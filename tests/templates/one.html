@@ -1,0 +1,45 @@
+{% if true %}123{% endif %}
+{% var ii: int %} {#  typesafe templates yay! :) #}
+{% ii = 1337 %}
+{% include tests/templates/foo.html %}
+{% ii = 1338 %}
+{% include tests/templates/foo.html %}
+
+{% ii = 5 %}
+
+<table>
+  {% for idx in 0 .. ii %}
+    <tr>
+      <td>IDX:</td>
+      <td>
+        {{idx}}
+        {% include tests/templates/foo.html %}
+      </td>
+    </tr>
+  {% endfor %}
+</table>
+
+<table>
+  {% for ii, item in ["foo", "baa", "baz"].pairs() %}
+    <tr>
+      <td>IDX:</td>
+      <td>
+        {{ii}} {{item}}
+        {% if ii mod 2 == 0 %}
+          MOD == 0
+        {% else %}
+          NOT !! ! !
+        {% endif %}
+        {% include tests/templates/foo.html %}
+      </td>
+    </tr>
+  {% endfor %}
+</table>
+
+
+{% for ii, item in ["https://google.de", "https://blog.fefe.de"].pairs() %}
+  {{ii}} {{item}}
+  <raw>
+    {{get(item).len}}
+  </raw>
+{% endfor %}
