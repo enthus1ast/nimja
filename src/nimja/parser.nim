@@ -170,7 +170,7 @@ proc parseSsWhile(fsTokens: seq[FsNode], pos: var int): NwtNode =
   result.whileStmt = elem.value
   while pos < fsTokens.len:
     pos.inc # skip the while
-    echo fsTokens[pos .. ^1]
+    # echo fsTokens[pos .. ^1]
     elem = fsTokens[pos]
     if elem.kind == FsEndWhile:
       break
@@ -194,23 +194,22 @@ proc parseSsBlock(fsTokens: seq[FsNode], pos: var int): NwtNode =
   var elem: FsNode = fsTokens[pos]
   let blockName = elem.value
   result = NwtNode(kind: NwtNodeKind.NBlock, blockName: blockName)
-  echo fmt"BLOCK START: '{elem.value}' @ {pos}"
+  # echo fmt"BLOCK START: '{elem.value}' @ {pos}"
   while pos < fsTokens.len:
     pos.inc # skip the block
     elem = fsTokens[pos]
     if elem.kind == FsEndBlock:
-      echo fmt"BLOCK END: '{elem.value}' @ {pos}"
-      # pos.inc # skip the endblock
+      # echo fmt"BLOCK END: '{elem.value}' @ {pos}"
       break
     else:
       result.blockBody &= parseSecondStepOne(fsTokens, pos)
-  echo result
+  # echo result
 
 proc parseSsExtends(fsTokens: seq[FsNode], pos: var int): NwtNode =
   var elem: FsNode = fsTokens[pos]
   let extendsPath = elem.value.strip(true, true, {'"'})
   result = NwtNode(kind: NwtNodeKind.NExtends, extendsPath: extendsPath)
-  echo fmt"EXTENDS: '{extendsPath}' @ {pos}"
+  # echo fmt"EXTENDS: '{extendsPath}' @ {pos}"
 
   # TODO this must be in a proc (called often in this parser)
   # var str = staticRead(extendsPath)
@@ -259,18 +258,9 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
 
 proc includeNwt(nodes: var seq[NwtNode], path: string) {.compileTime.} =
   {.push experimental: "vmopsDanger".} # should work in devel!
-  debugEcho "FOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
-  # let basePath = staticExec("""pathHelper.exe""")
-
   # must be build with --experimental:vmopsDanger
-  const basePath = getCurrentDir() # staticExec("pwd").strip().strip(leading = true, chars = {'/'})
-  echo "BASE PATH ========:", basePath
-  # var str = staticRead(path.strip(true, true, {'"'}) ) # TODO the static path is a problem...
-
-  #### TODO AAAARGH this is so annoying....
+  const basePath = getCurrentDir()
   var str = staticRead( basePath  / path.strip(true, true, {'"'}) )
-  # var str = staticRead("asdjfaklsdjf")
-
   var lexerTokens = toSeq(nwtTokenize(str))
   var firstStepTokens = parseFirstStep(lexerTokens)
   var pos = 0
@@ -279,22 +269,10 @@ proc includeNwt(nodes: var seq[NwtNode], path: string) {.compileTime.} =
     nodes.add secondStepToken
 
 proc parseSecondStep*(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
-  echo "parseSecondStep #########################"
   while pos < fsTokens.len:
-    ## TODO TEST IF THIS IS GOOD HERE
-    ## this is include
     let token = fsTokens[pos]
-    echo token.kind
-    # if token.kind == FsImport:
-    #   # pos.inc
-    #   # TODO this whole block could be removed??????
-    #   echo "HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH"
-    #   result.includeNwt(token.value)
-    # else:
     result &= parseSecondStepOne(fsTokens, pos)
     pos.inc # skip the current elem (test if the inner procs should forward)
-
-
 
 func astVariable(token: NwtNode): NimNode =
   return nnkStmtList.newTree(
@@ -386,19 +364,13 @@ proc astAstOne(token: NwtNode): NimNode =
     return astFor(token)
   elif token.kind == NWhile:
     return astWhile(token)
-
   elif token.kind == NExtends:
     return parseStmt("discard")
   elif token.kind == NBlock:
-    # for blockNode in gBlocks[token.value]:
     return parseStmt("discard")
-
   else:
     raise newException(ValueError, "cannot convert to ast:" & $token.kind)
     discard
-  # elif token.kind == NImport:
-  #   return
-
 
 proc astAst(tokens: seq[NwtNode]): seq[NimNode] =
   for token in tokens:
@@ -430,7 +402,7 @@ macro compileTemplateFile*(path: static string): untyped =
   ## TODO extend must be the first token, but
   ## strings can come before extend (for documentation purpose)
   if secondsStepTokens[0].kind == NExtends:
-    echo "===== THIS TEMPLATE EXTENDS ====="
+    # echo "===== THIS TEMPLATE EXTENDS ====="
     # Load master template
     let masterStr = staticRead( parentDir(path) / secondsStepTokens[0].extendsPath)
     var masterLexerTokens = toSeq(nwtTokenize(masterStr))
@@ -439,7 +411,6 @@ macro compileTemplateFile*(path: static string): untyped =
     var masterSecondsStepTokens = parseSecondStep(masterFirstStepTokens, masterPos)
 
     # Load THIS template (above)
-
     var toRender: seq[NwtNode] = @[]
     for masterSecondsStepToken in masterSecondsStepTokens:
       if masterSecondsStepToken.kind == NBlock:
@@ -449,10 +420,8 @@ macro compileTemplateFile*(path: static string): untyped =
           if secondsStepToken.kind == NBlock and secondsStepToken.blockName == masterSecondsStepToken.blockName:
             for blockToken in secondsStepToken.blockBody:
               toRender.add blockToken
-
       else:
         toRender.add masterSecondsStepToken
-
 
     result = newStmtList()
     for token in toRender:
@@ -465,69 +434,3 @@ macro compileTemplateFile*(path: static string): untyped =
       result.add astAstOne(token)
   # echo "gExtends: ", gExtends
   # echo "gBlocks: ", gBlocks
-
-# when isMainModule:
-#   expandMacros:
-#     var result = ""
-#     compileTemplateStr("{{foo}}baa{% idx.inc() %}{# a comment #}{%if foo() == baa()%}baa{{BAA}}{%elif true == true%}elif branch{%elif false == false%}elif branch2{%else%}ELSEBRANCH{%endif%}    {%for idx in 0..10%}{%if true%}{{TRAA}}{%endif%}{%endfor%}   {% var loop = 0%}{%while loop < 10%} {% loop.inc %} {%endwhile%} ")
-
-
-
-
-when isMainModule:
-  discard
-
-  # block:
-  #   proc testMe(a = 1, ONE = "ONE", TWO = "TWO", THREE = "THREE", ELSE = "ELSE", sex = "male"): string =
-  #     compileTemplateStr3 """{% if a == 1 %}a{% if sex == "male"%}HE{%else%}SHE{%endif%}is one{{ONE}}{% elif a == 2 %}a is two{{TWO}}{% elif a == 3 %}a is three{{THREE}}{% else %}a is something else{{ELSE}}{%endif%}"""
-  #   assert "aHEis one-->ONE<--" == testMe(a = 1, sex = "male", ONE = "-->ONE<--")
-  #   assert "aSHEis one-->ONE<--" == testMe(a = 1, sex = "female", ONE = "-->ONE<--")
-  #   assert "a is twoTWO" == testMe(a = 2)
-  #   assert "a is threeTHREE" == testMe(a = 3)
-
-  block:
-    discard
-    # echo onlyFirstAndSecond("""{{foo}}{% while idx < 10 %}idx is: {{idx}}{%idx.inc%}{% endwhile %}baa{{zaa}}""")
-    # echo onlyFirstAndSecond("""{{foo}}{% while idx < 10 %}idx is: {{idx}}{%idx.inc%}{% endwhile %}baa{{zaa}}""")
-    # echo onlyFirstAndSecond("""{% while isAA() %}AA{%while isBB()%}BB{%while isCC()%}CC{%endwhile%}{%endwhile%}{% endwhile %}baa{{zaa}}""")
-    # echo onlyFirstAndSecond("""{%if elems.len > 0%}{% while isFoo() %}FOO{% endwhile %}{%endif%}""")
-
-    # echo onlyFirstAndSecond("""{% for idx in 0..10 %}{{idx}}<br>{%endfor%}""")
-
-    # ## Wrong render but ast looks good...
-    # echo onlyFirstAndSecond("""{%if elems.len > 0%}{% while isFoo() %}FOO{%if true%}true{%endif%}{% endwhile %}{%endif%}baa""")
-    # echo onlyFirstAndSecond("""
-    #   {%if elems.len > 0%}
-    #     {% while isFoo() %}
-    #       FOO
-    #       {%if true%}
-    #         true
-    #       {%endif%}
-    #     {% endwhile %}
-    #   {%endif%}
-    #   baa""")
-
-
-
-    # proc testMe(): string =
-    #   compileTemplateStr3 """{% while idx < 10 %}idx is: {{idx}}{%idx.inc%}{%endwhile%}"""
-    # echo testMe()
-
-    # # Rendered wrong, ast seems ok
-    # proc testMe(): string =
-    #   compileTemplateStr3 """{%while true%}{% for idx in 0..10 %}{{idx}}<br>{%endfor%}{%endwhile%}"""
-    # echo testMe()
-
-    # echo prettyNwt("""{% var foo: string = ":D" %}{% for idx in 0..10 %}{% foo &= $idx %}foo={{foo}}<br>{%endfor%}""")
-
-
-    # type TestObj = object
-    #   foo: string
-    #   baa: int
-    # proc testObj(tobj: TestObj): string =
-    #   compileTemplateStr3 """{% for idx in 0 .. tobj.baa  %}{{idx}}{{tobj.foo}}{%endfor%}"""
-    # echo testObj(TestObj(foo:"_FOO", baa: 20))
-
-    # proc testMe2(): string =
-    #   compileTemplateStr3 """{% var foo: string = ":D" %}{% for idx in 0..10 %}{% foo &= $idx %}foo={{foo}}<br>{%endfor%}"""
-    # echo testMe2()
