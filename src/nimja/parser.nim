@@ -327,31 +327,13 @@ proc astAst(tokens: seq[NwtNode]): seq[NimNode] =
   for token in tokens:
     result.add astAstOne(token)
 
-macro compileTemplateStr*(str: typed): untyped =
-  var lexerTokens = toSeq(nwtTokenize(str.strVal))
-  var firstStepTokens = parseFirstStep(lexerTokens)
-  var pos = 0
-  var secondsStepTokens = parseSecondStep(firstStepTokens, pos)
-  when defined(dumpNwtAst): echo secondsStepTokens
-  result = newStmtList()
-  for token in secondsStepTokens:
-    result.add astAstOne(token)
-
-
-macro compileTemplateFile*(path: static string): untyped =
-  let str = staticRead(path)
-  var lexerTokens = toSeq(nwtTokenize(str))
-  var firstStepTokens = parseFirstStep(lexerTokens)
-  var pos = 0
-  var secondsStepTokens = parseSecondStep(firstStepTokens, pos)
-  when defined(dumpNwtAst): echo secondsStepTokens
-
+template compile(): untyped =
   ## TODO extend must be the first token, but
   ## comments can come before extend (for documentation purpose)
   if secondsStepTokens[0].kind == NExtends:
     # echo "===== THIS TEMPLATE EXTENDS ====="
     # Load master template
-    let masterStr = staticRead( parentDir(path) / secondsStepTokens[0].extendsPath)
+    let masterStr = staticRead( getScriptDir() / secondsStepTokens[0].extendsPath)
     var masterLexerTokens = toSeq(nwtTokenize(masterStr))
     var masterFirstStepTokens = parseFirstStep(masterLexerTokens)
     var masterPos = 0
@@ -376,3 +358,28 @@ macro compileTemplateFile*(path: static string): untyped =
     result = newStmtList()
     for token in secondsStepTokens:
       result.add astAstOne(token)
+
+macro compileTemplateStr*(str: typed): untyped =
+  ## Compiles a nimja template from a string.
+  ## .. code-block:: nim
+  ##  compileTemplateString("{%if true%}TRUE{%endif%}")
+  var lexerTokens = toSeq(nwtTokenize(str.strVal))
+  var firstStepTokens = parseFirstStep(lexerTokens)
+  var pos = 0
+  var secondsStepTokens = parseSecondStep(firstStepTokens, pos)
+  when defined(dumpNwtAst): echo secondsStepTokens
+  compile
+
+
+
+macro compileTemplateFile*(path: static string): untyped =
+  ## Compiles a nimja template from a file.
+  ## .. code-block:: nim
+  ##  compileTemplateFile(getScriptDir() / "relative/path.nwt")
+  let str = staticRead(path)
+  var lexerTokens = toSeq(nwtTokenize(str))
+  var firstStepTokens = parseFirstStep(lexerTokens)
+  var pos = 0
+  var secondsStepTokens = parseSecondStep(firstStepTokens, pos)
+  when defined(dumpNwtAst): echo secondsStepTokens
+  compile
