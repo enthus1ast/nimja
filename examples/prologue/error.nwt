@@ -1,0 +1,6 @@
+{% extends "partials/_master.nwt" %}
+{% block content %}
+<div style="font-size: 25px;">
+  :(
+</div>
+{% endblock %}
