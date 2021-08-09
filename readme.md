@@ -28,9 +28,6 @@ MOTIVATING EXAMPLE
 server.nim
 
 ```nim
-## compile this example with: --experimental:vmopsDanger or you will get
-## Error: cannot 'importc' variable at compile time; getCurrentDirectoryW
-
 import asynchttpserver, asyncdispatch
 import ../src/parser
 import os, random # os and random are later used in the templates, so imported here
@@ -74,7 +71,7 @@ runForever()
 index.nwt:
 
 ```twig
-{% extends master.nwt%}
+{% extends partials/_master.nwt%}
 {#
   extends uses the master.nwt template as the "base".
   All the `block`s that are defined in the master.nwt are filled
@@ -159,7 +156,7 @@ body {
 {#
   If the block contains content and is NOT overwritten later.
   The content from the master is rendered
-  (does not work in the alpha version..)
+  (does not work in the alpha version..) TODO #3
 #}
 {% block onlyMasterBlock %}Only Master Block (does it work yet?){% endblock %}
 
@@ -171,6 +168,16 @@ body {
 </html>
 ```
 
+partials/_menu.nwt:
+```twig
+<a href="/">index</a>
+```
+
+partials/_user.nwt:
+```twig
+User: {{user.name}} {{user.lastname}} age: {{user.age}}
+```
+
 Basic Syntax
 ============
 
@@ -178,9 +185,6 @@ Basic Syntax
 - {% myExpression.inc() %} --transformed-to---> `myExpression.inc()`
 - {# a comment #}
 
-
-BUILD WITH:
---experimental:vmopsDanger
 
 
 How?
@@ -211,12 +215,14 @@ this means you have the full power of nim in your templates.
 USAGE
 =====
 
-there are only two relevant procedures:
+there are only three relevant procedures:
 
 - `compileTemplateStr(str: string)`
   compiles a template string to nim ast (THIS ONE IS NOT FULLY USABLE IN THIS ALPHA VERSION)
 - `compileTemplateFile(path: string)`
   compiles the content of a file to nim ast
+- `getScriptDir()`
+  returns the path to your current project, on compiletime.
 
 
 if / elif / else
