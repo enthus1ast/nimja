@@ -1,15 +1,5 @@
-# {.push:experimental:vmopsDanger.}
-# {.experimental: "vmopsDanger".}
-
-
-# when not defined(vmopsDanger):
-#   echo "compile with: --experimental:vmopsDanger!"
-#   quit()
-
-
-import strformat, strutils
-import macros
-import nwtTokenizer, sequtils, parseutils, os
+import strutils, macros, sequtils, parseutils, os
+import nwtTokenizer
 
 type
   NwtNodeKind = enum
@@ -23,9 +13,9 @@ type
       commentBody: string
     of NIf:
       ifStmt: string
-      nnThen: seq[NwtNode] # <---- Alle Nodes
-      nnElif: seq[NwtNode] # <---  Elif nodes
-      nnElse: seq[NwtNode] # <---- Alle Nodes
+      nnThen: seq[NwtNode]
+      nnElif: seq[NwtNode]
+      nnElse: seq[NwtNode]
     of NElif:
       elifStmt: string
       elifBody: seq[NwtNode]
