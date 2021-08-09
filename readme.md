@@ -23,7 +23,7 @@ FEATURES
 MOTIVATING EXAMPLE
 ==================
 
-[this example is also in the example folder](https://github.com/enthus1ast/nimja/examples/fromReadme/)
+[this example is also in the example folder](https://github.com/enthus1ast/nimja/tree/master/examples/fromReadme)
 
 server.nim
 
