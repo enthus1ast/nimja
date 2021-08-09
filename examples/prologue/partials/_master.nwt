@@ -1,0 +1,15 @@
+<html>
+<head>
+  <title>{{title}}</title>
+</head>
+<body>
+  <h1>{{title}}</h1>
+  {% importnwt "partials/_menu.nwt" %}
+  <hr>
+  {% block content %}{% endblock %}
+  <hr>
+  {% importnwt "partials/_footer.nwt" %}
+</body>
+
+</html>
+

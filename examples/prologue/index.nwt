@@ -1,0 +1,14 @@
+{% extends "partials/_master.nwt" %}
+{% block content %}
+<p>
+Lorem ipsum dolor sit amet, consectetur adipisicing elit. Tenetur expedita nemo quis similique, soluta odio, quo rerum asperiores officia, dolor repellendus nulla neque perferendis rem saepe! Dolore magni impedit vero.
+</p>
+
+<p>
+Lorem ipsum dolor sit amet, consectetur adipisicing elit. Tenetur expedita nemo quis similique, soluta odio, quo rerum asperiores officia, dolor repellendus nulla neque perferendis rem saepe! Dolore magni impedit vero.
+</p>
+
+<p>
+Lorem ipsum dolor sit amet, consectetur adipisicing elit. Tenetur expedita nemo quis similique, soluta odio, quo rerum asperiores officia, dolor repellendus nulla neque perferendis rem saepe! Dolore magni impedit vero.
+</p>
+{% endblock %}

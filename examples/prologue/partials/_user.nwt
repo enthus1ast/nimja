@@ -1,0 +1,7 @@
+<div class="user">
+  <ul>
+    <li>lastname: {{user.lastname}}</li>
+    <li>name: {{user.name}}</li>
+    <li>age: {{user.age}}</li>
+  </ul>
+</div>
