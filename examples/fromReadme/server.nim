@@ -16,7 +16,7 @@ proc renderIndex(title: string, users: seq[User]): string =
   ## so it can access all variables like `title` and `users`
   ## the return variable could be `string` or `Rope` or
   ## anything which has a `&=`(obj: YourObj, str: string) proc.
-  compileTemplateFile(getCurrentDir() / "index.nwt")
+  compileTemplateFile(getScriptDir() / "index.nwt")
 
 proc main {.async.} =
   var server = newAsyncHttpServer()

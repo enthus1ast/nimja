@@ -66,10 +66,9 @@ type
 # var gExtends {.compileTime.}: Table[string, seq[NwtNode]]
 
 import os
-template getScriptDir(): string =
+template getScriptDir*(): string =
   ## Helper for staticRead
-  # parentDir(instantiationInfo(-1, true).filename)
-  instantiationInfo(-1, true).filename
+  getProjectPath()
 
 # Forward decleration
 proc parseSecondStep*(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
@@ -259,7 +258,7 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
 proc includeNwt(nodes: var seq[NwtNode], path: string) {.compileTime.} =
   {.push experimental: "vmopsDanger".} # should work in devel!
   # must be build with --experimental:vmopsDanger
-  const basePath = getCurrentDir()
+  const basePath = getProjectPath()
   var str = staticRead( basePath  / path.strip(true, true, {'"'}) )
   var lexerTokens = toSeq(nwtTokenize(str))
   var firstStepTokens = parseFirstStep(lexerTokens)
