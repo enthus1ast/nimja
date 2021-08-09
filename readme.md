@@ -23,6 +23,7 @@ FEATURES
 MOTIVATING EXAMPLE
 ==================
 
+[this example is also in the example folder](https://github.com/enthus1ast/nimja/examples/fromReadme/)
 
 server.nim
 
