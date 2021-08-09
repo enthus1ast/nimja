@@ -57,9 +57,7 @@ template getScriptDir*(): string =
 # Forward decleration
 proc parseSecondStep*(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
-proc astAstOne(token: NwtNode): NimNode
 proc astAst(tokens: seq[NwtNode]): seq[NimNode]
-proc includeNwt(nodes: var seq[NwtNode], path: string) {.compileTime.}
 
 
 func splitStmt(str: string): tuple[pref: string, suf: string] {.inline.} =
@@ -106,10 +104,10 @@ proc parseFirstStep*(tokens: seq[Token]): seq[FSNode] =
       result.add FSNode(kind: FsStr, value: token.value)
     elif token.tokenType == NwtVariable:
       result.add FSNode(kind: FsVariable, value: token.value)
+    elif token.tokenType == NwtComment:
+      discard # ignore comments
     else:
       echo "[FS] Not catched:", token
-    # elif token.tokenType == NwtComment:
-    #   result.add FSNode(kind: FsComment, value: token.value)
 
 
 proc parseSsIf(fsTokens: seq[FsNode], pos: var int): NwtNode =
@@ -188,6 +186,16 @@ proc parseSsExtends(fsTokens: seq[FsNode], pos: var int): NwtNode =
 converter singleNwtNodeToSeq(nwtNode: NwtNode): seq[NwtNode] =
   return @[nwtNode]
 
+proc includeNwt(nodes: var seq[NwtNode], path: string) {.compileTime.} =
+  const basePath = getProjectPath()
+  var str = staticRead( basePath  / path.strip(true, true, {'"'}) )
+  var lexerTokens = toSeq(nwtTokenize(str))
+  var firstStepTokens = parseFirstStep(lexerTokens)
+  var pos = 0
+  var secondsStepTokens = parseSecondStep(firstStepTokens, pos)
+  for secondStepToken in secondsStepTokens:
+    nodes.add secondStepToken
+
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     let fsToken = fsTokens[pos]
     # Complex Types
@@ -212,17 +220,6 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
         includeNwt(result, fsToken.value)
     else:
       echo "[SS] NOT IMPL: ", fsToken
-
-
-proc includeNwt(nodes: var seq[NwtNode], path: string) {.compileTime.} =
-  const basePath = getProjectPath()
-  var str = staticRead( basePath  / path.strip(true, true, {'"'}) )
-  var lexerTokens = toSeq(nwtTokenize(str))
-  var firstStepTokens = parseFirstStep(lexerTokens)
-  var pos = 0
-  var secondsStepTokens = parseSecondStep(firstStepTokens, pos)
-  for secondStepToken in secondsStepTokens:
-    nodes.add secondStepToken
 
 proc parseSecondStep*(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
   while pos < fsTokens.len:
