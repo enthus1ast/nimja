@@ -120,11 +120,11 @@ proc parseSsIf(fsTokens: seq[FsNode], pos: var int): NwtNode =
     elem = fsTokens[pos]
     if elem.kind == FsIf:
       if ifState == IfState.InThen:
-        result.nnThen.add parseSecondStep(fsTokens, pos) ## TODO should be parseSecondStep
+        result.nnThen.add parseSecondStep(fsTokens, pos)
       if ifState == IfState.InElse:
-        result.nnElse.add parseSecondStep(fsTokens, pos) ## TODO should be parseSecondStep
+        result.nnElse.add parseSecondStep(fsTokens, pos)
       if ifState == IfState.InElif:
-        result.nnElif[^1].elifBody.add parseSecondStep(fsTokens, pos) ## TODO should be parseSecondStep
+        result.nnElif[^1].elifBody.add parseSecondStep(fsTokens, pos)
     elif elem.kind == FsElif:
       ifstate = IfState.InElif
       result.nnElif.add NwtNode(kind: NElif, elifStmt: elem.value)
@@ -134,7 +134,7 @@ proc parseSsIf(fsTokens: seq[FsNode], pos: var int): NwtNode =
       break
     else:
       if ifState == IfState.InThen:
-        result.nnThen &= parseSecondStepOne(fsTokens, pos) #addCorrectNode(elem)
+        result.nnThen &= parseSecondStepOne(fsTokens, pos)
       if ifState == IfState.InElse:
         result.nnElse &= parseSecondStepOne(fsTokens, pos)
       if ifState == IfState.InElif:
@@ -155,11 +155,11 @@ proc parseSsWhile(fsTokens: seq[FsNode], pos: var int): NwtNode =
       result.whileBody &= parseSecondStepOne(fsTokens, pos)
 
 proc parseSsFor(fsTokens: seq[FsNode], pos: var int): NwtNode =
-  var elem: FsNode = fsTokens[pos] # first is the while that we got called about
+  var elem: FsNode = fsTokens[pos] # first is the for that we got called about
   result = NwtNode(kind: NwtNodeKind.NFor)
   result.forStmt = elem.value
   while pos < fsTokens.len:
-    pos.inc # skip the while
+    pos.inc # skip the for
     elem = fsTokens[pos]
     if elem.kind == FsEndFor:
       break
@@ -224,7 +224,7 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
 proc parseSecondStep*(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
   while pos < fsTokens.len:
     result &= parseSecondStepOne(fsTokens, pos)
-    pos.inc # skip the current elem (test if the inner procs should forward)
+    pos.inc # skip the current elem
 
 func astVariable(token: NwtNode): NimNode =
   return nnkStmtList.newTree(
@@ -322,7 +322,6 @@ proc astAstOne(token: NwtNode): NimNode =
     return parseStmt("discard")
   else:
     raise newException(ValueError, "cannot convert to ast:" & $token.kind)
-    discard
 
 proc astAst(tokens: seq[NwtNode]): seq[NimNode] =
   for token in tokens:
@@ -370,12 +369,9 @@ macro compileTemplateFile*(path: static string): untyped =
               toRender.add blockToken
       else:
         toRender.add masterSecondsStepToken
-
     result = newStmtList()
     for token in toRender:
       result.add astAstOne(token)
-    # insert THIS template to the masters blocks
-    # render the whole template
   else:
     result = newStmtList()
     for token in secondsStepTokens:
