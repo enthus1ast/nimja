@@ -1,2 +1,2 @@
 import nimja/parser
-export compileTemplateStr, compileTemplateFile
+export compileTemplateStr, compileTemplateFile, getScriptDir
