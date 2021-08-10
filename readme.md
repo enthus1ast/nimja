@@ -283,6 +283,7 @@ comments
 declare your own `$` before you call
 `compileTemplateStr()` or `compileTemplateFile()`
 for your custom objects.
+For complex types it is recommend to use the method described in the `importnwt` section.
 ```twig
 {{myVar}}
 {{someProc()}}
@@ -297,10 +298,12 @@ So it's a valid strategy to have a "partial" template that for example
 can render an object or a defined type.
 Then include the template wherever you need it:
 
-best practice is to have a partials folder.
+best practice is to have a `partials` folder,
 and every partial template begins with an underscore "_"
 all templates are partial that do not extend another
 template and therefore can be included.
+
+This way you create reusable template blocks to use all over your webpage.
 
 partials/_user.nwt:
 ```twig
@@ -377,20 +380,15 @@ This is a COMPILED template engine.
 This means you must _recompile_ your application
 for every change you do in the templates!
 
+_Automatic recompilation and/or hot code reloading is a [planned feature](https://github.com/enthus1ast/nimja/issues/6)._
+
 ```bash
-nim c -r --experimental:vmopsDanger yourfile.nim
-```
-
-to avoid writing `--experimental:vmopsDanger` every time you compile, create a file:
-
-yourfile.nims
-```nim
-switch("experimental", "vmopsDanger")
+nim c -r yourfile.nim
 ```
 
 sometimes, nim does not catch changes to template files.
 Then compile with "-f" (force)
 
 ```bash
-nim c -f -r --experimental:vmopsDanger yourfile.nim
+nim c -f -r  yourfile.nim
 ```
