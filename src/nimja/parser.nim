@@ -344,19 +344,33 @@ template compile(): untyped =
     for masterSecondsStepToken in masterSecondsStepTokens:
       if masterSecondsStepToken.kind == NBlock:
         ## search the other template and put the stuff in toRender
+        var found = false
         for secondsStepToken in secondsStepTokens[1..^1]:
           if secondsStepToken.kind == NExtends: raise newException(ValueError, "only one extend is allowed!")
           if secondsStepToken.kind == NBlock and secondsStepToken.blockName == masterSecondsStepToken.blockName:
+            found = true
             for blockToken in secondsStepToken.blockBody:
               toRender.add blockToken
+        if found == false:
+          # not overwritten; render the block
+          for blockToken in masterSecondsStepToken.blockBody:
+            toRender.add blockToken
       else:
         toRender.add masterSecondsStepToken
     result = newStmtList()
     for token in toRender:
       result.add astAstOne(token)
   else:
+    var toRender: seq[NwtNode] = @[]
     result = newStmtList()
     for token in secondsStepTokens:
+      if token.kind == NBlock:
+        # Render the content of a block directly (no extension done)
+        for blockToken in token.blockBody:
+          toRender.add blockToken
+      else:
+        toRender.add token
+    for token in toRender:
       result.add astAstOne(token)
 
 macro compileTemplateStr*(str: typed): untyped =
