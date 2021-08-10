@@ -25,7 +25,7 @@ MOTIVATING EXAMPLE
 
 - [this example is in the example folder](https://github.com/enthus1ast/nimja/tree/master/examples/fromReadme)
 
-- [and a more complete prologue example](https://github.com/enthus1ast/nimja/tree/master/examples/prologue)
+- [and a more complete prologue and jester example](https://github.com/enthus1ast/nimja/tree/master/examples/prologue)
 
 server.nim
 
