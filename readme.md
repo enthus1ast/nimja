@@ -23,7 +23,9 @@ FEATURES
 MOTIVATING EXAMPLE
 ==================
 
-[this example is also in the example folder](https://github.com/enthus1ast/nimja/tree/master/examples/fromReadme)
+- [this example is in the example folder](https://github.com/enthus1ast/nimja/tree/master/examples/fromReadme)
+
+- [and a more complete prologue example](https://github.com/enthus1ast/nimja/tree/master/examples/prologue)
 
 server.nim
 
