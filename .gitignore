@@ -4,3 +4,12 @@ outputGotten.txt
 *~
 testresults
 megatest.nim
+tests/basic/test_block
+tests/basic/test_dirtyStuff
+tests/basic/test_escape
+tests/basic/test_for
+tests/basic/test_if
+tests/basic/test_if_complex
+tests/basic/test_insert
+tests/basic/test_simple
+tests/basic/test_while
