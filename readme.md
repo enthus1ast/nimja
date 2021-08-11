@@ -158,7 +158,6 @@ body {
 {#
   If the block contains content and is NOT overwritten later.
   The content from the master is rendered
-  (does not work in the alpha version..) TODO #3
 #}
 {% block onlyMasterBlock %}Only Master Block (does it work yet?){% endblock %}
 
@@ -220,7 +219,7 @@ USAGE
 there are only three relevant procedures:
 
 - `compileTemplateStr(str: string)`
-  compiles a template string to nim ast (THIS ONE IS NOT FULLY USABLE IN THIS ALPHA VERSION)
+  compiles a template string to nim ast
 - `compileTemplateFile(path: string)`
   compiles the content of a file to nim ast
 - `getScriptDir()`
