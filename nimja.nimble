@@ -17,4 +17,4 @@ task tests, "Run all tests":
 
 task docs, "Generate all docs":
   rmDir("src/htmldocs/")
-  exec "nim doc --project src/nimja.nim"
+  exec "nim doc --project -o:docs/ src/nimja.nim"
