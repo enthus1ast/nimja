@@ -20,6 +20,13 @@ FEATURES
 - most nim code is valid in the templates
 
 
+DOCUMENTATION
+=============
+
+- this readme
+- [generated nim docs](https://enthus1ast.github.io/nimja/nimja.html)
+
+
 MOTIVATING EXAMPLE
 ==================
 
