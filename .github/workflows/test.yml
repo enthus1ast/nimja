@@ -6,11 +6,13 @@ on:
       - 'LICENSE'
       - 'readme.*'
       - 'logo/*'
+      - 'docs/*'
   pull_request:
     paths-ignore:
       - 'LICENSE'
       - 'readme.*'
       - 'logo/*'
+      - 'docs/*'
 
 jobs:
   test:
