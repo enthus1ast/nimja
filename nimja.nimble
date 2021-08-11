@@ -13,3 +13,8 @@ requires "nim >= 1.4.8"
 
 task tests, "Run all tests":
   exec "testament p 'tests/*/*.nim'"
+
+
+task docs, "Generate all docs":
+  rmDir("src/htmldocs/")
+  exec "nim doc --project src/nimja.nim"
