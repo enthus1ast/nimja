@@ -51,11 +51,13 @@ type
     value: string
 
 template getScriptDir*(): string =
-  ## Helper for staticRead
+  ## Helper for staticRead.
+  ##
+  ## returns the absolute path to your project, on compile time.
   getProjectPath()
 
 # Forward decleration
-proc parseSecondStep*(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
+proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc astAst(tokens: seq[NwtNode]): seq[NimNode]
 
@@ -68,7 +70,7 @@ func splitStmt(str: string): tuple[pref: string, suf: string] {.inline.} =
   result.pref = toLowerAscii(pref)
   result.suf = str[pos..^1]
 
-proc parseFirstStep*(tokens: seq[Token]): seq[FSNode] =
+proc parseFirstStep(tokens: seq[Token]): seq[FSNode] =
   result = @[]
   for token in tokens:
     if token.tokenType == NwtEval:
@@ -221,7 +223,7 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     else:
       echo "[SS] NOT IMPL: ", fsToken
 
-proc parseSecondStep*(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
+proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
   while pos < fsTokens.len:
     result &= parseSecondStepOne(fsTokens, pos)
     pos.inc # skip the current elem
@@ -375,8 +377,9 @@ template compile(): untyped =
 
 macro compileTemplateStr*(str: typed): untyped =
   ## Compiles a nimja template from a string.
-  ## .. code-block:: nim
-  ##  compileTemplateString("{%if true%}TRUE{%endif%}")
+  ##
+  ## .. code-block:: Nim
+  ##   compileTemplateString("{%if true%}TRUE{%endif%}")
   var lexerTokens = toSeq(nwtTokenize(str.strVal))
   var firstStepTokens = parseFirstStep(lexerTokens)
   var pos = 0
@@ -388,8 +391,9 @@ macro compileTemplateStr*(str: typed): untyped =
 
 macro compileTemplateFile*(path: static string): untyped =
   ## Compiles a nimja template from a file.
+  ##
   ## .. code-block:: nim
-  ##  compileTemplateFile(getScriptDir() / "relative/path.nwt")
+  ##   compileTemplateFile(getScriptDir() / "relative/path.nwt")
   let str = staticRead(path)
   var lexerTokens = toSeq(nwtTokenize(str))
   var firstStepTokens = parseFirstStep(lexerTokens)
