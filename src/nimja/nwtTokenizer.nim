@@ -94,8 +94,6 @@
 import parseutils
 import sequtils
 import strutils
-import tables
-import strtabs
 
 proc debugPrint(buffer: string, pos: int) =
   let pointPos = if pos - 1 < 0: 0 else: pos - 1
@@ -111,13 +109,10 @@ type
     NwtComment,
     NwtEval,
     NwtVariable,
-    # NwtTokens
 
   Token* = object
-    # tokenType*: NwtToken # the type of the token
     tokenType*: NwtToken
     value*: string # the value
-    # tokens*: seq[Token]
 
   Block* = tuple[name: string, posStart: int, posEnd: int]
 
@@ -125,7 +120,6 @@ proc newToken*(tokenType: NwtToken, value: string): Token =
   result = Token()
   result.tokenType = tokenType
   result.value = value
-  # result.tokens = @[]
 
 proc extractTemplateName*(raw: string): string =
   ## returns the template name from
@@ -135,7 +129,6 @@ proc extractTemplateName*(raw: string): string =
   if parts.len < 2:
     # TemplateSyntaxError
     raise newException(ValueError, "Could not extract template name from '$1'" % [raw])
-    # raise (OsError, "Could not extract template name from '$1'" % [raw])
   result = parts[1].captureBetween('"', '"')
   if result != "": return
 
@@ -211,75 +204,3 @@ iterator nwtTokenize*(s: string): Token =
     if pos >= buffer.len: # TODO check if this has to be '>'
       ## Nothing to do for us here
       break
-
-
-
-when isMainModule:
-  # var nwt = newNwt()
-  # echo "Loaded $1 templates." % [$nwt.templates.len]
-
-  # Tokenize tests
-  assert toSeq(nwtTokenize("hello")) == @[newToken(NwtString, "hello")]
-  assert toSeq(nwtTokenize("{{var}}")) == @[newToken(NwtVariable, "var")]
-  assert toSeq(nwtTokenize("{{ var }}")) == @[newToken(NwtVariable, "var")]
-  assert toSeq(nwtTokenize("{{var}}{{var}}")) == @[
-    newToken(NwtVariable, "var"),
-    newToken(NwtVariable, "var")
-  ]
-  assert toSeq(nwtTokenize("{#i am a comment#}")) == @[
-    newToken(NwtComment, "i am a comment")
-  ]
-  assert toSeq(nwtTokenize("{# i am a comment #}")) == @[
-    newToken(NwtComment, "i am a comment")
-  ]
-  assert toSeq(nwtTokenize("{%raw%}")) == @[newToken(NwtEval, "raw")]
-  assert toSeq(nwtTokenize("{% raw %}")) == @[newToken(NwtEval, "raw")]
-  assert toSeq(nwtTokenize("{% for each in foo %}")) == @[newToken(NwtEval,
-      "for each in foo")]
-
-  assert toSeq(nwtTokenize("body { background-color: blue; }")) == @[
-    newToken(NwtString, "body { background-color: blue; }")
-  ]
-
-  assert toSeq(nwtTokenize("{ nope }")) == @[newToken(NwtString, "{ nope }")]
-  assert toSeq(nwtTokenize("{nope}")) == @[newToken(NwtString, "{nope}")]
-  assert toSeq(nwtTokenize("{nope")) == @[newToken(NwtString, "{nope")]
-  assert toSeq(nwtTokenize("nope}")) == @[newToken(NwtString, "nope}")]
-
-  assert toSeq(nwtTokenize("{")) == @[newToken(NwtString, "{")]
-  assert toSeq(nwtTokenize("}")) == @[newToken(NwtString, "}")]
-
-  assert toSeq(nwtTokenize("""{%block 'first'%}{%blockend%}""")) == @[
-    newToken(NwtEval, "block 'first'"),
-    newToken(NwtEval, "blockend")
-  ]
-
-  assert toSeq(nwtTokenize("foo {baa}")) == @[newToken(NwtString, "foo {baa}")]
-
-  assert toSeq(nwtTokenize("foo {{baa}} {baa}")) == @[
-    newToken(NwtString, "foo "),
-    newToken(NwtVariable, "baa"),
-    newToken(NwtString, " {baa}")
-  ]
-  # extractTemplateName tests
-  assert extractTemplateName("""extends "foobaa.html" """) == "foobaa.html"
-  assert extractTemplateName("""extends "foobaa.html"""") == "foobaa.html"
-  assert extractTemplateName("""extends 'foobaa.html'""") == "foobaa.html"
-  assert extractTemplateName("""extends foobaa.html""") == "foobaa.html"
-  assert extractTemplateName("""extends foobaa.html""") == "foobaa.html"
-  assert extractTemplateName(toSeq(nwtTokenize("""{% extends "foobaa.html" %}"""))[0].value) == "foobaa.html"
-  block:
-    var tokens = toSeq(nwtTokenize("""{% extends "foobaa.html" %}{% extends "goo.html" %} """))
-    assert extractTemplateName(tokens[0].value) == "foobaa.html"
-    assert extractTemplateName(tokens[1].value) == "goo.html"
-  block:
-    var tokens = toSeq(nwtTokenize("""{% extends foobaa.html %}{% extends goo.html %}"""))
-    assert extractTemplateName(tokens[0].value) == "foobaa.html"
-    assert extractTemplateName(tokens[1].value) == "goo.html"
-  block:
-    var tokens = toSeq(nwtTokenize("""{%extends "foobaa.html" %}{% extends 'goo.html' %}"""))
-    assert extractTemplateName(tokens[0].value) == "foobaa.html"
-    assert extractTemplateName(tokens[1].value) == "goo.html"
-  block:
-    var tokens = toSeq(nwtTokenize("""{%extends foobaa.html%}"""))
-    assert extractTemplateName(tokens[0].value) == "foobaa.html"
