@@ -20,6 +20,7 @@ suite "tokenizer":
       newToken(NwtVariable, "var"),
       newToken(NwtVariable, "var")
     ]
+    check toSeq(nwtTokenize("{{\"a str\"}}")) == @[newToken(NwtVariable, "\"a str\"")]
 
   test "NwtComment":
     check toSeq(nwtTokenize("{#i am a comment#}")) == @[
@@ -47,12 +48,23 @@ suite "tokenizer":
     check toSeq(nwtTokenize("{")) == @[newToken(NwtString, "{")]
     check toSeq(nwtTokenize("}")) == @[newToken(NwtString, "}")]
 
-  test "NwtVariable lonely/broken \"{{\"":
-    check toSeq(nwtTokenize("""{{ "{{" }}""")) == @[newToken(NwtVariable, "}}")] # <-- fails
+  test "NwtVariable str with lonely/broken \"{{\"":
+    check toSeq(nwtTokenize("""{{ "{{" }}""")) == @[newToken(NwtVariable, "\"}}\"")] # <-- fails
 
-  test "NwtVariable lonely/broken \"}}\"":
-    check toSeq(nwtTokenize("""{{ "}}" }}""")) == @[newToken(NwtVariable, "{{")]
+  test "NwtVariable str with lonely/broken \"}}\"":
+    check toSeq(nwtTokenize("""{{ "}}" }}""")) == @[newToken(NwtVariable, "\"{{\"")]
 
+  test "NwtVariable str with lonely/broken \"{%\"":
+      check toSeq(nwtTokenize("""{{ "{%" }}""")) == @[newToken(NwtVariable, "\"{%\"")]
+
+  test "NwtVariable str with lonely/broken \"%}\"":
+      check toSeq(nwtTokenize("""{{ "%}" }}""")) == @[newToken(NwtVariable, "\"%}\"")]
+
+  test "NwtVariable str with lonely/broken \"{#\"":
+      check toSeq(nwtTokenize("""{{ "{#" }}""")) == @[newToken(NwtVariable, "\"{#\"")]
+
+  test "NwtVariable str with lonely/broken \"#}\"":
+      check toSeq(nwtTokenize("""{{ "#}" }}""")) == @[newToken(NwtVariable, "\"#}\"")]
 
   test "NwtBlock":
     check toSeq(nwtTokenize("""{%block 'first'%}{%blockend%}""")) == @[
