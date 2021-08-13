@@ -212,7 +212,7 @@ is transformed to:
 proc foo(ss: string; ii: int): string =
   result &= "example"
   if ii == 1:
-    result &= "one"
+    result &= ss
   var myvar = 1
   inc(myvar, 1)
 ```
