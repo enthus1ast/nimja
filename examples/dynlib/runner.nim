@@ -1,17 +1,19 @@
 ## this example shows two ways to load templates from a dynamic library.
 
+import strutils, os
+
 # Nim binds
 echo "Nim binds\n#####################"
-proc foo*(ss: string, ii: int): string {.cdecl, importc, dynlib: "templates".}
-proc baa*(ss: string, ii: int): string {.cdecl, importc, dynlib: "templates".}
+proc foo*(ss: string, ii: int): string {.cdecl, importc, dynlib: "./" / DynlibFormat % "templates".}
+proc baa*(ss: string, ii: int): string {.cdecl, importc, dynlib: "./" / DynlibFormat % "templates".}
 
 echo foo("foo", 42)
 echo baa("baa", 42)
 
 # Manual binding
 echo "\nManual binding\n#####################"
-import dynlib, os, strutils
-let libpath = DynlibFormat % "templates"
+import dynlib 
+let libpath = "./" / DynlibFormat % "templates"
 
 let lib = loadLib(libpath)
 if lib == nil:
