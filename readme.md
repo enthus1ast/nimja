@@ -31,8 +31,8 @@ MOTIVATING EXAMPLE
 ==================
 
 - [this example is in the example folder](https://github.com/enthus1ast/nimja/tree/master/examples/fromReadme)
-
 - [and a more complete prologue and jester example](https://github.com/enthus1ast/nimja/tree/master/examples/prologue)
+- [an example howto load templates from a shared library (dll, so)](https://github.com/enthus1ast/nimja/tree/master/examples/dynlib)
 
 server.nim
 
