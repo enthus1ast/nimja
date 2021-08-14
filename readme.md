@@ -210,11 +210,11 @@ is transformed to:
 
 ```nim
 proc foo(ss: string; ii: int): string =
-  result &= "example"
-  if ii == 1:
-    result &= ss
-  var myvar = 1
-  inc(myvar, 1)
+  result &= "example"   # <- this must come from the vm
+  if ii == 1:   # <- this must come from the vm
+    result &= ss   # <- this must come from the vm
+  var myvar = 1   # <- this must come from the vm
+  inc(myvar, 1)   # <- this must come from the vm
 ```
 
 this means you have the full power of nim in your templates.
@@ -399,4 +399,22 @@ Then compile with "-f" (force)
 
 ```bash
 nim c -f -r  yourfile.nim
+```
+
+Debugging
+=====================
+
+Dump generated NwtAst for debugging
+-----------------------------------
+
+```bash
+nim c -d:dumpNwtAst -r yourfile.nim
+nim c -d:dumpNwtAstPretty -r yourfile.nim
+```
+
+Dump generated NimMacros
+------------------------
+
+```bash
+nim c -d:dumpNwtMacro -r yourfile.nim
 ```
