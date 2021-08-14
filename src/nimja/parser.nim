@@ -1,6 +1,8 @@
 import strutils, macros, sequtils, parseutils, os
 import nwtTokenizer
 
+import strformat
+
 type
   NwtNodeKind = enum
     NStr, NComment, NIf, NElif, NElse, NWhile, NFor,
@@ -431,7 +433,8 @@ conf.errorMax = high(int)
 conf.structuredErrorHook =
   proc (config: ConfigRef; info: TLineInfo; msg: string; severity: Severity) =
     # assert false, &"{info.line}:{info.col} {msg}" # TODO?
-    echo "TODO"
+    echo fmt"{info.line}:{info.col} {msg}" # TODO?
+    # echo "TODO"
 
 initDefines(conf.symbols)
 
@@ -480,37 +483,62 @@ proc empty(): PNode = nkEmpty.newTree()
 #     newStrNode(nkStrLit, "SSSSSSSSSSSSS"))))
 
 ###################################################
-proc foo*(str: string): string =
-  # var res = ""
-  # processModule4(
-  #   # nkCall.newTree(graph.newIdent("echo"), newStrNode(nkStrLit, str))
-  #   # nkCall.newTree(graph.newIdent("&="), graph.newIdent("res") ,newStrNode(nkStrLit, str))
-  #   nkCall.newTree(graph.newIdent("return"), newStrNode(nkStrLit, str))
-  # )
-  # return res
-  var res = ""
-  graph.vm.PEvalContext().registerCallback(
-    "customProc",
-    proc(args: VmArgs) =
-      echo "Called custom proc with arg [", args.getString(0), "]"
-      res = args.getString(0)
-  )
-
+proc foo*(str: string) =
+  var res: int
   processModule4(
-    nkStmtList.newTree(
-      nkProcDef.newTree(
-        graph.getIdent("customProc"),
-        empty(),
-        empty(),
-        nkFormalParams.newTree(
-          empty(),
-          nkIdentDefs.newTree(graph.getIdent("arg"), graph.getIdent("string"), empty())),
-        empty(),
-        empty(),
-        nkStmtList.newTree(nkDiscardStmt.newTree(empty()))),
-    nkCall.newTree(graph.getIdent("customProc"), newStrNode(nkStrLit, "SSSSSSSSSSSSS"))))
 
-  return res
+
+    # nkStmtList.newTree(
+    #   nkReturnStmt.newTree(
+    #     newStrNode("foo", nkStrLit)))
+
+    # nkStmtList.newTree(
+    #   nkReturnStmt.newTree(
+    #     newStrNode(nkStrLit, str)
+    #   )
+    # )
+
+    # nkStmtList.newTree(
+    #   nkCall.newTree(
+    #     nkReturnStmt.newTree(
+    #       newIntNode(nkIntLit, 12)
+    #     )
+    #   )
+    # )
+
+    nkStmtList.newTree(
+      nkAsgn.newTree(
+        graph.getIdent("res"),
+        newIntNode(nkIntLit, 123)))
+
+
+  )
+    # nkCall.newTree(graph.newIdent("echo"), newStrNode(nkStrLit, str))
+    # nkCall.newTree(graph.newIdent("&="), graph.newIdent("res") ,newStrNode(nkStrLit, str))
+  # return res
+  # var res = ""
+  # graph.vm.PEvalContext().registerCallback(
+  #   "customProc",
+  #   proc(args: VmArgs) =
+  #     echo "Called custom proc with arg [", args.getString(0), "]"
+  #     res = args.getString(0)
+  # )
+
+  # processModule4(
+  #   nkStmtList.newTree(
+  #     nkProcDef.newTree(
+  #       graph.getIdent("customProc"),
+  #       empty(),
+  #       empty(),
+  #       nkFormalParams.newTree(
+  #         empty(),
+  #         nkIdentDefs.newTree(graph.getIdent("arg"), graph.getIdent("string"), empty())),
+  #       empty(),
+  #       empty(),
+  #       nkStmtList.newTree(nkDiscardStmt.newTree(empty()))),
+  #   nkCall.newTree(graph.getIdent("customProc"), newStrNode(nkStrLit, "SSSSSSSSSSSSS"))))
+
+  # return res
 
   ## Dynamically evaluates your template,
   ## good for development withouth recompilation.

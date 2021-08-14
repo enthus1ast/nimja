@@ -5,12 +5,18 @@ import ../../src/nimja/parser
 
 # proc foo(): string =
 #   compileTemplate[NimNode]("foo")
-
-proc ev(users: seq[string]): string =
+# import macros
+proc ev(): int =
+  var res: int
   foo("hallofslkjsfdlkjsdfd")
+  return res
 
-var ll = ev(@["foo", "baa"])
+# var ll = ev(@["foo", "baa"])
+var ll = ev()
 echo ll
-echo ll.len
+# echo ll.len
 # var res =  ev()
 # echo res.len
+
+# dumpAstGen:
+#   return "foo"
