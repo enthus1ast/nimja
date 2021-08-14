@@ -1,5 +1,6 @@
 *.exe
 nimcache/**
+cache/**
 outputGotten.txt
 *~
 testresults

@@ -10,10 +10,10 @@ srcDir        = "src"
 # Dependencies
 
 requires "nim >= 1.4.8"
+requires "hnimast" # for dynamic evaluation
 
 task tests, "Run all tests":
   exec "testament p 'tests/*/*.nim'"
-
 
 task docs, "Generate all docs":
   rmDir("src/htmldocs/")
