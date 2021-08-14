@@ -2,45 +2,40 @@ import asynchttpserver, asyncdispatch
 import nimja/parser
 import os, random # os and random are later used in the templates, so imported here
 
-# type
-#   User = object
-#     name: string
-#     lastname: string
-#     age: int
-
-# proc renderIndex(title: string, users: seq[User]): string =
-#   ## the `index.nwt` template is transformed to nim code.
-#   ## so it can access all variables like `title` and `users`
-#   ## the return variable could be `string` or `Rope` or
-#   ## anything which has a `&=`(obj: YourObj, str: string) proc.
-#   compileTemplateFile(getScriptDir() / "index.nwt")
-
-
 ############
 import system/nimscript
 import compiler/nimeval
 import compiler/ast
 import compiler/llstream
 import compiler/pathutils
+import compiler/renderer # To get the correct `$` procedure
 import os
 
 echo cmpic("asdf", "asdf")
+
+# for p in @[
+#     stdlib,
+#     stdlib / "pure",
+#     stdlib / "core",
+#     stdlib / "pure" / "collections"
+#   ]:
+#   conf.searchPaths.add(AbsoluteDir p)
+
+let stdlib = findNimStdLibCompileTime()
+echo stdlib
 var inter = createInterpreter(
-  # "dyn.nims",
   """C:\Users\david\projects\nimja\examples\fromReadme\dyn.nims""",
   [
-    findNimStdLibCompileTime(),
+    stdlib,
     $toAbsoluteDir("./"),
     """C:\Users\david\projects\nimja\src""",
-    """C:\Users\david\.choosenim\toolchains\nim-1.4.8\lib\pure\""",
-    """C:\Users\david\.choosenim\toolchains\nim-1.4.8\lib\core\""",
-    """C:\Users\david\.choosenim\toolchains\nim-#head\lib\pure\collections\"""
+    stdlib / "pure",
+    stdlib / "core",
+    stdlib / "pure/collections"
   ],
-  # defines = @[nimscript],
   defines = @[("nimscript", "true"), ("nimconfig", "true")],
   registerOps = true
 )
-
 
 let path = toAbsolute("dyn.nims", toAbsoluteDir("./"))
 proc call(): string =
@@ -51,10 +46,15 @@ proc call(): string =
     ## This seems to not being catchable
     echo "cannot execute!"
     echo getCurrentExceptionMsg()
+
+  for sym in inter.exportedSymbols:
+    echo sym.name.s, " = ", inter.getGlobalValue(sym)
+
   let sym = inter.selectUniqueSymbol("ret")
   let ret = inter.getGlobalValue(sym)
   return ret.strVal
   script.llStreamClose()
+
 ############
 
 proc main {.async.} =

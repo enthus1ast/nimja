@@ -309,9 +309,13 @@ proc astAst(tokens: seq[NwtNode]): seq[NimNode] =
   for token in tokens:
     result.add astAstOne(token)
 
-proc compile(str: string): seq[NwtNode] =
-  ## TODO extend must be the first token, but
-  ## comments can come before extend (for documentation purpose)
+proc parse*(str: string): seq[NwtNode] =
+  ## The nimja parser.
+  ##
+  ## Generates NwtNodes from template strings
+  ## These can later be compiled or dynamically evaluated.
+  # TODO extend must be the first token, but
+  # comments can come before extend (for documentation purpose)
   var lexerTokens = toSeq(nwtTokenize(str))
   var firstStepTokens = parseFirstStep(lexerTokens)
   var pos = 0
@@ -365,7 +369,7 @@ macro compileTemplateStr*(str: typed): untyped =
   ##
   ##  echo yourFunc(true)
   ##
-  let nwtNodes = compile(str.strVal)
+  let nwtNodes = parse(str.strVal)
   when defined(dumpNwtAst): echo nwtNodes
   when defined(dumpNwtAstPretty): echo nwtNodes.pretty
   result = newStmtList()
@@ -383,7 +387,7 @@ macro compileTemplateFile*(path: static string): untyped =
   ##  echo yourFunc(true)
   ##
   let str = staticRead(path)
-  let nwtNodes = compile(str)
+  let nwtNodes = parse(str)
   when defined(dumpNwtAst): echo nwtNodes
   when defined(dumpNwtAstPretty): echo nwtNodes.pretty
   result = newStmtList()
@@ -394,28 +398,146 @@ macro compileTemplateFile*(path: static string): untyped =
 # # #################################################
 # # Dynamic
 # # #################################################
-# import
-#   compiler/[
-#     nimeval, ast, astalgo, pathutils, vm, scriptconfig,
-#     modulegraphs, options, idents, condsyms, sem, modules, llstream,
-#     lineinfos, astalgo, msgs, parser, idgen, vmdef
-#   ]
+# https://github.com/haxscramper/hack/blob/master/testing/nim/compilerapi/nims_template.nim#L71
+# https://github.com/haxscramper/hack/blob/d2324554cff3d9c3401715700e67383bb4474771/testing/nim/compilerapi/nims_template.nim#L62
+include compiler/passes
+import
+  compiler/[
+    nimeval, ast, astalgo, pathutils, vm, scriptconfig,
+    modulegraphs, options, idents, condsyms, sem, modules, llstream,
+    lineinfos, astalgo, msgs, parser, idgen, vmdef, #passes
+  ]
+import hnimast/hast_common ## haxscramper
+
+
+var
+  conf = newConfigRef()
+  cache = newIdentCache()
+  graph = newModuleGraph(cache, conf)
+
+let stdlib = findNimStdLibCompileTime()
+conf.libpath = AbsoluteDir stdlib
+
+for p in @[
+    stdlib,
+    stdlib / "pure",
+    stdlib / "core",
+    stdlib / "pure" / "collections"
+  ]:
+  conf.searchPaths.add(AbsoluteDir p)
+
+conf.cmd = cmdInteractive
+conf.errorMax = high(int)
+conf.structuredErrorHook =
+  proc (config: ConfigRef; info: TLineInfo; msg: string; severity: Severity) =
+    # assert false, &"{info.line}:{info.col} {msg}" # TODO?
+    echo "TODO"
+
+initDefines(conf.symbols)
+
+defineSymbol(conf.symbols, "nimscript")
+defineSymbol(conf.symbols, "nimconfig")
+
+registerPass(graph, semPass)
+registerPass(graph, evalPass)
+
+var module = graph.makeModule(AbsoluteFile"scriptname.nim")
+incl(module.flags, sfMainModule)
+graph.vm = setupVM(module, cache, "scriptname.nim", graph)
+graph.compileSystemModule()
+
+
+# graph.vm.PEvalContext().registerCallback(
+#   "customProc",
+#   proc(args: VmArgs) =
+#     echo "Called custom proc with arg [", args.getString(0), "]"
+# )
+
+
+proc processModule3(graph: ModuleGraph; module: PSym, n: PNode) =
+  var a: TPassContextArray
+  openPasses(graph, a, module)
+  discard processTopLevelStmt(graph, n, a)
+  closePasses(graph, a)
+
+proc processModule4(node: PNode) =
+  # uses globals
+  var passContextArray: TPassContextArray
+  openPasses(graph, passContextArray, module)
+  discard processTopLevelStmt(graph, node, passContextArray)
+  # echo repr a
+  closePasses(graph, passContextArray)
+
+proc getIdent(graph: ModuleGraph, name: string): PNode =
+  newIdentNode(graph.cache.getIdent(name), TLineInfo())
+
+proc empty(): PNode = nkEmpty.newTree()
+
 # import hnimast
+# import dynamic
+# processModule3(nkCall.newTree(
+#     graph.newIdent("echo"),
+#     newStrNode(nkStrLit, "SSSSSSSSSSSSS"))))
 
-# proc foo*() =
-#   ## Dynamically evaluates your template,
-#   ## good for development withouth recompilation.
-#   ## When you're done, compile your templates for more speed.
-#   ##
-#   ## Dynamic evaluation uses the Nim Compilers VM for expanding your template.
-#   ##
-#   discard
+###################################################
+proc foo*(str: string): string =
+  # var res = ""
+  # processModule4(
+  #   # nkCall.newTree(graph.newIdent("echo"), newStrNode(nkStrLit, str))
+  #   # nkCall.newTree(graph.newIdent("&="), graph.newIdent("res") ,newStrNode(nkStrLit, str))
+  #   nkCall.newTree(graph.newIdent("return"), newStrNode(nkStrLit, str))
+  # )
+  # return res
+  var res = ""
+  graph.vm.PEvalContext().registerCallback(
+    "customProc",
+    proc(args: VmArgs) =
+      echo "Called custom proc with arg [", args.getString(0), "]"
+      res = args.getString(0)
+  )
 
+  processModule4(
+    nkStmtList.newTree(
+      nkProcDef.newTree(
+        graph.getIdent("customProc"),
+        empty(),
+        empty(),
+        nkFormalParams.newTree(
+          empty(),
+          nkIdentDefs.newTree(graph.getIdent("arg"), graph.getIdent("string"), empty())),
+        empty(),
+        empty(),
+        nkStmtList.newTree(nkDiscardStmt.newTree(empty()))),
+    nkCall.newTree(graph.getIdent("customProc"), newStrNode(nkStrLit, "SSSSSSSSSSSSS"))))
+
+  return res
+
+  ## Dynamically evaluates your template,
+  ## good for development withouth recompilation.
+  ## When you're done, compile your templates for more speed.
+  ##
+  ## Dynamic evaluation uses the Nim Compilers VM for expanding your template.
+  ##
+  # discard
+  # let stdlib = findNimStdLibCompileTime()
+  # echo stdlib
+  # var inter = createInterpreter(
+  #   """C:\Users\david\projects\nimja\examples\fromReadme\dyn.nims""",
+  #   [
+  #     stdlib,
+  #     $toAbsoluteDir("./"),
+  #     """C:\Users\david\projects\nimja\src""",
+  #     stdlib / "pure",
+  #     stdlib / "core",
+  #     stdlib / "pure/collections"
+  #   ],
+  #   defines = @[("nimscript", "true"), ("nimconfig", "true")],
+  #   registerOps = true
 # proc conv[N](ast: NwtNode): N =
 #   case ast.kind:
 #     of NIf:
 #       result = newIf[N](
-#         conv[N](ast.ifCond),
+#         conv[N](ast.ifStmt),
 #         conv[N](ast.nnThen),
 #         conv[N](ast.nnElse))
 
@@ -426,19 +548,20 @@ macro compileTemplateFile*(path: static string): untyped =
 #       discard
 # #     of # ...
 
-# proc compileTemplate[N: NimNode | PNode](code: string): N =
-#   let ast: NwtNode = compileTemplateStr(code)
-#   return conv[N](ast)
-
+# proc compileTemplate*[N: NimNode | PNode](code: string): N =
+#   result = newStmtList()
+#   let asts: seq[NwtNode] = parse(code)
+#   for ast in asts:
+#     result.add conv[N](ast)
 
 # # macro compileTemplateStr(str: static[string]): untyped =
-# #   ## Compile template to the nim node
-# #   compileTemplate[NimNode](str)
+#   ## Compile template to the nim node
+#   # for compileTemplate[NimNode](str)
 
-# proc evalTemplateRuntime(str: string) =
-#   ## Evaluate template in the vm
-#   processModule(graph, m, compileTemplate[PNode](str))
+# # proc evalTemplateRuntime(str: string) =
+# #   ## Evaluate template in the vm
+# #   processModule(graph, m, compileTemplate[PNode](str))
 
-# # proc codegenTemplate(str: string): string =
-# #   ## Generate code for template
-# #   $compileTemplate[PNode](str)
+# # # proc codegenTemplate(str: string): string =
+# # #   ## Generate code for template
+# # #   $compileTemplate[PNode](str)
