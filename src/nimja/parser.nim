@@ -50,6 +50,11 @@ type
     kind: FsNodeKind
     value: string
 
+when defined(dumpNwtAstPretty):
+  import json
+  proc pretty*(nwtNodes: seq[NwtNode]): string {.compileTime.} =
+    (%* nwtNodes).pretty()
+
 template getScriptDir*(): string =
   ## Helper for staticRead.
   ##
@@ -304,9 +309,14 @@ proc astAst(tokens: seq[NwtNode]): seq[NimNode] =
   for token in tokens:
     result.add astAstOne(token)
 
-template compile(): untyped =
+proc compile(str: string): seq[NwtNode] =
   ## TODO extend must be the first token, but
   ## comments can come before extend (for documentation purpose)
+  var lexerTokens = toSeq(nwtTokenize(str))
+  var firstStepTokens = parseFirstStep(lexerTokens)
+  var pos = 0
+  var secondsStepTokens = parseSecondStep(firstStepTokens, pos)
+  when defined(dumpNwtAst): echo secondsStepTokens
   if secondsStepTokens[0].kind == NExtends:
     # echo "===== THIS TEMPLATE EXTENDS ====="
     # Load master template
@@ -334,43 +344,101 @@ template compile(): untyped =
             toRender.add blockToken
       else:
         toRender.add masterSecondsStepToken
-    result = newStmtList()
-    for token in toRender:
-      result.add astAstOne(token)
+    return toRender
   else:
     var toRender: seq[NwtNode] = @[]
-    result = newStmtList()
     for token in secondsStepTokens:
       if token.kind == NBlock:
-        # Render the content of a block directly (no extension done)
         for blockToken in token.blockBody:
           toRender.add blockToken
       else:
         toRender.add token
-    for token in toRender:
-      result.add astAstOne(token)
+    return toRender
+
 
 macro compileTemplateStr*(str: typed): untyped =
   ## Compiles a nimja template from a string.
   ##
   ## .. code-block:: Nim
-  ##   compileTemplateString("{%if true%}TRUE{%endif%}")
-  var lexerTokens = toSeq(nwtTokenize(str.strVal))
-  var firstStepTokens = parseFirstStep(lexerTokens)
-  var pos = 0
-  var secondsStepTokens = parseSecondStep(firstStepTokens, pos)
-  when defined(dumpNwtAst): echo secondsStepTokens
-  compile
+  ##  proc yourFunc(yourParams: bool): string =
+  ##    compileTemplateString("{%if yourParams%}TRUE{%endif%}")
+  ##
+  ##  echo yourFunc(true)
+  ##
+  let nwtNodes = compile(str.strVal)
+  when defined(dumpNwtAst): echo nwtNodes
+  when defined(dumpNwtAstPretty): echo nwtNodes.pretty
+  result = newStmtList()
+  for nwtNode in nwtNodes:
+    result.add astAstOne(nwtNode)
+  when defined(dumpNwtMacro): echo toStrLit(result)
 
 macro compileTemplateFile*(path: static string): untyped =
   ## Compiles a nimja template from a file.
   ##
   ## .. code-block:: nim
-  ##   compileTemplateFile(getScriptDir() / "relative/path.nwt")
+  ##  proc yourFunc(yourParams: bool): string =
+  ##    compileTemplateFile(getScriptDir() / "relative/path.nwt")
+  ##
+  ##  echo yourFunc(true)
+  ##
   let str = staticRead(path)
-  var lexerTokens = toSeq(nwtTokenize(str))
-  var firstStepTokens = parseFirstStep(lexerTokens)
-  var pos = 0
-  var secondsStepTokens = parseSecondStep(firstStepTokens, pos)
-  when defined(dumpNwtAst): echo secondsStepTokens
-  compile
+  let nwtNodes = compile(str)
+  when defined(dumpNwtAst): echo nwtNodes
+  when defined(dumpNwtAstPretty): echo nwtNodes.pretty
+  result = newStmtList()
+  for nwtNode in nwtNodes:
+    result.add astAstOne(nwtNode)
+  when defined(dumpNwtMacro): echo toStrLit(result)
+
+# # #################################################
+# # Dynamic
+# # #################################################
+# import
+#   compiler/[
+#     nimeval, ast, astalgo, pathutils, vm, scriptconfig,
+#     modulegraphs, options, idents, condsyms, sem, modules, llstream,
+#     lineinfos, astalgo, msgs, parser, idgen, vmdef
+#   ]
+# import hnimast
+
+# proc foo*() =
+#   ## Dynamically evaluates your template,
+#   ## good for development withouth recompilation.
+#   ## When you're done, compile your templates for more speed.
+#   ##
+#   ## Dynamic evaluation uses the Nim Compilers VM for expanding your template.
+#   ##
+#   discard
+
+# proc conv[N](ast: NwtNode): N =
+#   case ast.kind:
+#     of NIf:
+#       result = newIf[N](
+#         conv[N](ast.ifCond),
+#         conv[N](ast.nnThen),
+#         conv[N](ast.nnElse))
+
+#     of NStr:
+#       result = newNLit[N, string](ast.strBody)
+
+#     else:
+#       discard
+# #     of # ...
+
+# proc compileTemplate[N: NimNode | PNode](code: string): N =
+#   let ast: NwtNode = compileTemplateStr(code)
+#   return conv[N](ast)
+
+
+# # macro compileTemplateStr(str: static[string]): untyped =
+# #   ## Compile template to the nim node
+# #   compileTemplate[NimNode](str)
+
+# proc evalTemplateRuntime(str: string) =
+#   ## Evaluate template in the vm
+#   processModule(graph, m, compileTemplate[PNode](str))
+
+# # proc codegenTemplate(str: string): string =
+# #   ## Generate code for template
+# #   $compileTemplate[PNode](str)
