@@ -76,30 +76,18 @@ proc parseFirstStep(tokens: seq[Token]): seq[FSNode] =
     if token.tokenType == NwtEval:
       let (pref, suf) = splitStmt(token.value)
       case pref
-      of "if":
-        result.add FSNode(kind: FsIf, value: suf)
-      of "elif":
-        result.add FSNode(kind: FsElif, value: suf)
-      of "else":
-        result.add FSNode(kind: FsElse, value: suf)
-      of "endif":
-        result.add FSNode(kind: FsEndif, value: suf)
-      of "for":
-        result.add FSNode(kind: FsFor, value: suf)
-      of "endfor":
-        result.add FSNode(kind: FsEndfor, value: suf)
-      of "while":
-        result.add FSNode(kind: FsWhile, value: suf)
-      of "endwhile":
-        result.add FSNode(kind: FsEndWhile, value: suf)
-      of "importnwt":
-        result.add FSNode(kind: FsImport, value: suf)
-      of "block":
-        result.add FSNode(kind: FsBlock, value: suf)
-      of "endblock":
-        result.add FSNode(kind: FsEndBlock, value: suf)
-      of "extends":
-        result.add FSNode(kind: FsExtends, value: suf)
+      of "if": result.add FSNode(kind: FsIf, value: suf)
+      of "elif": result.add FSNode(kind: FsElif, value: suf)
+      of "else": result.add FSNode(kind: FsElse, value: suf)
+      of "endif": result.add FSNode(kind: FsEndif, value: suf)
+      of "for": result.add FSNode(kind: FsFor, value: suf)
+      of "endfor": result.add FSNode(kind: FsEndfor, value: suf)
+      of "while": result.add FSNode(kind: FsWhile, value: suf)
+      of "endwhile": result.add FSNode(kind: FsEndWhile, value: suf)
+      of "importnwt": result.add FSNode(kind: FsImport, value: suf)
+      of "block": result.add FSNode(kind: FsBlock, value: suf)
+      of "endblock": result.add FSNode(kind: FsEndBlock, value: suf)
+      of "extends": result.add FSNode(kind: FsExtends, value: suf)
       else:
         result.add FSNode(kind: FsEval, value: token.value)
     elif token.tokenType == NwtString:
@@ -120,26 +108,29 @@ proc parseSsIf(fsTokens: seq[FsNode], pos: var int): NwtNode =
   var ifstate = IfState.InThen
   while pos < fsTokens.len:
     elem = fsTokens[pos]
-    if elem.kind == FsIf:
-      if ifState == IfState.InThen:
+    case elem.kind
+    of FsIf:
+      case ifState
+      of IfState.InThen:
         result.nnThen.add parseSecondStep(fsTokens, pos)
-      if ifState == IfState.InElse:
+      of IfState.InElse:
         result.nnElse.add parseSecondStep(fsTokens, pos)
-      if ifState == IfState.InElif:
+      of IfState.InElif:
         result.nnElif[^1].elifBody.add parseSecondStep(fsTokens, pos)
-    elif elem.kind == FsElif:
+    of FsElif:
       ifstate = IfState.InElif
       result.nnElif.add NwtNode(kind: NElif, elifStmt: elem.value)
-    elif elem.kind == FsElse:
+    of FsElse:
       ifstate = IfState.InElse
-    elif elem.kind == FsEndif:
+    of FsEndif:
       break
     else:
-      if ifState == IfState.InThen:
+      case ifState
+      of IfState.InThen:
         result.nnThen &= parseSecondStepOne(fsTokens, pos)
-      if ifState == IfState.InElse:
+      of IfState.InElse:
         result.nnElse &= parseSecondStepOne(fsTokens, pos)
-      if ifState == IfState.InElif:
+      of IfState.InElif:
         result.nnElif[^1].elifBody &= parseSecondStepOne(fsTokens, pos)
     pos.inc
 
@@ -200,28 +191,21 @@ proc includeNwt(nodes: var seq[NwtNode], path: string) {.compileTime.} =
 
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     let fsToken = fsTokens[pos]
+
+    case fsToken.kind
     # Complex Types
-    if fsToken.kind == FSif:
-      return parseSsIf(fsTokens, pos)
-    elif fsToken.kind == FsWhile:
-      return parseSsWhile(fsTokens, pos)
-    elif fsToken.kind == FsFor:
-      return parseSsFor(fsTokens, pos)
+    of FSif: return parseSsIf(fsTokens, pos)
+    of FsWhile: return parseSsWhile(fsTokens, pos)
+    of FsFor: return parseSsFor(fsTokens, pos)
+    of FsBlock: return parseSsBlock(fsTokens, pos)
+
     # Simple Types
-    elif fsToken.kind == FsStr:
-      return NwtNode(kind: NStr, strBody: fsToken.value)
-    elif fsToken.kind == FsVariable:
-      return NwtNode(kind: NVariable, variableBody: fsToken.value)
-    elif fsToken.kind == FsEval:
-      return NwtNode(kind: NEval, evalBody: fsToken.value)
-    elif fsToken.kind == FsBlock:
-      return parseSsBlock(fsTokens, pos)
-    elif fsToken.kind == FsExtends:
-      return parseSsExtends(fsTokens, pos)
-    elif fsToken.kind == FsImport:
-        includeNwt(result, fsToken.value)
-    else:
-      echo "[SS] NOT IMPL: ", fsToken
+    of FsStr: return NwtNode(kind: NStr, strBody: fsToken.value)
+    of FsVariable: return NwtNode(kind: NVariable, variableBody: fsToken.value)
+    of FsEval: return NwtNode(kind: NEval, evalBody: fsToken.value)
+    of FsExtends: return parseSsExtends(fsTokens, pos)
+    of FsImport: includeNwt(result, fsToken.value)
+    else: echo "[SS] NOT IMPL: ", fsToken
 
 proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
   while pos < fsTokens.len:
@@ -304,26 +288,17 @@ proc astIf(token: NwtNode): NimNode =
 
 
 proc astAstOne(token: NwtNode): NimNode =
-  if token.kind == NVariable:
-    return astVariable(token)
-  elif token.kind == NStr:
-    return astStr(token)
-  elif token.kind == NEval:
-    return astEval(token)
-  elif token.kind == NComment:
-    return astComment(token)
-  elif token.kind == NIf:
-    return astIf(token)
-  elif token.kind == NFor:
-    return astFor(token)
-  elif token.kind == NWhile:
-    return astWhile(token)
-  elif token.kind == NExtends:
-    return parseStmt("discard")
-  elif token.kind == NBlock:
-    return parseStmt("discard")
-  else:
-    raise newException(ValueError, "cannot convert to ast:" & $token.kind)
+  case token.kind
+  of NVariable: return astVariable(token)
+  of NStr: return astStr(token)
+  of NEval: return astEval(token)
+  of NComment: return astComment(token)
+  of NIf: return astIf(token)
+  of NFor: return astFor(token)
+  of NWhile: return astWhile(token)
+  of NExtends: return parseStmt("discard")
+  of NBlock: return parseStmt("discard")
+  else: raise newException(ValueError, "cannot convert to ast:" & $token.kind)
 
 proc astAst(tokens: seq[NwtNode]): seq[NimNode] =
   for token in tokens:
@@ -386,8 +361,6 @@ macro compileTemplateStr*(str: typed): untyped =
   var secondsStepTokens = parseSecondStep(firstStepTokens, pos)
   when defined(dumpNwtAst): echo secondsStepTokens
   compile
-
-
 
 macro compileTemplateFile*(path: static string): untyped =
   ## Compiles a nimja template from a file.
