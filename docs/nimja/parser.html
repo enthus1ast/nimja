@@ -135,14 +135,20 @@ function main() {
 <dt><pre><span class="Keyword">macro</span> <a href="#compileTemplateStr.m%2Ctyped"><span class="Identifier">compileTemplateStr</span></a><span class="Other">(</span><span class="Identifier">str</span><span class="Other">:</span> <span class="Identifier">typed</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">untyped</span></pre></dt>
 <dd>
 
-Compiles a nimja template from a string.<pre class="listing"><span class="Identifier">compileTemplateString</span><span class="Punctuation">(</span><span class="StringLit">&quot;{%if true%}TRUE{%endif%}&quot;</span><span class="Punctuation">)</span></pre>
+Compiles a nimja template from a string.<pre class="listing"><span class="Keyword">proc</span> <span class="Identifier">yourFunc</span><span class="Punctuation">(</span><span class="Identifier">yourParams</span><span class="Punctuation">:</span> <span class="Identifier">bool</span><span class="Punctuation">)</span><span class="Punctuation">:</span> <span class="Identifier">string</span> <span class="Operator">=</span>
+  <span class="Identifier">compileTemplateString</span><span class="Punctuation">(</span><span class="StringLit">&quot;{%if yourParams%}TRUE{%endif%}&quot;</span><span class="Punctuation">)</span>
+
+<span class="Identifier">echo</span> <span class="Identifier">yourFunc</span><span class="Punctuation">(</span><span class="Identifier">true</span><span class="Punctuation">)</span></pre>
 
 </dd>
 <a id="compileTemplateFile.m,staticstring"></a>
 <dt><pre><span class="Keyword">macro</span> <a href="#compileTemplateFile.m%2Cstaticstring"><span class="Identifier">compileTemplateFile</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">untyped</span></pre></dt>
 <dd>
 
-Compiles a nimja template from a file.<pre class="listing"><span class="Identifier">compileTemplateFile</span><span class="Punctuation">(</span><span class="Identifier">getScriptDir</span><span class="Punctuation">(</span><span class="Punctuation">)</span> <span class="Operator">/</span> <span class="StringLit">&quot;relative/path.nwt&quot;</span><span class="Punctuation">)</span></pre>
+Compiles a nimja template from a file.<pre class="listing"><span class="Keyword">proc</span> <span class="Identifier">yourFunc</span><span class="Punctuation">(</span><span class="Identifier">yourParams</span><span class="Punctuation">:</span> <span class="Identifier">bool</span><span class="Punctuation">)</span><span class="Punctuation">:</span> <span class="Identifier">string</span> <span class="Operator">=</span>
+  <span class="Identifier">compileTemplateFile</span><span class="Punctuation">(</span><span class="Identifier">getScriptDir</span><span class="Punctuation">(</span><span class="Punctuation">)</span> <span class="Operator">/</span> <span class="StringLit">&quot;relative/path.nwt&quot;</span><span class="Punctuation">)</span>
+
+<span class="Identifier">echo</span> <span class="Identifier">yourFunc</span><span class="Punctuation">(</span><span class="Identifier">true</span><span class="Punctuation">)</span></pre>
 
 </dd>
 
@@ -169,7 +175,7 @@ Compiles a nimja template from a file.<pre class="listing"><span class="Identifi
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-08-11 11:36:08 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2021-08-17 21:13:33 UTC</small>
       </div>
     </div>
   </div>
