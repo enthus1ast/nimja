@@ -330,8 +330,6 @@ proc validExtend(secondsStepTokens: seq[NwtNode]): int =
     )
 
 proc compile(str: string): seq[NwtNode] =
-  ## TODO extend must be the first token, but
-  ## comments can come before extend (for documentation purpose)
   var lexerTokens = toSeq(nwtTokenize(str))
   var firstStepTokens = parseFirstStep(lexerTokens)
   var pos = 0

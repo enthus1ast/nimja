@@ -4,13 +4,6 @@ discard """
 import ../../src/nimja
 import unittest
 
-
-# proc someFunctionThatReturnsString(): string =
-#   "HI THERE!"
-# proc test(): string = compileTemplateStr("""<html>{% if true %}{{ someFunctionThatReturnsString() }}{% endif %}</html>""")
-# echo test()
-
-### Now complex examples follow
 suite "test_if_complex":
   test "if/else":
     block:
