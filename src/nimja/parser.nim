@@ -309,6 +309,26 @@ proc astAst(tokens: seq[NwtNode]): seq[NimNode] =
   for token in tokens:
     result.add astAstOne(token)
 
+proc validExtend(secondsStepTokens: seq[NwtNode]): int =
+  ## Scans if invalid tokens come before extend.
+  ## If no extend was found `-1` is returned, else the position.
+  ## Only Strings and comments are allowed to come before extend
+  result = -1
+  var validBeforeExtend = true
+  for idx, secondStepToken in secondsStepTokens.pairs:
+    case secondStepToken.kind
+    of NComment, NStr: discard
+    of NExtends:
+      result = idx
+      break
+    else:
+      validBeforeExtend = false
+
+  if (result > -1) and (not validBeforeExtend):
+    raise newException(ValueError,
+      "Invalid token(s) before {%extend%}: " & $ secondsStepTokens[0 .. result]
+    )
+
 proc compile(str: string): seq[NwtNode] =
   ## TODO extend must be the first token, but
   ## comments can come before extend (for documentation purpose)
@@ -317,10 +337,13 @@ proc compile(str: string): seq[NwtNode] =
   var pos = 0
   var secondsStepTokens = parseSecondStep(firstStepTokens, pos)
   when defined(dumpNwtAst): echo secondsStepTokens
-  if secondsStepTokens[0].kind == NExtends:
+
+  let foundExtendAt = validExtend(secondsStepTokens)
+
+  if foundExtendAt > -1:
     # echo "===== THIS TEMPLATE EXTENDS ====="
     # Load master template
-    let masterStr = staticRead( getScriptDir() / secondsStepTokens[0].extendsPath)
+    let masterStr = staticRead( getScriptDir() / secondsStepTokens[foundExtendAt].extendsPath)
     var masterLexerTokens = toSeq(nwtTokenize(masterStr))
     var masterFirstStepTokens = parseFirstStep(masterLexerTokens)
     var masterPos = 0
@@ -332,7 +355,7 @@ proc compile(str: string): seq[NwtNode] =
       if masterSecondsStepToken.kind == NBlock:
         ## search the other template and put the stuff in toRender
         var found = false
-        for secondsStepToken in secondsStepTokens[1..^1]:
+        for secondsStepToken in secondsStepTokens[foundExtendAt+1 .. ^1]: # skip everything before the extend
           if secondsStepToken.kind == NExtends: raise newException(ValueError, "only one extend is allowed!")
           if secondsStepToken.kind == NBlock and secondsStepToken.blockName == masterSecondsStepToken.blockName:
             found = true
