@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.1.12"
+version       = "0.1.13"
 author        = "David Krause"
 description   = "typed and compiled template engine inspired by jinja2, twig and onionhammer/nim-templates for Nim."
 license       = "MIT"
@@ -10,7 +10,6 @@ srcDir        = "src"
 # Dependencies
 
 requires "nim >= 1.4.8"
-requires "hnimast" # for dynamic evaluation
 
 task tests, "Run all tests":
   exec "testament p 'tests/*/*.nim'"

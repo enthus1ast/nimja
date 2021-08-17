@@ -21,10 +21,10 @@ block:
 
 
 # TODO How to test on compile time errors?
-block:
-  proc index(title: auto, body: auto): string =
-    compileTemplateStr(""" {% invalid %}  {%extends "../templates/blockMaster.html"%}{%block mytitle%}{{title}}{%endblock%}{%block mybody%}{{body}}{%endblock%}""")
-  index("title", "FOO") == "<html><title>title</title><body>FOO</body></html>"
+# block:
+#   proc index(title: auto, body: auto): string =
+#     compileTemplateStr(""" {% invalid %}  {%extends "../templates/blockMaster.html"%}{%block mytitle%}{{title}}{%endblock%}{%block mybody%}{{body}}{%endblock%}""")
+#   index("title", "FOO") == "<html><title>title</title><body>FOO</body></html>"
 
   # check doAssertRaises(ValueError):
   #   index("", "") == "<html><title></title><body></body></html>"
