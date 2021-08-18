@@ -410,6 +410,7 @@ Dump generated NwtAst for debugging
 ```bash
 nim c -d:dumpNwtAst -r yourfile.nim
 nim c -d:dumpNwtAstPretty -r yourfile.nim
+nim c -d:nwtCacheOff -r yourfile.nim   # <-- disables the NwtNode cache
 ```
 
 Dump generated NimMacros
