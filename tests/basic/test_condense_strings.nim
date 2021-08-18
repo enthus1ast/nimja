@@ -61,32 +61,3 @@ block:
       check toSeq(condenseStrings(beforeCondens))[idx].strBody == afterCondense[idx].strBody
     else:
       discard
-
-# block:
-#   var foo = condenseStrings(beforeCondens2)
-#   foo == afterCondense
-
-# template maybeYieldString() =
-#   if curStr.len != 0:
-#     result.add NwtNode(kind: NStr, strBody: curStr)
-#     curStr = ""
-
-# proc condenseStrings(nodess: seq[NwtNode]): seq[NwtNode] =
-#   var curStr = ""
-#   for node in nodes:
-#     # case node.kind
-#     if node.kind == NStr:
-#       curStr &= node.strBody
-#     # elif node.kind == NComment:
-#     #   continue
-#     # else:
-#     #   if curStr.len != 0:
-#     #     result.add NwtNode(kind: NStr, strBody: curStr)
-#     #     curStr = ""
-#   # maybeYieldString # something to yield after for loop
-
-# assert beforeCondens.condenseStrings() == afterCondense
-
-# assert toSeq(beforeCondens.condenseStrings()) == afterCondense
-# assert toSeq(beforeCondens2.condenseStrings()) == afterCondense
-# assert toSeq(compile("""foo{#comment#}foo{#comment#}foo""").condenseStrings()) == afterCondense
