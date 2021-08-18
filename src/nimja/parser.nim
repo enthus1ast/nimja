@@ -336,6 +336,10 @@ proc validExtend(secondsStepTokens: seq[NwtNode]): int =
 
 
 proc loadCache(str: string): seq[NwtNode] =
+  ## For faster compilation
+  ## ```-d:nwtCacheOff``` to disable caching
+  ## Creates NwtNodes only the first time for a given string,
+  ## the second time is returned from the cache
   when defined(nwtCacheOff):
     var lexerTokens = toSeq(nwtTokenize(str))
     var firstStepTokens = parseFirstStep(lexerTokens)
@@ -353,6 +357,11 @@ proc loadCache(str: string): seq[NwtNode] =
       return cacheNwtNode[str]
 
 proc loadCacheFile(path: Path): string =
+  ## For faster compilation
+  ## ```-d:nwtCacheOff``` to disable caching
+  ## Statically reads a file, and caches it.
+  ## The second time the same file should be read
+  ## it is returned from the cache
   when defined(nwtCacheOff):
     return staticRead(path)
   else:
@@ -363,30 +372,16 @@ proc loadCacheFile(path: Path): string =
       cacheNwtNodeFile[path] = staticRead(path)
       return cacheNwtNodeFile[path]
 
-
-
 proc compile(str: string): seq[NwtNode] =
-  # var lexerTokens = toSeq(nwtTokenize(str))
-  # var firstStepTokens = parseFirstStep(lexerTokens)
-  # var pos = 0
-  # var secondsStepTokens = parseSecondStep(firstStepTokens, pos)
+  ## Transforms a template string into a seq of NwtNodes
   var secondsStepTokens = loadCache(str)
   when defined(dumpNwtAst): echo secondsStepTokens
-
   let foundExtendAt = validExtend(secondsStepTokens)
-
   if foundExtendAt > -1:
     # echo "===== THIS TEMPLATE EXTENDS ====="
     # Load master template
-
-    # let masterStr = staticRead( getScriptDir() / secondsStepTokens[foundExtendAt].extendsPath)
     let masterStr = loadCacheFile( getScriptDir() / secondsStepTokens[foundExtendAt].extendsPath )
-    # var masterLexerTokens = toSeq(nwtTokenize(masterStr))
-    # var masterFirstStepTokens = parseFirstStep(masterLexerTokens)
-    # var masterPos = 0
-    # var masterSecondsStepTokens = parseSecondStep(masterFirstStepTokens, masterPos)
     var masterSecondsStepTokens = loadCache(masterStr)
-
     # Load THIS template (above)
     var toRender: seq[NwtNode] = @[]
     for masterSecondsStepToken in masterSecondsStepTokens:
