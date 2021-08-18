@@ -372,8 +372,28 @@ proc loadCacheFile(path: Path): string =
       cacheNwtNodeFile[path] = staticRead(path)
       return cacheNwtNodeFile[path]
 
+iterator condenseStrings(nodes: seq[NwtNode]): NwtNode =
+  when defined(noCondenseStrings):
+    discard # TODO how to make an interator a no operation
+    for node in nodes: yield node
+  else:
+    var curStr = ""
+    for node in nodes:
+      case node.kind
+      of NStr:
+        curStr &= node.strBody
+      of NComment:
+        continue
+      else:
+        yield NwtNode(kind: NStr, strBody: curStr)
+        curStr = ""
+        yield node
+    if curStr.len != 0:
+      yield NwtNode(kind: NStr, strBody: curStr)
+
 proc compile(str: string): seq[NwtNode] =
   ## Transforms a template string into a seq of NwtNodes
+  # TODO make to ITERATOR
   var secondsStepTokens = loadCache(str)
   when defined(dumpNwtAst): echo secondsStepTokens
   let foundExtendAt = validExtend(secondsStepTokens)
@@ -400,7 +420,7 @@ proc compile(str: string): seq[NwtNode] =
             toRender.add blockToken
       else:
         toRender.add masterSecondsStepToken
-    return toRender
+    return toSeq(toRender.condenseStrings()) # TODO make to ITERATOR
   else:
     var toRender: seq[NwtNode] = @[]
     for token in secondsStepTokens:
@@ -409,7 +429,7 @@ proc compile(str: string): seq[NwtNode] =
           toRender.add blockToken
       else:
         toRender.add token
-    return toRender
+    return toSeq(toRender.condenseStrings()) # TODO make to ITERATOR
 
 
 macro compileTemplateStr*(str: typed): untyped =
