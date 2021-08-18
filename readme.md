@@ -90,7 +90,8 @@ index.nwt:
 
   blocks can have arbitrary names
 
-  currently the extends must be on the FIRST LINE!
+  extend must be the first token in the template,
+  only comments `{# Some foo #}` and strings are permitted to come before it.
 #}
 
 
@@ -166,7 +167,7 @@ body {
   If the block contains content and is NOT overwritten later.
   The content from the master is rendered
 #}
-{% block onlyMasterBlock %}Only Master Block (does it work yet?){% endblock %}
+{% block onlyMasterBlock %}Only Master Block{% endblock %}
 
 <footer>
   {% block footer %}{% endblock %}
@@ -210,11 +211,11 @@ is transformed to:
 
 ```nim
 proc foo(ss: string; ii: int): string =
-  result &= "example"   # <- this must come from the vm
-  if ii == 1:   # <- this must come from the vm
-    result &= ss   # <- this must come from the vm
-  var myvar = 1   # <- this must come from the vm
-  inc(myvar, 1)   # <- this must come from the vm
+  result &= "example"
+  if ii == 1:
+    result &= ss
+  var myvar = 1
+  inc(myvar, 1)
 ```
 
 this means you have the full power of nim in your templates.
@@ -252,6 +253,14 @@ for
 ```twig
 {% for (cnt, elem) in @["foo", "baa", "baz"].pairs() %}
   {{cnt}} -> {{elem}}
+{% endfor %}
+```
+
+```twig
+{% for elem in someObj.someIter() %}
+  {# `elem` is accessible from the "some/template.nwt" #}
+  {# see importnwt section for more info #}
+  {% importnwt "some/template.nwt" %}
 {% endfor %}
 ```
 
@@ -388,7 +397,7 @@ This is a COMPILED template engine.
 This means you must _recompile_ your application
 for every change you do in the templates!
 
-_Automatic recompilation and/or hot code reloading is a [planned feature](https://github.com/enthus1ast/nimja/issues/6)._
+_Automatic recompilation / hot code reloading / dynamic execution is a [planned feature](https://github.com/enthus1ast/nimja/issues/6)._
 
 ```bash
 nim c -r yourfile.nim
