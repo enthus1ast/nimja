@@ -1,6 +1,8 @@
 import strutils, macros, sequtils, parseutils, os
 import nwtTokenizer
+import tables
 
+type Path = string
 type
   NwtNodeKind = enum
     NStr, NComment, NIf, NElif, NElse, NWhile, NFor,
@@ -49,6 +51,9 @@ type
   FSNode = object
     kind: FsNodeKind
     value: string
+
+var cacheNwtNode {.compileTime.}: Table[string, seq[NwtNode]] ## a cache for rendered NwtNodes
+var cacheNwtNodeFile {.compileTime.}: Table[Path, string] ## a cache for content of a path
 
 when defined(dumpNwtAstPretty):
   import json
@@ -329,24 +334,74 @@ proc validExtend(secondsStepTokens: seq[NwtNode]): int =
       "Invalid token(s) before {%extend%}: " & $ secondsStepTokens[0 .. result]
     )
 
+
+proc loadCache(str: string): seq[NwtNode] =
+  ## For faster compilation
+  ## ```-d:nwtCacheOff``` to disable caching
+  ## Creates NwtNodes only the first time for a given string,
+  ## the second time is returned from the cache
+  when defined(nwtCacheOff):
+    var lexerTokens = toSeq(nwtTokenize(str))
+    var firstStepTokens = parseFirstStep(lexerTokens)
+    var pos = 0
+    return parseSecondStep(firstStepTokens, pos)
+  else:
+    if cacheNwtNode.contains(str):
+      # echo "cache hit str"
+      return cacheNwtNode[str]
+    else:
+      var lexerTokens = toSeq(nwtTokenize(str))
+      var firstStepTokens = parseFirstStep(lexerTokens)
+      var pos = 0
+      cacheNwtNode[str] = parseSecondStep(firstStepTokens, pos)
+      return cacheNwtNode[str]
+
+proc loadCacheFile(path: Path): string =
+  ## For faster compilation
+  ## ```-d:nwtCacheOff``` to disable caching
+  ## Statically reads a file, and caches it.
+  ## The second time the same file should be read
+  ## it is returned from the cache
+  when defined(nwtCacheOff):
+    return staticRead(path)
+  else:
+    if cacheNwtNodeFile.contains(path):
+      # echo "cache hit file"
+      return cacheNwtNodeFile[path]
+    else:
+      cacheNwtNodeFile[path] = staticRead(path)
+      return cacheNwtNodeFile[path]
+
+iterator condenseStrings(nodes: seq[NwtNode]): NwtNode =
+  when defined(noCondenseStrings):
+    discard # TODO how to make an interator a no operation
+    for node in nodes: yield node
+  else:
+    var curStr = ""
+    for node in nodes:
+      case node.kind
+      of NStr:
+        curStr &= node.strBody
+      of NComment:
+        continue
+      else:
+        yield NwtNode(kind: NStr, strBody: curStr)
+        curStr = ""
+        yield node
+    if curStr.len != 0:
+      yield NwtNode(kind: NStr, strBody: curStr)
+
 proc compile(str: string): seq[NwtNode] =
-  var lexerTokens = toSeq(nwtTokenize(str))
-  var firstStepTokens = parseFirstStep(lexerTokens)
-  var pos = 0
-  var secondsStepTokens = parseSecondStep(firstStepTokens, pos)
+  ## Transforms a template string into a seq of NwtNodes
+  # TODO make to ITERATOR
+  var secondsStepTokens = loadCache(str)
   when defined(dumpNwtAst): echo secondsStepTokens
-
   let foundExtendAt = validExtend(secondsStepTokens)
-
   if foundExtendAt > -1:
     # echo "===== THIS TEMPLATE EXTENDS ====="
     # Load master template
-    let masterStr = staticRead( getScriptDir() / secondsStepTokens[foundExtendAt].extendsPath)
-    var masterLexerTokens = toSeq(nwtTokenize(masterStr))
-    var masterFirstStepTokens = parseFirstStep(masterLexerTokens)
-    var masterPos = 0
-    var masterSecondsStepTokens = parseSecondStep(masterFirstStepTokens, masterPos)
-
+    let masterStr = loadCacheFile( getScriptDir() / secondsStepTokens[foundExtendAt].extendsPath )
+    var masterSecondsStepTokens = loadCache(masterStr)
     # Load THIS template (above)
     var toRender: seq[NwtNode] = @[]
     for masterSecondsStepToken in masterSecondsStepTokens:
@@ -365,7 +420,7 @@ proc compile(str: string): seq[NwtNode] =
             toRender.add blockToken
       else:
         toRender.add masterSecondsStepToken
-    return toRender
+    return toSeq(toRender.condenseStrings()) # TODO make to ITERATOR
   else:
     var toRender: seq[NwtNode] = @[]
     for token in secondsStepTokens:
@@ -374,7 +429,7 @@ proc compile(str: string): seq[NwtNode] =
           toRender.add blockToken
       else:
         toRender.add token
-    return toRender
+    return toSeq(toRender.condenseStrings()) # TODO make to ITERATOR
 
 
 macro compileTemplateStr*(str: typed): untyped =
@@ -403,7 +458,7 @@ macro compileTemplateFile*(path: static string): untyped =
   ##
   ##  echo yourFunc(true)
   ##
-  let str = staticRead(path)
+  let str = loadCacheFile(path)
   let nwtNodes = compile(str)
   when defined(dumpNwtAst): echo nwtNodes
   when defined(dumpNwtAstPretty): echo nwtNodes.pretty
@@ -411,55 +466,3 @@ macro compileTemplateFile*(path: static string): untyped =
   for nwtNode in nwtNodes:
     result.add astAstOne(nwtNode)
   when defined(dumpNwtMacro): echo toStrLit(result)
-
-# # #################################################
-# # Dynamic
-# # #################################################
-# import
-#   compiler/[
-#     nimeval, ast, astalgo, pathutils, vm, scriptconfig,
-#     modulegraphs, options, idents, condsyms, sem, modules, llstream,
-#     lineinfos, astalgo, msgs, parser, idgen, vmdef
-#   ]
-# import hnimast
-
-# proc foo*() =
-#   ## Dynamically evaluates your template,
-#   ## good for development withouth recompilation.
-#   ## When you're done, compile your templates for more speed.
-#   ##
-#   ## Dynamic evaluation uses the Nim Compilers VM for expanding your template.
-#   ##
-#   discard
-
-# proc conv[N](ast: NwtNode): N =
-#   case ast.kind:
-#     of NIf:
-#       result = newIf[N](
-#         conv[N](ast.ifCond),
-#         conv[N](ast.nnThen),
-#         conv[N](ast.nnElse))
-
-#     of NStr:
-#       result = newNLit[N, string](ast.strBody)
-
-#     else:
-#       discard
-# #     of # ...
-
-# proc compileTemplate[N: NimNode | PNode](code: string): N =
-#   let ast: NwtNode = compileTemplateStr(code)
-#   return conv[N](ast)
-
-
-# # macro compileTemplateStr(str: static[string]): untyped =
-# #   ## Compile template to the nim node
-# #   compileTemplate[NimNode](str)
-
-# proc evalTemplateRuntime(str: string) =
-#   ## Evaluate template in the vm
-#   processModule(graph, m, compileTemplate[PNode](str))
-
-# # proc codegenTemplate(str: string): string =
-# #   ## Generate code for template
-# #   $compileTemplate[PNode](str)
