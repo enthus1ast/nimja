@@ -1,6 +1,8 @@
 import strutils, macros, sequtils, parseutils, os
 import nwtTokenizer
+import tables
 
+type Path = string
 type
   NwtNodeKind = enum
     NStr, NComment, NIf, NElif, NElse, NWhile, NFor,
@@ -49,6 +51,9 @@ type
   FSNode = object
     kind: FsNodeKind
     value: string
+
+var cacheNwtNode {.compileTime.}: Table[string, seq[NwtNode]] ## a cache for rendered NwtNodes
+var cacheNwtNodeFile {.compileTime.}: Table[Path, string] ## a cache for content of a path
 
 when defined(dumpNwtAstPretty):
   import json
@@ -329,11 +334,43 @@ proc validExtend(secondsStepTokens: seq[NwtNode]): int =
       "Invalid token(s) before {%extend%}: " & $ secondsStepTokens[0 .. result]
     )
 
+
+proc loadCache(str: string): seq[NwtNode] =
+  when defined(nwtCacheOff):
+    var lexerTokens = toSeq(nwtTokenize(str))
+    var firstStepTokens = parseFirstStep(lexerTokens)
+    var pos = 0
+    return parseSecondStep(firstStepTokens, pos)
+  else:
+    if cacheNwtNode.contains(str):
+      # echo "cache hit str"
+      return cacheNwtNode[str]
+    else:
+      var lexerTokens = toSeq(nwtTokenize(str))
+      var firstStepTokens = parseFirstStep(lexerTokens)
+      var pos = 0
+      cacheNwtNode[str] = parseSecondStep(firstStepTokens, pos)
+      return cacheNwtNode[str]
+
+proc loadCacheFile(path: Path): string =
+  when defined(nwtCacheOff):
+    return staticRead(path)
+  else:
+    if cacheNwtNodeFile.contains(path):
+      # echo "cache hit file"
+      return cacheNwtNodeFile[path]
+    else:
+      cacheNwtNodeFile[path] = staticRead(path)
+      return cacheNwtNodeFile[path]
+
+
+
 proc compile(str: string): seq[NwtNode] =
-  var lexerTokens = toSeq(nwtTokenize(str))
-  var firstStepTokens = parseFirstStep(lexerTokens)
-  var pos = 0
-  var secondsStepTokens = parseSecondStep(firstStepTokens, pos)
+  # var lexerTokens = toSeq(nwtTokenize(str))
+  # var firstStepTokens = parseFirstStep(lexerTokens)
+  # var pos = 0
+  # var secondsStepTokens = parseSecondStep(firstStepTokens, pos)
+  var secondsStepTokens = loadCache(str)
   when defined(dumpNwtAst): echo secondsStepTokens
 
   let foundExtendAt = validExtend(secondsStepTokens)
@@ -341,11 +378,14 @@ proc compile(str: string): seq[NwtNode] =
   if foundExtendAt > -1:
     # echo "===== THIS TEMPLATE EXTENDS ====="
     # Load master template
-    let masterStr = staticRead( getScriptDir() / secondsStepTokens[foundExtendAt].extendsPath)
-    var masterLexerTokens = toSeq(nwtTokenize(masterStr))
-    var masterFirstStepTokens = parseFirstStep(masterLexerTokens)
-    var masterPos = 0
-    var masterSecondsStepTokens = parseSecondStep(masterFirstStepTokens, masterPos)
+
+    # let masterStr = staticRead( getScriptDir() / secondsStepTokens[foundExtendAt].extendsPath)
+    let masterStr = loadCacheFile( getScriptDir() / secondsStepTokens[foundExtendAt].extendsPath )
+    # var masterLexerTokens = toSeq(nwtTokenize(masterStr))
+    # var masterFirstStepTokens = parseFirstStep(masterLexerTokens)
+    # var masterPos = 0
+    # var masterSecondsStepTokens = parseSecondStep(masterFirstStepTokens, masterPos)
+    var masterSecondsStepTokens = loadCache(masterStr)
 
     # Load THIS template (above)
     var toRender: seq[NwtNode] = @[]
@@ -403,7 +443,7 @@ macro compileTemplateFile*(path: static string): untyped =
   ##
   ##  echo yourFunc(true)
   ##
-  let str = staticRead(path)
+  let str = loadCacheFile(path)
   let nwtNodes = compile(str)
   when defined(dumpNwtAst): echo nwtNodes
   when defined(dumpNwtAstPretty): echo nwtNodes.pretty
