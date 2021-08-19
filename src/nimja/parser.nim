@@ -185,9 +185,14 @@ proc parseSsExtends(fsTokens: seq[FsNode], pos: var int): NwtNode =
 converter singleNwtNodeToSeq(nwtNode: NwtNode): seq[NwtNode] =
   return @[nwtNode]
 
-proc includeNwt(nodes: var seq[NwtNode], path: string) {.compileTime.} =
+# proc includeNwt(nodes: var seq[NwtNode], path: string) {.compileTime.} =
+proc includeNwt(nodes: var seq[NwtNode], path: string) =
   const basePath = getProjectPath()
-  var str = staticRead( basePath  / path.strip(true, true, {'"'}) )
+  var str = ""
+  when nimvm:
+    str = staticRead( basePath  / path.strip(true, true, {'"'}) )
+  else:
+    str = readFile( basePath  / path.strip(true, true, {'"'}) )
   var lexerTokens = toSeq(nwtTokenize(str))
   var firstStepTokens = parseFirstStep(lexerTokens)
   var pos = 0
@@ -210,7 +215,7 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     of FsVariable: return NwtNode(kind: NVariable, variableBody: fsToken.value)
     of FsEval: return NwtNode(kind: NEval, evalBody: fsToken.value)
     of FsExtends: return parseSsExtends(fsTokens, pos)
-    # of FsImport: includeNwt(result, fsToken.value) ##########################################################
+    of FsImport: includeNwt(result, fsToken.value)
     else: echo "[SS] NOT IMPL: ", fsToken
 
 proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
