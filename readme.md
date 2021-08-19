@@ -390,6 +390,23 @@ I AM CONTENT
 </html>
 ```
 
+Iterator
+========
+
+Expanded template bodies can also be created as an iterator,
+therefore the generated strings are not concatenated to the result
+`result &= "my string"` but are yielded.
+
+This could be used for streaming templates, or to save memory when a big template is rendered and the http server can send data in chunks:
+
+```nim
+iterator yourIter(yourParams: bool): string =
+  compileTemplateString("{%for idx in 0 .. 100%}{{idx}}{%endfor%}", iter = true)
+
+for elem in yourIter(true):
+  echo elem
+```
+
 Compile / Use
 =============
 

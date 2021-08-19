@@ -54,6 +54,7 @@ type
 
 var cacheNwtNode {.compileTime.}: Table[string, seq[NwtNode]] ## a cache for rendered NwtNodes
 var cacheNwtNodeFile {.compileTime.}: Table[Path, string] ## a cache for content of a path
+var nwtIter {.compileTime.} = false
 
 when defined(dumpNwtAstPretty):
   import json
@@ -243,6 +244,24 @@ func astStr(token: NwtNode): NimNode =
     )
   )
 
+func astVariableIter(token: NwtNode): NimNode =
+  return nnkStmtList.newTree(
+    nnkYieldStmt.newTree(
+      newCall(
+        "$",
+        parseStmt(token.variableBody)
+      )
+    )
+  )
+
+func astStrIter(token: NwtNode): NimNode =
+  return nnkStmtList.newTree(
+    nnkYieldStmt.newTree(
+      newStrLitNode(token.strBody)
+    )
+  )
+
+
 func astEval(token: NwtNode): NimNode =
   return parseStmt(token.evalBody)
 
@@ -299,8 +318,12 @@ proc astIf(token: NwtNode): NimNode =
 
 proc astAstOne(token: NwtNode): NimNode =
   case token.kind
-  of NVariable: return astVariable(token)
-  of NStr: return astStr(token)
+  of NVariable:
+    if nwtIter: return astVariableIter(token)
+    else: return astVariable(token)
+  of NStr:
+    if nwtIter: return astStrIter(token)
+    else: return astStr(token)
   of NEval: return astEval(token)
   of NComment: return astComment(token)
   of NIf: return astIf(token)
@@ -372,11 +395,14 @@ proc loadCacheFile(path: Path): string =
       cacheNwtNodeFile[path] = staticRead(path)
       return cacheNwtNodeFile[path]
 
-iterator condenseStrings(nodes: seq[NwtNode]): NwtNode =
-  when defined(noCondenseStrings):
-    discard # TODO how to make an interator a no operation
-    for node in nodes: yield node
-  else:
+
+
+## TODO maybe put this back into the iterator
+when defined(noCondenseStrings):
+  template condenseStrings(nodes: seq[NwtNode]): seq[NwtNode] =
+    nodes
+else:
+  iterator condenseStrings(nodes: seq[NwtNode]): NwtNode =
     var curStr = ""
     for node in nodes:
       case node.kind
@@ -432,7 +458,7 @@ proc compile(str: string): seq[NwtNode] =
     return toSeq(toRender.condenseStrings()) # TODO make to ITERATOR
 
 
-macro compileTemplateStr*(str: typed): untyped =
+macro compileTemplateStr*(str: typed, iter: static bool = false): untyped =
   ## Compiles a nimja template from a string.
   ##
   ## .. code-block:: Nim
@@ -441,6 +467,18 @@ macro compileTemplateStr*(str: typed): untyped =
   ##
   ##  echo yourFunc(true)
   ##
+  ## If `iter = true` then the macro can be used in an interator body
+  ## this could be used for streaming templates, or to save memory when a big template
+  ## is rendered and the http server can send data in chunks.
+  ##
+  ## .. code-block:: nim
+  ##  iterator yourIter(yourParams: bool): string =
+  ##    compileTemplateString("{%for idx in 0 .. 100%}{{idx}}{%endfor%}", iter = true)
+  ##
+  ##  for elem in yourIter(true):
+  ##    echo elem
+  ##
+  nwtIter = iter
   let nwtNodes = compile(str.strVal)
   when defined(dumpNwtAst): echo nwtNodes
   when defined(dumpNwtAstPretty): echo nwtNodes.pretty
@@ -449,7 +487,7 @@ macro compileTemplateStr*(str: typed): untyped =
     result.add astAstOne(nwtNode)
   when defined(dumpNwtMacro): echo toStrLit(result)
 
-macro compileTemplateFile*(path: static string): untyped =
+macro compileTemplateFile*(path: static string, iter: static bool = false): untyped =
   ## Compiles a nimja template from a file.
   ##
   ## .. code-block:: nim
@@ -458,6 +496,18 @@ macro compileTemplateFile*(path: static string): untyped =
   ##
   ##  echo yourFunc(true)
   ##
+  ## If `iter = true` then the macro can be used in an interator body
+  ## this could be used for streaming templates, or to save memory when a big template
+  ## is rendered and the http server can send data in chunks.
+  ##
+  ## .. code-block:: nim
+  ##  iterator yourIter(yourParams: bool): string =
+  ##    compileTemplateFile(getScriptDir() / "relative/path.nwt", iter = true)
+  ##
+  ##  for elem in yourIter(true):
+  ##    echo elem
+  ##
+  nwtIter = iter
   let str = loadCacheFile(path)
   let nwtNodes = compile(str)
   when defined(dumpNwtAst): echo nwtNodes

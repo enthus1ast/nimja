@@ -6,6 +6,10 @@ discard """
 include ../../src/nimja/parser
 import sequtils, unittest
 
+when defined(noCondenseStrings):
+  echo "noCondenseStrings is set, this test is invalid. Quitting"
+  quit()
+
 block:
   var beforeCondens = @[
     NwtNode(kind: NStr, strBody: "foo"),

@@ -1,3 +1,3 @@
 getScriptDir	nimja/parser.html#getScriptDir.t	parser: getScriptDir(): string	
-compileTemplateStr	nimja/parser.html#compileTemplateStr.m,typed	parser: compileTemplateStr(str: typed): untyped	
-compileTemplateFile	nimja/parser.html#compileTemplateFile.m,staticstring	parser: compileTemplateFile(path: static string): untyped	
+compileTemplateStr	nimja/parser.html#compileTemplateStr.m,typed,staticbool	parser: compileTemplateStr(str: typed; iter: static bool = false): untyped	
+compileTemplateFile	nimja/parser.html#compileTemplateFile.m,staticstring,staticbool	parser: compileTemplateFile(path: static string; iter: static bool = false): untyped	
