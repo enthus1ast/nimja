@@ -210,7 +210,7 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     of FsVariable: return NwtNode(kind: NVariable, variableBody: fsToken.value)
     of FsEval: return NwtNode(kind: NEval, evalBody: fsToken.value)
     of FsExtends: return parseSsExtends(fsTokens, pos)
-    of FsImport: includeNwt(result, fsToken.value)
+    # of FsImport: includeNwt(result, fsToken.value) ##########################################################
     else: echo "[SS] NOT IMPL: ", fsToken
 
 proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
@@ -261,6 +261,7 @@ func astEval(token: NwtNode): NimNode =
   return parseStmt(token.evalBody)
 
 proc astFor(token: NwtNode): NimNode =
+  ## TODO is "easyFor" good way? Do better maybe
   let easyFor = "for " & token.forStmt & ": discard" # `discard` to make a parsable construct
   result = parseStmt(easyFor)
   result[0][2] = newStmtList(astAst(token.forBody)) # overwrite discard with real `for` body
@@ -398,10 +399,13 @@ proc loadCacheFile(path: Path): string =
       # echo "cache hit file"
       return cacheNwtNodeFile[path]
     else:
-      cacheNwtNodeFile[path] = staticRead(path)
+      when nimvm:
+        cacheNwtNodeFile[path] = staticRead(path)
+      else:
+        cacheNwtNodeFile[path] = readFile(path)
       return cacheNwtNodeFile[path]
 
-proc compile(str: string): seq[NwtNode] =
+proc compile*(str: string): seq[NwtNode] =
   ## Transforms a template string into a seq of NwtNodes
   # TODO make to ITERATOR
   var secondsStepTokens = loadCache(str)
