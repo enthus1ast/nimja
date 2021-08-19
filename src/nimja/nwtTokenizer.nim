@@ -92,7 +92,6 @@
 ##   </html>)
 
 import parseutils
-import sequtils
 import strutils
 
 proc debugPrint(buffer: string, pos: int) =

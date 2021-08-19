@@ -5,14 +5,12 @@ import tables
 type Path = string
 type
   NwtNodeKind = enum
-    NStr, NComment, NIf, NElif, NElse, NWhile, NFor,
+    NStr, NIf, NElif, NElse, NWhile, NFor,
     NVariable, NEval, NImport, NBlock, NExtends
   NwtNode = object
     case kind: NwtNodeKind
     of NStr:
       strBody: string
-    of NComment:
-      commentBody: string
     of NIf:
       ifStmt: string
       nnThen: seq[NwtNode]
@@ -84,7 +82,8 @@ func splitStmt(str: string): tuple[pref: string, suf: string] {.inline.} =
 proc parseFirstStep(tokens: seq[Token]): seq[FSNode] =
   result = @[]
   for token in tokens:
-    if token.tokenType == NwtEval:
+    case token.tokenType
+    of NwtEval:
       let (pref, suf) = splitStmt(token.value)
       case pref
       of "if": result.add FSNode(kind: FsIf, value: suf)
@@ -101,14 +100,10 @@ proc parseFirstStep(tokens: seq[Token]): seq[FSNode] =
       of "extends": result.add FSNode(kind: FsExtends, value: suf)
       else:
         result.add FSNode(kind: FsEval, value: token.value)
-    elif token.tokenType == NwtString:
-      result.add FSNode(kind: FsStr, value: token.value)
-    elif token.tokenType == NwtVariable:
-      result.add FSNode(kind: FsVariable, value: token.value)
-    elif token.tokenType == NwtComment:
-      discard # ignore comments
-    else:
-      echo "[FS] Not catched:", token
+    of NwtString: result.add FSNode(kind: FsStr, value: token.value)
+    of NwtVariable: result.add FSNode(kind: FsVariable, value: token.value)
+    of NwtComment: discard # ignore comments
+    else: echo "[FS] Not catched:", token
 
 
 proc parseSsIf(fsTokens: seq[FsNode], pos: var int): NwtNode =
@@ -265,9 +260,6 @@ func astStrIter(token: NwtNode): NimNode =
 func astEval(token: NwtNode): NimNode =
   return parseStmt(token.evalBody)
 
-func astComment(token: NwtNode): NimNode =
-  return newCommentStmtNode(token.commentBody)
-
 proc astFor(token: NwtNode): NimNode =
   let easyFor = "for " & token.forStmt & ": discard" # `discard` to make a parsable construct
   result = parseStmt(easyFor)
@@ -325,7 +317,6 @@ proc astAstOne(token: NwtNode): NimNode =
     if nwtIter: return astStrIter(token)
     else: return astStr(token)
   of NEval: return astEval(token)
-  of NComment: return astComment(token)
   of NIf: return astIf(token)
   of NFor: return astFor(token)
   of NWhile: return astWhile(token)
@@ -345,7 +336,7 @@ proc validExtend(secondsStepTokens: seq[NwtNode]): int =
   var validBeforeExtend = true
   for idx, secondStepToken in secondsStepTokens.pairs:
     case secondStepToken.kind
-    of NComment, NStr: discard
+    of NStr: discard
     of NExtends:
       result = idx
       break
@@ -357,6 +348,21 @@ proc validExtend(secondsStepTokens: seq[NwtNode]): int =
       "Invalid token(s) before {%extend%}: " & $ secondsStepTokens[0 .. result]
     )
 
+func condenseStrings(nodes: seq[FsNode]): seq[FsNode] =
+  when defined(noCondenseStrings):
+    return nodes
+  else:
+    var curStr = ""
+    for node in nodes:
+      case node.kind
+      of FsStr:
+        curStr &= node.value
+      else:
+        result.add FsNode(kind: FsStr, value: curStr)
+        curStr = ""
+        result.add node
+    if curStr.len != 0:
+      result.add FsNode(kind: FsStr, value: curStr)
 
 proc loadCache(str: string): seq[NwtNode] =
   ## For faster compilation
@@ -365,7 +371,7 @@ proc loadCache(str: string): seq[NwtNode] =
   ## the second time is returned from the cache
   when defined(nwtCacheOff):
     var lexerTokens = toSeq(nwtTokenize(str))
-    var firstStepTokens = parseFirstStep(lexerTokens)
+    var firstStepTokens = condenseStrings(parseFirstStep(lexerTokens))
     var pos = 0
     return parseSecondStep(firstStepTokens, pos)
   else:
@@ -374,7 +380,7 @@ proc loadCache(str: string): seq[NwtNode] =
       return cacheNwtNode[str]
     else:
       var lexerTokens = toSeq(nwtTokenize(str))
-      var firstStepTokens = parseFirstStep(lexerTokens)
+      var firstStepTokens = condenseStrings(parseFirstStep(lexerTokens))
       var pos = 0
       cacheNwtNode[str] = parseSecondStep(firstStepTokens, pos)
       return cacheNwtNode[str]
@@ -394,28 +400,6 @@ proc loadCacheFile(path: Path): string =
     else:
       cacheNwtNodeFile[path] = staticRead(path)
       return cacheNwtNodeFile[path]
-
-
-
-## TODO maybe put this back into the iterator
-when defined(noCondenseStrings):
-  template condenseStrings(nodes: seq[NwtNode]): seq[NwtNode] =
-    nodes
-else:
-  iterator condenseStrings(nodes: seq[NwtNode]): NwtNode =
-    var curStr = ""
-    for node in nodes:
-      case node.kind
-      of NStr:
-        curStr &= node.strBody
-      of NComment:
-        continue
-      else:
-        yield NwtNode(kind: NStr, strBody: curStr)
-        curStr = ""
-        yield node
-    if curStr.len != 0:
-      yield NwtNode(kind: NStr, strBody: curStr)
 
 proc compile(str: string): seq[NwtNode] =
   ## Transforms a template string into a seq of NwtNodes
@@ -446,7 +430,7 @@ proc compile(str: string): seq[NwtNode] =
             toRender.add blockToken
       else:
         toRender.add masterSecondsStepToken
-    return toSeq(toRender.condenseStrings()) # TODO make to ITERATOR
+    return toRender
   else:
     var toRender: seq[NwtNode] = @[]
     for token in secondsStepTokens:
@@ -455,7 +439,7 @@ proc compile(str: string): seq[NwtNode] =
           toRender.add blockToken
       else:
         toRender.add token
-    return toSeq(toRender.condenseStrings()) # TODO make to ITERATOR
+    return toRender # TODO make to ITERATOR
 
 
 macro compileTemplateStr*(str: typed, iter: static bool = false): untyped =

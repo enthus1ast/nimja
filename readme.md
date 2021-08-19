@@ -430,19 +430,11 @@ nim c -f -r  yourfile.nim
 Debugging
 =====================
 
-Dump generated NwtAst for debugging
------------------------------------
 
 ```bash
-nim c -d:dumpNwtAst -r yourfile.nim
-nim c -d:dumpNwtAstPretty -r yourfile.nim
+nim c -d:dumpNwtAst -r yourfile.nim # <-- dump NwtAst
+nim c -d:dumpNwtAstPretty -r yourfile.nim # <-- dump NwtAst as pretty json
 nim c -d:nwtCacheOff -r yourfile.nim   # <-- disables the NwtNode cache
 nim c -d:noCondenseStrings -r yourfile.nim # <-- disables string condense see #12
-```
-
-Dump generated NimMacros
-------------------------
-
-```bash
-nim c -d:dumpNwtMacro -r yourfile.nim
+nim c -d:dumpNwtMacro -r yourfile.nim # <-- dump generated Nim macros
 ```
