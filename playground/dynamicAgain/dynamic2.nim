@@ -1,3 +1,7 @@
+#### For dynamic the caches must work differently
+#### and reparse if changed (file)
+
+
 # from nimja/parser import compile, NwtNode
 include nimja/parser
 # import
@@ -185,11 +189,11 @@ echo astAstDyn(compile("foo{#baa#}baz"))
 
 
 
-graph.vm.PEvalContext().registerCallback(
-  "setOutResult",
-  proc(args: VmArgs) =
-    echo "Called custom proc with arg [", args.getString(0), "]"
-)
+# graph.vm.PEvalContext().registerCallback(
+#   "setOutResult",
+#   proc(args: VmArgs) =
+#     echo "Called custom proc with arg [", args.getString(0), "]"
+# )
 
 proc empty(): PNode = nkEmpty.newTree()
 
@@ -286,25 +290,71 @@ proc processModule2(
 var a: TPassContextArray
 openPasses(graph, a, m)
 
+proc repl() =
 
-processModule2(graph, m, llStreamOpen("""
+  graph.vm.PEvalContext().registerCallback(
+    "setOutResult",
+    proc(args: VmArgs) =
+      echo "Called custom proc with arg [", args.getString(0), "]"
+  )
+
+
+  processModule2(graph, m, llStreamOpen("""
 proc setOutResult[T](arg: T) = discard
 var result = ""
 var ii = 123
-"""), a)
+  """), a)
 
-while true:
-  let line = stdin.readLine().strip()
-  if line == "": continue
+  while true:
+    let line = stdin.readLine().strip()
+    if line == "": continue
 
-  let nwtNodes = compile(line)
-  if nwtNodes.len == 0: continue
-  # var fun = astAstOneDyn(compile("foo{#baa#}baz")[0])
-  # var fun = astAstOneDyn(nwtNodes[0])
+    let nwtNodes = compile(line)
+    if nwtNodes.len == 0: continue
+    # var fun = astAstOneDyn(compile("foo{#baa#}baz")[0])
+    # var fun = astAstOneDyn(nwtNodes[0])
+    var fun = newPStmtList()
+    for node in nwtNodes:
+      fun.add astAstOneDyn(node)
+    # var fun = astAstDyn(nwtNodes)
+    var cc = "compiled"
+    processModule3(graph, m, fun, a)
+
+    processModule2(graph, m, llStreamOpen("""
+echo "##########"
+echo result
+echo "##########"
+setOutResult(result)
+result = ""
+    """), a)
+# repl()
+
+template dynamicStr*(str: string) =
+  openPasses(graph, a, m)
+  if graph.isNil: echo "graph is nil"; quit()
+  if m.isNil: echo "m is nil"; quit()
+  if conf.isNil: echo "conf is nil"; quit()
+
+  var res = ""
+  var resP = addr res
+  graph.vm.PEvalContext().registerCallback(
+    "setOutResult",
+    proc(args: VmArgs) =
+      echo "Called custom proc with arg [", args.getString(0), "]"
+      resP[] = args.getString(0)
+  )
+
+
+  processModule2(graph, m, llStreamOpen("""
+proc setOutResult[T](arg: T) = discard
+var result = ""
+var ii = 123
+  """), a)
+
+  let nwtNodes = compile(str)
   var fun = newPStmtList()
   for node in nwtNodes:
     fun.add astAstOneDyn(node)
-  # var fun = astAstDyn(nwtNodes)
   var cc = "compiled"
   processModule3(graph, m, fun, a)
 
@@ -314,7 +364,15 @@ echo result
 echo "##########"
 setOutResult(result)
 result = ""
-  """), a)
+    """), a)
+
+
+  closePasses(graph, a)
+  # resP[]
+  result = resP[]
+
+template dynamicFile*(path: string) =
+  dynamicStr(readFile(path))
 
 
 closePasses(graph, a)
