@@ -1,5 +1,5 @@
 import strutils, macros, sequtils, parseutils, os
-import nwtTokenizer
+import lexer
 import tables
 
 type Path = string
@@ -82,7 +82,7 @@ func splitStmt(str: string): tuple[pref: string, suf: string] {.inline.} =
 proc parseFirstStep(tokens: seq[Token]): seq[FSNode] =
   result = @[]
   for token in tokens:
-    case token.tokenType
+    case token.kind
     of NwtEval:
       let (pref, suf) = splitStmt(token.value)
       case pref
@@ -188,7 +188,7 @@ converter singleNwtNodeToSeq(nwtNode: NwtNode): seq[NwtNode] =
 proc includeNwt(nodes: var seq[NwtNode], path: string) {.compileTime.} =
   const basePath = getProjectPath()
   var str = staticRead( basePath  / path.strip(true, true, {'"'}) )
-  var lexerTokens = toSeq(nwtTokenize(str))
+  var lexerTokens = toSeq(lex(str))
   var firstStepTokens = parseFirstStep(lexerTokens)
   var pos = 0
   var secondsStepTokens = parseSecondStep(firstStepTokens, pos)
@@ -370,7 +370,7 @@ proc loadCache(str: string): seq[NwtNode] =
   ## Creates NwtNodes only the first time for a given string,
   ## the second time is returned from the cache
   when defined(nwtCacheOff):
-    var lexerTokens = toSeq(nwtTokenize(str))
+    var lexerTokens = toSeq(lex(str))
     var firstStepTokens = condenseStrings(parseFirstStep(lexerTokens))
     var pos = 0
     return parseSecondStep(firstStepTokens, pos)
@@ -379,7 +379,7 @@ proc loadCache(str: string): seq[NwtNode] =
       # echo "cache hit str"
       return cacheNwtNode[str]
     else:
-      var lexerTokens = toSeq(nwtTokenize(str))
+      var lexerTokens = toSeq(lex(str))
       var firstStepTokens = condenseStrings(parseFirstStep(lexerTokens))
       var pos = 0
       cacheNwtNode[str] = parseSecondStep(firstStepTokens, pos)
