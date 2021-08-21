@@ -5,9 +5,17 @@ import sequtils
 import ../../src/nimja/lexer
 import unittest
 
-proc newToken(kind: NwtTokenKind, value: string): Token =
-  return Token(kind: kind, value: value)
+proc newToken(kind: NwtTokenKind, value: string, line = 0): Token =
+  return Token(kind: kind, value: value, line: line)
 
+# echo "#####"
+# # for elem in lex("{"):
+# #   echo elem
+# echo toSeq(lex("foo\n{{baa}}\n\n\n{{baa}}baz"))
+
+# echo "#####"
+
+# quit()
 
 suite "tokenizer":
   test "NwtString":
@@ -40,16 +48,15 @@ suite "tokenizer":
     check toSeq(lex("{% for each in foo %}")) == @[
       newToken(NwtEval, "for each in foo")]
 
-
-
   test "NwtString broken":
     check toSeq(lex("{ nope }")) == @[newToken(NwtString, "{ nope }")]
     check toSeq(lex("{nope}")) == @[newToken(NwtString, "{nope}")]
     check toSeq(lex("{nope")) == @[newToken(NwtString, "{nope")]
     check toSeq(lex("nope}")) == @[newToken(NwtString, "nope}")]
 
-  test "NwtString broken { / }":
+  test "NwtString broken {":
     check toSeq(lex("{")) == @[newToken(NwtString, "{")]
+  test "NwtString broken }":
     check toSeq(lex("}")) == @[newToken(NwtString, "}")]
 
   test "NwtVariable str with lonely/broken \"{{\"":
@@ -85,11 +92,54 @@ suite "tokenizer":
     ]
 
   test "unsorted":
-    assert toSeq(lex("foo {{baa}} {baa}")) == @[
+    check toSeq(lex("foo {{baa}} {baa}")) == @[
       newToken(NwtString, "foo "),
       newToken(NwtVariable, "baa"),
       newToken(NwtString, " {baa}")
     ]
+
+  ## TODO a token.line should always point to the _BEGINNING_ of the token right?
+  # test "lines":
+  #   check toSeq(lex("foo\n{{baa}}\n{baa}")) == @[
+  #     newToken(NwtString, "foo\n", 0),
+  #     newToken(NwtVariable, "baa", 1),
+  #     newToken(NwtString, "\n{baa}", 1), # this s
+  #   ]
+    # echo toSeq(lex("foo\n{{ba\na}}\n{baa}"))
+    # echo toSeq(lex("foo\n{{baa}}\n\n\n{baa}"))
+    # check toSeq(lex("foo\n{{baa}}\n{baa}")) == @[
+    #   newToken(NwtString, "foo "),
+    #   newToken(NwtVariable, "baa"),
+    #   newToken(NwtString, " {baa}")
+    # ]
+
+
+  test "#16":
+    let tokens = toSeq(lex("""{#
+    {% var idx = 0 %}
+    {%while true%}
+      <div class="row m-4">
+        {% for title in @["foo", "baa", "baz", "asdf", "afsdfasdfkl" , "asdfasdf"] %}
+          <div class="col-4">
+            <div class="card" style="width: 18rem;">
+              <img src="..." class="card-img-top" alt="...">
+              <div class="card-body">
+                <h5 class="card-title">{{title}}</h5>
+                <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                <a href="#" class="btn btn-primary">Go somewhere</a>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      {% idx.inc %}
+      {% if idx > 2 %}{% break %}{% endif %}
+    {% endwhile %}
+    #}"""))
+
+    check tokens.len == 1
+    check tokens[0].kind == NwtComment
+
 
   # test "extractTemplateName":
   #   check extractTemplateName("""extends "foobaa.html" """) == "foobaa.html"

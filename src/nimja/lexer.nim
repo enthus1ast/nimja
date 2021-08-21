@@ -1,4 +1,5 @@
-import parseutils, strformat
+import strformat, strutils
+
 type
 
   NwtTokenKind* = enum # TODO rename to TokenKind or TokenType
@@ -12,9 +13,9 @@ type
     kind*: NwtTokenKind
     value*: string # the value
     line*: int
+    charinbuf*: int
 
 
-import strutils
 proc debugPrint(buffer: string, pos: int) =
   let pointPos = if pos - 1 < 0: 0 else: pos - 1
   echo buffer
@@ -24,13 +25,16 @@ template thisIs(chr: char): bool =
   (not (pos > buf.len)) and (buf[pos] == chr)
 
 template nextIs(chr: char): bool =
-  (not (pos + 1 > buf.len)) and (buf[pos + 1] == chr)
+  (not (pos + 1 >= buf.len)) and (buf[pos + 1] == chr)
 
 template lastIs(chr: char): bool =
-  (not (pos - 1 > buf.len)) and (not(pos - 1 < 0)) and (buf[pos - 1] == chr)
+  (not (pos - 1 >= buf.len)) and (not(pos - 1 < 0)) and (buf[pos - 1] == chr)
 
 template isEof(): bool =
   pos >= buf.len
+
+template handleNl() =
+  if thisIs('\n'): line.inc
 
 type
   LexReturn = tuple[good: bool, token: Token]
@@ -44,20 +48,23 @@ proc lexerMsg(str: string, line: int) =
 # func lexStr(buf: string, pos: var int): LexReturn =
 #   discard
 
-# func lexInnerStr(buf: string, pos: var int): string =
-#   result &= buf[pos] # the '"'
-#   pos.inc # skip '"'
-#   while pos < buf.len:
-#     let ch = buf[pos]
-#     if ch == '\\':
-#       pos.inc
-#       result &= buf[pos]
-#     elif ch == '"':
-#       result &= '"'
-#       break
-#     else:
-#       result &= ch
-#     pos.inc
+func lexInnerStr(buf: string, pos: var int): string =
+  result &= buf[pos] # the '"'
+  pos.inc # skip '"'
+  var escape = false
+  while pos < buf.len:
+    let ch = buf[pos]
+    if escape:
+      result &= ch
+      escape = false
+    elif ch == '\\':
+      escape = true
+    elif ch == '"':
+      result &= '"'
+      break
+    else:
+      result &= ch
+    pos.inc
 
 template store() =
   result.token.value &= ch
@@ -69,14 +76,12 @@ proc lexBetween(buf: string, pos: var int, line: var int, bstart = "{{", bend = 
   result.good = true
   result.token = Token(kind: kind)
   result.token.line = line
-  pos += skipWhitespace(buf, pos)
+  # pos += skipWhitespace(buf, pos) # is stripped later...
   var escaped = false
   var endchar = false
   while pos < buf.len:
     let ch = buf[pos]
-    # debugEcho ch
-    # if thisIs('\c') or thisIs['\l']: # TODO \l ??
-    #   result.token.line.inc
+    handleNl
     if escaped:
       store
       escaped = false
@@ -88,6 +93,8 @@ proc lexBetween(buf: string, pos: var int, line: var int, bstart = "{{", bend = 
       endchar = true
       pos.inc # skip next '}'
       break
+    elif thisIs('"'):
+      result.token.value &= lexInnerStr(buf, pos)
     # elif thisIs('"'):
     #   result.token.value &= lexInnerStr(buf, pos)
     else:
@@ -112,6 +119,7 @@ proc lexStr(buf: string, pos: var int, line: var int): LexReturn =
   result.token.line = line
   while pos < buf.len:
     let ch = buf[pos]
+    handleNl
     if thisIs('{') and (nextIs('#') or nextIs('%') or nextIs('{')):
       pos.dec # go back to last for next lexer
       break
@@ -126,9 +134,7 @@ iterator lex*(buf: string): Token =
   var lexReturn: LexReturn
   while pos < buf.len:
     var ch = buf[pos]
-    if ch == '\n':
-      line.inc
-
+    handleNl
     lexReturn = lexVar(buf, pos, line)
     if lexReturn.good:
       yield lexReturn.token
