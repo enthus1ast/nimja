@@ -17,9 +17,8 @@ task tests, "Run all tests":
 
   # Make sure all examples compile
   exec "nimble install jester -y"
-  exec """testament  --directory:"./examples/"  p "prologue/server*.nim""""
-
   exec "nimble install prologue -y"
+  exec """testament  --directory:"./examples/"  p "prologue/server*.nim""""
   exec """testament  --directory:"./examples/"  p "fromReadme/server.nim""""
 
   # This needs to compile the templates as a shared library first.
