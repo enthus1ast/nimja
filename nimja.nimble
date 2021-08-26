@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.2.4"
+version       = "0.2.5"
 author        = "David Krause"
 description   = "typed and compiled template engine inspired by jinja2, twig and onionhammer/nim-templates for Nim."
 license       = "MIT"
@@ -16,7 +16,10 @@ task tests, "Run all tests":
   exec """testament --directory:"./tests/" p "bugs/*.nim""""
 
   # Make sure all examples compile
+  exec "nimble install jester -y"
   exec """testament  --directory:"./examples/"  p "prologue/server*.nim""""
+
+  exec "nimble install prologue -y"
   exec """testament  --directory:"./examples/"  p "fromReadme/server.nim""""
 
   # This needs to compile the templates as a shared library first.
