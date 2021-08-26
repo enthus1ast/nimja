@@ -1,3 +1,6 @@
+discard """
+action: "compile"
+"""
 import os, strutils
 import prologue
 import nimja/parser

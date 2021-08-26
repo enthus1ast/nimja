@@ -1,5 +1,5 @@
 *.exe
-nimcache/**
+**/nimcache/**
 cache/**
 outputGotten.txt
 *~

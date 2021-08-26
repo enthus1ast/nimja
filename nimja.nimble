@@ -12,7 +12,17 @@ srcDir        = "src"
 requires "nim >= 1.4.8"
 
 task tests, "Run all tests":
-  exec "testament p 'tests/*/*.nim'"
+  exec """testament --directory:"./tests/" p "basic/*.nim""""
+  exec """testament --directory:"./tests/" p "bugs/*.nim""""
+
+  # Make sure all examples compile
+  exec """testament  --directory:"./examples/"  p "prologue/server*.nim""""
+  exec """testament  --directory:"./examples/"  p "fromReadme/server.nim""""
+
+  # This needs to compile the templates as a shared library first.
+  exec "nim c examples/dynlib/templates.nim"
+  exec """testament  --directory:"./examples/"  p "dynlib/runner.nim""""
+
 
 task docs, "Generate all docs":
   rmDir("src/htmldocs/")

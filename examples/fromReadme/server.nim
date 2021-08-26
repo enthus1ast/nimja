@@ -1,3 +1,6 @@
+discard """
+action: "compile"
+"""
 ## compile this example with: --experimental:vmopsDanger or you will get
 ## Error: cannot 'importc' variable at compile time; getCurrentDirectoryW
 
