@@ -105,7 +105,6 @@ proc parseFirstStep(tokens: seq[Token]): seq[FSNode] =
     of NwtComment: discard # ignore comments
     else: echo "[FS] Not catched:", token
 
-
 proc parseSsIf(fsTokens: seq[FsNode], pos: var int): NwtNode =
   var elem: FsNode = fsTokens[pos] # first is the if that we got called about
   result = NwtNode(kind: NwtNodeKind.NIf)
@@ -139,7 +138,6 @@ proc parseSsIf(fsTokens: seq[FsNode], pos: var int): NwtNode =
       of IfState.InElif:
         result.nnElif[^1].elifBody &= parseSecondStepOne(fsTokens, pos)
     pos.inc
-
 
 proc parseSsWhile(fsTokens: seq[FsNode], pos: var int): NwtNode =
   var elem: FsNode = fsTokens[pos] # first is the while that we got called about
@@ -320,8 +318,8 @@ proc astAstOne(token: NwtNode): NimNode =
   of NIf: return astIf(token)
   of NFor: return astFor(token)
   of NWhile: return astWhile(token)
-  of NExtends: return parseStmt("discard")
-  of NBlock: return parseStmt("discard")
+  of NExtends: return newNimNode(nnkDiscardStmt) # parseStmt("discard")
+  of NBlock: return newNimNode(nnkDiscardStmt) # parseStmt("discard")
   else: raise newException(ValueError, "cannot convert to ast:" & $token.kind)
 
 proc astAst(tokens: seq[NwtNode]): seq[NimNode] =
@@ -358,7 +356,8 @@ func condenseStrings(nodes: seq[FsNode]): seq[FsNode] =
       of FsStr:
         curStr &= node.value
       else:
-        result.add FsNode(kind: FsStr, value: curStr)
+        if curStr.len > 0:
+          result.add FsNode(kind: FsStr, value: curStr)
         curStr = ""
         result.add node
     if curStr.len != 0:
@@ -442,6 +441,16 @@ proc compile(str: string): seq[NwtNode] =
     return toRender # TODO make to ITERATOR
 
 
+template doCompile(str: untyped) =
+  nwtIter = iter
+  let nwtNodes = compile(str)
+  when defined(dumpNwtAst): echo nwtNodes
+  when defined(dumpNwtAstPretty): echo nwtNodes.pretty
+  result = newStmtList()
+  for nwtNode in nwtNodes:
+    result.add astAstOne(nwtNode)
+  when defined(dumpNwtMacro): echo toStrLit(result)
+
 macro compileTemplateStr*(str: typed, iter: static bool = false): untyped =
   ## Compiles a nimja template from a string.
   ##
@@ -462,14 +471,7 @@ macro compileTemplateStr*(str: typed, iter: static bool = false): untyped =
   ##  for elem in yourIter(true):
   ##    echo elem
   ##
-  nwtIter = iter
-  let nwtNodes = compile(str.strVal)
-  when defined(dumpNwtAst): echo nwtNodes
-  when defined(dumpNwtAstPretty): echo nwtNodes.pretty
-  result = newStmtList()
-  for nwtNode in nwtNodes:
-    result.add astAstOne(nwtNode)
-  when defined(dumpNwtMacro): echo toStrLit(result)
+  doCompile(str.strVal)
 
 macro compileTemplateFile*(path: static string, iter: static bool = false): untyped =
   ## Compiles a nimja template from a file.
@@ -491,12 +493,5 @@ macro compileTemplateFile*(path: static string, iter: static bool = false): unty
   ##  for elem in yourIter(true):
   ##    echo elem
   ##
-  nwtIter = iter
   let str = loadCacheFile(path)
-  let nwtNodes = compile(str)
-  when defined(dumpNwtAst): echo nwtNodes
-  when defined(dumpNwtAstPretty): echo nwtNodes.pretty
-  result = newStmtList()
-  for nwtNode in nwtNodes:
-    result.add astAstOne(nwtNode)
-  when defined(dumpNwtMacro): echo toStrLit(result)
+  doCompile(str)
