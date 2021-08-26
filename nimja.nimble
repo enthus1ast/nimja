@@ -23,7 +23,7 @@ task tests, "Run all tests":
 
   # This needs to compile the templates as a shared library first.
   exec "nim c examples/dynlib/templates.nim"
-  exec """testament  --directory:"./examples/"  p "dynlib/runner.nim""""
+  exec """testament  --directory:"./examples/dynlib"  p "runner.nim""""
 
 
 task docs, "Generate all docs":
