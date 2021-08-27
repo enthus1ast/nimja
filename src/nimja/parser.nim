@@ -54,6 +54,13 @@ var cacheNwtNode {.compileTime.}: Table[string, seq[NwtNode]] ## a cache for ren
 var cacheNwtNodeFile {.compileTime.}: Table[Path, string] ## a cache for content of a path
 var nwtIter {.compileTime.} = false
 
+# macro DISCARD_STMT() =
+#   return nnkStmtList.newTree(
+#     nnkDiscardStmt.newTree(
+#       newEmptyNode()
+#     )
+#   )
+
 when defined(dumpNwtAstPretty):
   import json
   proc pretty*(nwtNodes: seq[NwtNode]): string {.compileTime.} =
@@ -318,8 +325,8 @@ proc astAstOne(token: NwtNode): NimNode =
   of NIf: return astIf(token)
   of NFor: return astFor(token)
   of NWhile: return astWhile(token)
-  of NExtends: return newNimNode(nnkDiscardStmt) # parseStmt("discard")
-  of NBlock: return newNimNode(nnkDiscardStmt) # parseStmt("discard")
+  of NExtends: return parseStmt("discard") # newNimNode(nnkDiscardStmt)
+  of NBlock: return parseStmt("discard") #newNimNode(nnkDiscardStmt)
   else: raise newException(ValueError, "cannot convert to ast:" & $token.kind)
 
 proc astAst(tokens: seq[NwtNode]): seq[NimNode] =
@@ -407,10 +414,12 @@ proc compile(str: string): seq[NwtNode] =
   when defined(dumpNwtAst): echo secondsStepTokens
   let foundExtendAt = validExtend(secondsStepTokens)
   if foundExtendAt > -1:
-    # echo "===== THIS TEMPLATE EXTENDS ====="
+    echo "===== THIS TEMPLATE EXTENDS ====="
+    echo str
+    echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
     # Load master template
     let masterStr = loadCacheFile( getScriptDir() / secondsStepTokens[foundExtendAt].extendsPath )
-    var masterSecondsStepTokens = loadCache(masterStr)
+    var masterSecondsStepTokens = compile(masterStr) # loadCache(masterStr)
     # Load THIS template (above)
     var toRender: seq[NwtNode] = @[]
     for masterSecondsStepToken in masterSecondsStepTokens:
@@ -429,6 +438,7 @@ proc compile(str: string): seq[NwtNode] =
             toRender.add blockToken
       else:
         toRender.add masterSecondsStepToken
+    echo toRender
     return toRender
   else:
     var toRender: seq[NwtNode] = @[]
@@ -438,11 +448,11 @@ proc compile(str: string): seq[NwtNode] =
           toRender.add blockToken
       else:
         toRender.add token
+    echo toRender
     return toRender # TODO make to ITERATOR
 
 
-template doCompile(str: untyped) =
-  nwtIter = iter
+template doCompile(str: untyped): untyped =
   let nwtNodes = compile(str)
   when defined(dumpNwtAst): echo nwtNodes
   when defined(dumpNwtAstPretty): echo nwtNodes.pretty
@@ -471,6 +481,7 @@ macro compileTemplateStr*(str: typed, iter: static bool = false): untyped =
   ##  for elem in yourIter(true):
   ##    echo elem
   ##
+  nwtIter = iter
   doCompile(str.strVal)
 
 macro compileTemplateFile*(path: static string, iter: static bool = false): untyped =
@@ -493,5 +504,6 @@ macro compileTemplateFile*(path: static string, iter: static bool = false): unty
   ##  for elem in yourIter(true):
   ##    echo elem
   ##
+  nwtIter = iter
   let str = loadCacheFile(path)
   doCompile(str)
