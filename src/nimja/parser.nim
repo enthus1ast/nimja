@@ -1,6 +1,6 @@
 import strutils, macros, sequtils, parseutils, os
 import lexer
-import tables
+import tables, sets, deques
 
 type Path = string
 type
@@ -72,6 +72,12 @@ template getScriptDir*(): string =
   ## returns the absolute path to your project, on compile time.
   getProjectPath()
 
+template read(path: untyped): untyped =
+  when nimvm:
+    staticRead(path)
+  else:
+    readFile(path)
+
 # Forward decleration
 proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
@@ -86,8 +92,18 @@ func splitStmt(str: string): tuple[pref: string, suf: string] {.inline.} =
   result.pref = toLowerAscii(pref)
   result.suf = str[pos..^1]
 
+
+iterator findAll(fsns: seq[FsNode], kind: FsNodeKind | set[FsNodeKind]): FsNode =
+  # Finds all FsNodes with given kind
+  for fsn in fsns:
+    when kind is FsNodeKind:
+      if fsn.kind == kind: yield fsn
+    else:
+      if kind.contains(fsn.kind): yield fsn
+
 proc parseFirstStep(tokens: seq[Token]): seq[FSNode] =
   result = @[]
+
   for token in tokens:
     case token.kind
     of NwtEval:
@@ -189,12 +205,6 @@ proc parseSsExtends(fsTokens: seq[FsNode], pos: var int): NwtNode =
 
 converter singleNwtNodeToSeq(nwtNode: NwtNode): seq[NwtNode] =
   return @[nwtNode]
-
-template read(path: untyped): untyped =
-  when nimvm:
-    staticRead(path)
-  else:
-    readFile(path)
 
 proc includeNwt(nodes: var seq[NwtNode], path: string) =
   const basePath = getProjectPath()
@@ -376,26 +386,82 @@ func condenseStrings(nodes: seq[FsNode]): seq[FsNode] =
     if curStr.len != 0:
       result.add FsNode(kind: FsStr, value: curStr)
 
+proc errorOnDoublicatedBlocks(fsns: seq[FSNode]) =
+  # Find doublicated blocks
+  var blocknames: HashSet[string]
+  for fsnode in fsns.findAll(FsBlock):
+    if blocknames.contains(fsnode.value):
+      raise newException(ValueError, "found doublicated block:" & fsnode.value & " :" & $ fsns)
+    else:
+      blocknames.incl fsnode.value
+
+proc errorOnDoublicatedExtends(fsns: seq[FSNode]) =
+  ## Find doublicated blocks
+  # TODO give context and line
+  var foundExtends = false
+  for _ in fsns.findAll(FsExtends):
+    if foundExtends == true:
+      raise newException(ValueError, "found multiple extends: " & $fsns)
+    else:
+      foundExtends = true
+
+proc errorOnUnevenBlocks(fsns: seq[FSNode]) =
+  ## Find and errors uneven/lonely blocks
+  # TODO give context and line
+  var ifs = 0
+  var fors = 0
+  var whiles = 0
+  for fsnode in fsns.findAll({FsIf, FsEndif, FsFor, FsEndfor, FsWhile, FsEndWhile}):
+    case fsnode.kind
+    of FsIf: ifs.inc
+    of FsEndif: ifs.dec
+    of FsFor: fors.inc
+    of FsEndfor: fors.dec
+    of FsWhile: whiles.inc
+    of FsEndWhile: whiles.dec
+    else: discard # Cannot happen
+  if ifs != 0:
+    raise newException(ValueError, "uneven if's: " & $fsns)
+  if fors != 0:
+    raise newException(ValueError, "uneven for's: " & $fsns)
+  if whiles != 0:
+    raise newException(ValueError, "uneven while's: " & $fsns)
+
 proc loadCache(str: string): seq[NwtNode] =
   ## For faster compilation
   ## ```-d:nwtCacheOff``` to disable caching
   ## Creates NwtNodes only the first time for a given string,
   ## the second time is returned from the cache
-  when defined(nwtCacheOff):
-    var lexerTokens = toSeq(lex(str))
-    var firstStepTokens = condenseStrings(parseFirstStep(lexerTokens))
-    var pos = 0
-    return parseSecondStep(firstStepTokens, pos)
-  else:
-    if cacheNwtNode.contains(str):
-      # echo "cache hit str"
-      return cacheNwtNode[str]
-    else:
-      var lexerTokens = toSeq(lex(str))
-      var firstStepTokens = condenseStrings(parseFirstStep(lexerTokens))
-      var pos = 0
-      cacheNwtNode[str] = parseSecondStep(firstStepTokens, pos)
-      return cacheNwtNode[str]
+
+  var lexerTokens = toSeq(lex(str))
+
+  let fsns = parseFirstStep(lexerTokens)
+
+  ## TODO combine all these?
+  errorOnDoublicatedExtends(fsns)
+  errorOnDoublicatedBlocks(fsns)
+  errorOnUnevenBlocks(fsns)
+
+  var firstStepTokens = condenseStrings(fsns)
+  var pos = 0
+  return parseSecondStep(firstStepTokens, pos)
+
+  ## TODO reactivate later
+  # when defined(nwtCacheOff):
+  #   var lexerTokens = toSeq(lex(str))
+  #   var firstStepTokens = condenseStrings(parseFirstStep(lexerTokens))
+  #   var pos = 0
+  #   return parseSecondStep(firstStepTokens, pos)
+  # else:
+  #   if cacheNwtNode.contains(str):
+  #     # echo "cache hit str"
+  #     return cacheNwtNode[str]
+  #   else:
+  #     var lexerTokens = toSeq(lex(str))
+  #     var firstStepTokens = condenseStrings(parseFirstStep(lexerTokens))
+  #     var pos = 0
+  #     cacheNwtNode[str] = parseSecondStep(firstStepTokens, pos)
+  #     return cacheNwtNode[str]
 
 proc loadCacheFile(path: Path): string =
   ## For faster compilation
@@ -404,14 +470,18 @@ proc loadCacheFile(path: Path): string =
   ## The second time the same file should be read
   ## it is returned from the cache
   when defined(nwtCacheOff):
-    return staticRead(path)
+    return read(path)
   else:
     if cacheNwtNodeFile.contains(path):
       # echo "cache hit file"
       return cacheNwtNodeFile[path]
     else:
-      cacheNwtNodeFile[path] = staticRead(path)
+      cacheNwtNodeFile[path] = read(path)
       return cacheNwtNodeFile[path]
+
+
+# var templateCache = initDeque[seq[NwtNode]]()
+
 
 proc compile(str: string): seq[NwtNode] =
   ## Transforms a template string into a seq of NwtNodes

@@ -13,3 +13,6 @@ print(render("doubleExtends/inner.nwt"))
 print(render("doubleExtends/outer.nwt"))
 print(render("doubleExtends/base.nwt"))
 
+
+
+print(render("doubleExtends/innerSkipOne.nwt"))
