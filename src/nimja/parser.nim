@@ -185,9 +185,15 @@ proc parseSsExtends(fsTokens: seq[FsNode], pos: var int): NwtNode =
 converter singleNwtNodeToSeq(nwtNode: NwtNode): seq[NwtNode] =
   return @[nwtNode]
 
-proc includeNwt(nodes: var seq[NwtNode], path: string) {.compileTime.} =
+template read(path: untyped): untyped =
+  when nimvm:
+    staticRead(path)
+  else:
+    readFile(path)
+
+proc includeNwt(nodes: var seq[NwtNode], path: string) =
   const basePath = getProjectPath()
-  var str = staticRead( basePath  / path.strip(true, true, {'"'}) )
+  var str = read( basePath  / path.strip(true, true, {'"'}) )
   var lexerTokens = toSeq(lex(str))
   var firstStepTokens = parseFirstStep(lexerTokens)
   var pos = 0
