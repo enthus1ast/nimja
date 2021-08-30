@@ -35,9 +35,11 @@ proc fillBlocks(nodes: seq[NwtNode], blocks: Table[string, seq[NwtNode]]): seq[N
       result.add node
 
 
-macro doStuff(): untyped =
+# macro compileTemplateStr*(str: typed, iter: static bool = false): untyped =
+macro compileTemplateStr*(str: typed, iter: static bool = false): untyped =
   var templateCache = initDeque[seq[NwtNode]]()
-  echo compile2("""{% extends "doubleExtends/outer.nwt" %}{%block outer%}inner{%endblock%}""", templateCache)
+  # echo compile2("""{% extends "doubleExtends/outer.nwt" %}{%block outer%}inner{%endblock%}""", templateCache)
+  echo compile2(str.strVal, templateCache)
   var blocks: Table[string, seq[NwtNode]]
   for idx, tmp in templateCache.pairs():
     echo idx, " :", tmp
@@ -52,10 +54,34 @@ macro doStuff(): untyped =
   for nwtNode in filledBlocks:
     result.add astAstOne(nwtNode)
 
-proc foo(): string =
-  doStuff()
+# macro compileTemplateFile*(path: typed, iter: static bool = false): untyped =
+macro compileTemplateFile*(path: static string, iter: static bool = false): untyped =
+  var str = read(path)
+  # compileTemplateStr(str)
+  var templateCache = initDeque[seq[NwtNode]]()
+  # echo compile2("""{% extends "doubleExtends/outer.nwt" %}{%block outer%}inner{%endblock%}""", templateCache)
+  echo compile2(str, templateCache)
+  var blocks: Table[string, seq[NwtNode]]
+  for idx, tmp in templateCache.pairs():
+    echo idx, " :", tmp
+    for nwtn in tmp.recursiveFindAllBlocks():
+      blocks[nwtn.blockName] = nwtn.blockBody
+    echo blocks
+  var base = templateCache[0]
+  let filledBlocks = fillBlocks(base, blocks)
+  # echo filledBlocks
 
-echo foo()
+  result = newStmtList()
+  for nwtNode in filledBlocks:
+    result.add astAstOne(nwtNode)
+
+
+
+
+proc foo(): string =
+  compileTemplateStr("""{% extends "doubleExtends/outer.nwt" %}{%block outer%}inner{%endblock%}""")
+
+# echo foo()
 
 
 # proc fillBlocks()

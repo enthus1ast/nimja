@@ -239,14 +239,19 @@ proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     result &= parseSecondStepOne(fsTokens, pos)
     pos.inc # skip the current elem
 
-func astVariable(token: NwtNode): NimNode =
+proc astVariable(token: NwtNode): NimNode =
+  var varb: NimNode
+  try:
+    varb = parseStmt(token.variableBody)
+  except:
+    error "Cannot parse variable body: " & getCurrentExceptionMsg()
   return nnkStmtList.newTree(
     nnkInfix.newTree(
       newIdentNode("&="),
       newIdentNode("result"),
       newCall(
         "$",
-        parseStmt(token.variableBody)
+        varb
       )
     )
   )
@@ -279,7 +284,11 @@ func astStrIter(token: NwtNode): NimNode =
 
 
 func astEval(token: NwtNode): NimNode =
-  return parseStmt(token.evalBody)
+  try:
+    return parseStmt(token.evalBody)
+  except:
+    error "Cannot parse eval body: " & token.evalBody
+
 
 proc astFor(token: NwtNode): NimNode =
   let easyFor = "for " & token.forStmt & ": discard" # `discard` to make a parsable construct
@@ -341,8 +350,8 @@ proc astAstOne(token: NwtNode): NimNode =
   of NIf: return astIf(token)
   of NFor: return astFor(token)
   of NWhile: return astWhile(token)
-  of NExtends: return parseStmt("discard") # newNimNode(nnkDiscardStmt)
-  of NBlock: return parseStmt("discard") #newNimNode(nnkDiscardStmt)
+  of NExtends: return parseStmt("discard")
+  of NBlock: return parseStmt("discard")
   else: raise newException(ValueError, "cannot convert to ast:" & $token.kind)
 
 proc astAst(tokens: seq[NwtNode]): seq[NimNode] =
@@ -483,103 +492,184 @@ proc loadCacheFile(path: Path): string =
 # var templateCache = initDeque[seq[NwtNode]]()
 
 
-proc compile(str: string): seq[NwtNode] =
-  ## Transforms a template string into a seq of NwtNodes
-  # TODO make to ITERATOR
+# proc compile(str: string): seq[NwtNode] =
+#   ## Transforms a template string into a seq of NwtNodes
+#   # TODO make to ITERATOR
+#   var secondsStepTokens = loadCache(str)
+#   when defined(dumpNwtAst): echo secondsStepTokens
+#   let foundExtendAt = validExtend(secondsStepTokens)
+#   if foundExtendAt > -1:
+#     echo "===== THIS TEMPLATE EXTENDS ====="
+#     echo str
+#     echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+#     # Load master template
+#     let masterStr = loadCacheFile( getScriptDir() / secondsStepTokens[foundExtendAt].extendsPath )
+#     var masterSecondsStepTokens = compile(masterStr) # loadCache(masterStr)
+#     # Load THIS template (above)
+#     var toRender: seq[NwtNode] = @[]
+#     for masterSecondsStepToken in masterSecondsStepTokens:
+#       if masterSecondsStepToken.kind == NBlock:
+#         ## search the other template and put the stuff in toRender
+#         var found = false
+#         for secondsStepToken in secondsStepTokens[foundExtendAt+1 .. ^1]: # skip everything before the extend
+#           if secondsStepToken.kind == NExtends: raise newException(ValueError, "only one extend is allowed!")
+#           if secondsStepToken.kind == NBlock and secondsStepToken.blockName == masterSecondsStepToken.blockName:
+#             found = true
+#             for blockToken in secondsStepToken.blockBody:
+#               toRender.add blockToken
+#         if found == false:
+#           # not overwritten; render the block
+#           for blockToken in masterSecondsStepToken.blockBody:
+#             toRender.add blockToken
+#       else:
+#         toRender.add masterSecondsStepToken
+#     echo toRender
+#     return toRender
+#   else:
+#     var toRender: seq[NwtNode] = @[]
+#     for token in secondsStepTokens:
+#       if token.kind == NBlock:
+#         for blockToken in token.blockBody:
+#           toRender.add blockToken
+#       else:
+#         toRender.add token
+#     echo toRender
+#     return toRender # TODO make to ITERATOR
+
+
+# template doCompile(str: untyped): untyped =
+#   let nwtNodes = compile(str)
+#   when defined(dumpNwtAst): echo nwtNodes
+#   when defined(dumpNwtAstPretty): echo nwtNodes.pretty
+#   result = newStmtList()
+#   for nwtNode in nwtNodes:
+#     result.add astAstOne(nwtNode)
+#   when defined(dumpNwtMacro): echo toStrLit(result)
+
+####################################
+proc compile2(str: string, templateCache: var Deque[seq[NwtNode]]): seq[NwtNode] =
   var secondsStepTokens = loadCache(str)
-  when defined(dumpNwtAst): echo secondsStepTokens
   let foundExtendAt = validExtend(secondsStepTokens)
   if foundExtendAt > -1:
-    echo "===== THIS TEMPLATE EXTENDS ====="
-    echo str
-    echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
-    # Load master template
-    let masterStr = loadCacheFile( getScriptDir() / secondsStepTokens[foundExtendAt].extendsPath )
-    var masterSecondsStepTokens = compile(masterStr) # loadCache(masterStr)
-    # Load THIS template (above)
-    var toRender: seq[NwtNode] = @[]
-    for masterSecondsStepToken in masterSecondsStepTokens:
-      if masterSecondsStepToken.kind == NBlock:
-        ## search the other template and put the stuff in toRender
-        var found = false
-        for secondsStepToken in secondsStepTokens[foundExtendAt+1 .. ^1]: # skip everything before the extend
-          if secondsStepToken.kind == NExtends: raise newException(ValueError, "only one extend is allowed!")
-          if secondsStepToken.kind == NBlock and secondsStepToken.blockName == masterSecondsStepToken.blockName:
-            found = true
-            for blockToken in secondsStepToken.blockBody:
-              toRender.add blockToken
-        if found == false:
-          # not overwritten; render the block
-          for blockToken in masterSecondsStepToken.blockBody:
-            toRender.add blockToken
-      else:
-        toRender.add masterSecondsStepToken
-    echo toRender
-    return toRender
+    echo "EXTENDS"
+    templateCache.addFirst secondsStepTokens
+    # compile2(loadCacheFile(getScriptDir() / secondsStepTokens[foundExtendAt].extendsPath))
+    let ext = read(getScriptDir() / secondsStepTokens[foundExtendAt].extendsPath)
+    discard compile2(ext, templateCache)
   else:
-    var toRender: seq[NwtNode] = @[]
-    for token in secondsStepTokens:
-      if token.kind == NBlock:
-        for blockToken in token.blockBody:
-          toRender.add blockToken
-      else:
-        toRender.add token
-    echo toRender
-    return toRender # TODO make to ITERATOR
+    templateCache.addFirst secondsStepTokens
+
+proc findAll(nwtns: seq[NwtNode], kind: NwtNodeKind): seq[NwtNode] =
+  for nwtn in nwtns:
+    if nwtn.kind == kind: result.add nwtn
+
+proc recursiveFindAllBlocks(nwtns: seq[NwtNode]): seq[NwtNode] =
+  for nwtn in nwtns.findAll(NBlock):
+    result.add nwtn
+    result.add recursiveFindAllBlocks(nwtn.blockBody)
 
 
-template doCompile(str: untyped): untyped =
-  let nwtNodes = compile(str)
-  when defined(dumpNwtAst): echo nwtNodes
-  when defined(dumpNwtAstPretty): echo nwtNodes.pretty
-  result = newStmtList()
-  for nwtNode in nwtNodes:
-    result.add astAstOne(nwtNode)
-  when defined(dumpNwtMacro): echo toStrLit(result)
+proc fillBlocks(nodes: seq[NwtNode], blocks: Table[string, seq[NwtNode]]): seq[NwtNode] =
+  for node in nodes:
+    if node.kind == NBlock:
+      for bnode in blocks[node.blockName]:
+        if bnode.kind == NBlock:
+          result.add fillBlocks(bnode, blocks)
+        else:
+          result.add bnode
+    else:
+      result.add node
 
+
+# macro compileTemplateStr*(str: typed, iter: static bool = false): untyped =
 macro compileTemplateStr*(str: typed, iter: static bool = false): untyped =
-  ## Compiles a nimja template from a string.
-  ##
-  ## .. code-block:: Nim
-  ##  proc yourFunc(yourParams: bool): string =
-  ##    compileTemplateString("{%if yourParams%}TRUE{%endif%}")
-  ##
-  ##  echo yourFunc(true)
-  ##
-  ## If `iter = true` then the macro can be used in an interator body
-  ## this could be used for streaming templates, or to save memory when a big template
-  ## is rendered and the http server can send data in chunks.
-  ##
-  ## .. code-block:: nim
-  ##  iterator yourIter(yourParams: bool): string =
-  ##    compileTemplateString("{%for idx in 0 .. 100%}{{idx}}{%endfor%}", iter = true)
-  ##
-  ##  for elem in yourIter(true):
-  ##    echo elem
-  ##
   nwtIter = iter
-  doCompile(str.strVal)
+  var templateCache = initDeque[seq[NwtNode]]()
+  # echo compile2("""{% extends "doubleExtends/outer.nwt" %}{%block outer%}inner{%endblock%}""", templateCache)
+  discard compile2(str.strVal, templateCache)
+  var blocks: Table[string, seq[NwtNode]]
+  for idx, tmp in templateCache.pairs():
+    # echo idx, " :", tmp
+    for nwtn in tmp.recursiveFindAllBlocks():
+      blocks[nwtn.blockName] = nwtn.blockBody
+    # echo blocks
+  var base = templateCache[0]
+  let filledBlocks = fillBlocks(base, blocks)
+  # echo filledBlocks
 
+  result = newStmtList()
+  for nwtNode in filledBlocks:
+    result.add astAstOne(nwtNode)
+
+# macro compileTemplateFile*(path: typed, iter: static bool = false): untyped =
 macro compileTemplateFile*(path: static string, iter: static bool = false): untyped =
-  ## Compiles a nimja template from a file.
-  ##
-  ## .. code-block:: nim
-  ##  proc yourFunc(yourParams: bool): string =
-  ##    compileTemplateFile(getScriptDir() / "relative/path.nwt")
-  ##
-  ##  echo yourFunc(true)
-  ##
-  ## If `iter = true` then the macro can be used in an interator body
-  ## this could be used for streaming templates, or to save memory when a big template
-  ## is rendered and the http server can send data in chunks.
-  ##
-  ## .. code-block:: nim
-  ##  iterator yourIter(yourParams: bool): string =
-  ##    compileTemplateFile(getScriptDir() / "relative/path.nwt", iter = true)
-  ##
-  ##  for elem in yourIter(true):
-  ##    echo elem
-  ##
   nwtIter = iter
-  let str = loadCacheFile(path)
-  doCompile(str)
+  var str = read(path)
+  # compileTemplateStr(str)
+  var templateCache = initDeque[seq[NwtNode]]()
+  # echo compile2("""{% extends "doubleExtends/outer.nwt" %}{%block outer%}inner{%endblock%}""", templateCache)
+  discard compile2(str, templateCache)
+  var blocks: Table[string, seq[NwtNode]]
+  for idx, tmp in templateCache.pairs():
+    # echo idx, " :", tmp
+    for nwtn in tmp.recursiveFindAllBlocks():
+      blocks[nwtn.blockName] = nwtn.blockBody
+    # echo blocks
+  var base = templateCache[0]
+  let filledBlocks = fillBlocks(base, blocks)
+  # echo filledBlocks
+
+  result = newStmtList()
+  for nwtNode in filledBlocks:
+    result.add astAstOne(nwtNode)
+####################################
+
+# import ../tests/basic/foo
+# export compileTemplateStr, compileTemplateFile
+
+# macro compileTemplateStr*(str: typed, iter: static bool = false): untyped =
+#   ## Compiles a nimja template from a string.
+#   ##
+#   ## .. code-block:: Nim
+#   ##  proc yourFunc(yourParams: bool): string =
+#   ##    compileTemplateString("{%if yourParams%}TRUE{%endif%}")
+#   ##
+#   ##  echo yourFunc(true)
+#   ##
+#   ## If `iter = true` then the macro can be used in an interator body
+#   ## this could be used for streaming templates, or to save memory when a big template
+#   ## is rendered and the http server can send data in chunks.
+#   ##
+#   ## .. code-block:: nim
+#   ##  iterator yourIter(yourParams: bool): string =
+#   ##    compileTemplateString("{%for idx in 0 .. 100%}{{idx}}{%endfor%}", iter = true)
+#   ##
+#   ##  for elem in yourIter(true):
+#   ##    echo elem
+#   ##
+#   nwtIter = iter
+#   doCompile(str.strVal)
+
+# macro compileTemplateFile*(path: static string, iter: static bool = false): untyped =
+#   ## Compiles a nimja template from a file.
+#   ##
+#   ## .. code-block:: nim
+#   ##  proc yourFunc(yourParams: bool): string =
+#   ##    compileTemplateFile(getScriptDir() / "relative/path.nwt")
+#   ##
+#   ##  echo yourFunc(true)
+#   ##
+#   ## If `iter = true` then the macro can be used in an interator body
+#   ## this could be used for streaming templates, or to save memory when a big template
+#   ## is rendered and the http server can send data in chunks.
+#   ##
+#   ## .. code-block:: nim
+#   ##  iterator yourIter(yourParams: bool): string =
+#   ##    compileTemplateFile(getScriptDir() / "relative/path.nwt", iter = true)
+#   ##
+#   ##  for elem in yourIter(true):
+#   ##    echo elem
+#   ##
+#   nwtIter = iter
+#   let str = loadCacheFile(path)
+#   doCompile(str)
