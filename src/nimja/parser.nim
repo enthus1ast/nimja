@@ -54,13 +54,6 @@ var cacheNwtNode {.compileTime.}: Table[string, seq[NwtNode]] ## a cache for ren
 var cacheNwtNodeFile {.compileTime.}: Table[Path, string] ## a cache for content of a path
 var nwtIter {.compileTime.} = false
 
-# macro DISCARD_STMT() =
-#   return nnkStmtList.newTree(
-#     nnkDiscardStmt.newTree(
-#       newEmptyNode()
-#     )
-#   )
-
 when defined(dumpNwtAstPretty):
   import json
   proc pretty*(nwtNodes: seq[NwtNode]): string {.compileTime.} =
@@ -379,6 +372,7 @@ proc validExtend(secondsStepTokens: seq[NwtNode]): int =
     )
 
 func condenseStrings(nodes: seq[FsNode]): seq[FsNode] =
+  ## tries to combine multiple string assignments into one.
   when defined(noCondenseStrings):
     return nodes
   else:
@@ -396,7 +390,8 @@ func condenseStrings(nodes: seq[FsNode]): seq[FsNode] =
       result.add FsNode(kind: FsStr, value: curStr)
 
 proc errorOnDoublicatedBlocks(fsns: seq[FSNode]) =
-  # Find doublicated blocks
+  ## Find doublicated blocks
+  # TODO give context and line
   var blocknames: HashSet[string]
   for fsnode in fsns.findAll(FsBlock):
     if blocknames.contains(fsnode.value):
@@ -405,7 +400,7 @@ proc errorOnDoublicatedBlocks(fsns: seq[FSNode]) =
       blocknames.incl fsnode.value
 
 proc errorOnDoublicatedExtends(fsns: seq[FSNode]) =
-  ## Find doublicated blocks
+  ## Find doublicated extends
   # TODO give context and line
   var foundExtends = false
   for _ in fsns.findAll(FsExtends):
@@ -436,41 +431,32 @@ proc errorOnUnevenBlocks(fsns: seq[FSNode]) =
   if whiles != 0:
     raise newException(ValueError, "uneven while's: " & $fsns)
 
-proc loadCache(str: string): seq[NwtNode] =
-  ## For faster compilation
-  ## ```-d:nwtCacheOff``` to disable caching
-  ## Creates NwtNodes only the first time for a given string,
-  ## the second time is returned from the cache
-
-  var lexerTokens = toSeq(lex(str))
-
-  let fsns = parseFirstStep(lexerTokens)
-
+template firstStepErrorChecks(fsns: seq[FSNode]) =
   ## TODO combine all these?
   errorOnDoublicatedExtends(fsns)
   errorOnDoublicatedBlocks(fsns)
   errorOnUnevenBlocks(fsns)
 
-  var firstStepTokens = condenseStrings(fsns)
-  var pos = 0
-  return parseSecondStep(firstStepTokens, pos)
-
-  ## TODO reactivate later
-  # when defined(nwtCacheOff):
-  #   var lexerTokens = toSeq(lex(str))
-  #   var firstStepTokens = condenseStrings(parseFirstStep(lexerTokens))
-  #   var pos = 0
-  #   return parseSecondStep(firstStepTokens, pos)
-  # else:
-  #   if cacheNwtNode.contains(str):
-  #     # echo "cache hit str"
-  #     return cacheNwtNode[str]
-  #   else:
-  #     var lexerTokens = toSeq(lex(str))
-  #     var firstStepTokens = condenseStrings(parseFirstStep(lexerTokens))
-  #     var pos = 0
-  #     cacheNwtNode[str] = parseSecondStep(firstStepTokens, pos)
-  #     return cacheNwtNode[str]
+proc loadCache(str: string): seq[NwtNode] =
+  ## For faster compilation
+  ## ```-d:nwtCacheOff``` to disable caching
+  ## Creates NwtNodes only the first time for a given string,
+  ## the second time is returned from the cache
+  if not defined(nwtCacheOff) and cacheNwtNode.contains(str):
+    # echo "cache hit str"
+    return cacheNwtNode[str]
+  else:
+    # No cache hit (or cache disabled)
+    var lexerTokens = toSeq(lex(str))
+    var fsns = parseFirstStep(lexerTokens)
+    fsns.firstStepErrorChecks()
+    fsns = fsns.condenseStrings()
+    var pos = 0
+    when defined(nwtCacheOff):
+      return parseSecondStep(fsns, pos)
+    else:
+      cacheNwtNode[str] = parseSecondStep(fsns, pos)
+      return cacheNwtNode[str]
 
 proc loadCacheFile(path: Path): string =
   ## For faster compilation
@@ -488,56 +474,6 @@ proc loadCacheFile(path: Path): string =
       cacheNwtNodeFile[path] = read(path)
       return cacheNwtNodeFile[path]
 
-
-# var templateCache = initDeque[seq[NwtNode]]()
-
-
-# proc compile(str: string): seq[NwtNode] =
-#   ## Transforms a template string into a seq of NwtNodes
-#   # TODO make to ITERATOR
-#   var secondsStepTokens = loadCache(str)
-#   when defined(dumpNwtAst): echo secondsStepTokens
-#   let foundExtendAt = validExtend(secondsStepTokens)
-#   if foundExtendAt > -1:
-#     echo "===== THIS TEMPLATE EXTENDS ====="
-#     echo str
-#     echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
-#     # Load master template
-#     let masterStr = loadCacheFile( getScriptDir() / secondsStepTokens[foundExtendAt].extendsPath )
-#     var masterSecondsStepTokens = compile(masterStr) # loadCache(masterStr)
-#     # Load THIS template (above)
-#     var toRender: seq[NwtNode] = @[]
-#     for masterSecondsStepToken in masterSecondsStepTokens:
-#       if masterSecondsStepToken.kind == NBlock:
-#         ## search the other template and put the stuff in toRender
-#         var found = false
-#         for secondsStepToken in secondsStepTokens[foundExtendAt+1 .. ^1]: # skip everything before the extend
-#           if secondsStepToken.kind == NExtends: raise newException(ValueError, "only one extend is allowed!")
-#           if secondsStepToken.kind == NBlock and secondsStepToken.blockName == masterSecondsStepToken.blockName:
-#             found = true
-#             for blockToken in secondsStepToken.blockBody:
-#               toRender.add blockToken
-#         if found == false:
-#           # not overwritten; render the block
-#           for blockToken in masterSecondsStepToken.blockBody:
-#             toRender.add blockToken
-#       else:
-#         toRender.add masterSecondsStepToken
-#     echo toRender
-#     return toRender
-#   else:
-#     var toRender: seq[NwtNode] = @[]
-#     for token in secondsStepTokens:
-#       if token.kind == NBlock:
-#         for blockToken in token.blockBody:
-#           toRender.add blockToken
-#       else:
-#         toRender.add token
-#     echo toRender
-#     return toRender # TODO make to ITERATOR
-
-
-####################################
 proc extend(str: string, templateCache: var Deque[seq[NwtNode]]) =
   var secondsStepTokens = loadCache(str)
   let foundExtendAt = validExtend(secondsStepTokens)
