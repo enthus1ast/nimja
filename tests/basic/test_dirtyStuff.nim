@@ -20,15 +20,6 @@ result.add foo() & $ii
   doAssert test() == "FOO!!123"
 
 block:
-  proc test(): string = compileTemplateStr("""
-{%
-var ii = 123
-proc foo(): string = return "FOO!!"
-result.add foo() & $ii
-%}""")
-  doAssert test() == "FOO!!123"
-
-block:
   proc test(): string = compileTemplateStr("""SOME STUFF{% result = "" %}""")
   doAssert test() == ""
 

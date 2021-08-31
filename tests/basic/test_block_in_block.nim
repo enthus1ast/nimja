@@ -1,3 +1,6 @@
+discard """
+  joinable: false
+"""
 include ../../src/nimja/parser
 import ../../src/nimja/lexer
 import sequtils

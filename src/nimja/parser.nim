@@ -537,25 +537,15 @@ proc loadCacheFile(path: Path): string =
 #     return toRender # TODO make to ITERATOR
 
 
-# template doCompile(str: untyped): untyped =
-#   let nwtNodes = compile(str)
-#   when defined(dumpNwtAst): echo nwtNodes
-#   when defined(dumpNwtAstPretty): echo nwtNodes.pretty
-#   result = newStmtList()
-#   for nwtNode in nwtNodes:
-#     result.add astAstOne(nwtNode)
-#   when defined(dumpNwtMacro): echo toStrLit(result)
-
 ####################################
-proc compile2(str: string, templateCache: var Deque[seq[NwtNode]]): seq[NwtNode] =
+proc extend(str: string, templateCache: var Deque[seq[NwtNode]]) =
   var secondsStepTokens = loadCache(str)
   let foundExtendAt = validExtend(secondsStepTokens)
   if foundExtendAt > -1:
     echo "EXTENDS"
     templateCache.addFirst secondsStepTokens
-    # compile2(loadCacheFile(getScriptDir() / secondsStepTokens[foundExtendAt].extendsPath))
-    let ext = read(getScriptDir() / secondsStepTokens[foundExtendAt].extendsPath)
-    discard compile2(ext, templateCache)
+    let ext = loadCacheFile(getScriptDir() / secondsStepTokens[foundExtendAt].extendsPath)
+    extend(ext, templateCache)
   else:
     templateCache.addFirst secondsStepTokens
 
@@ -568,7 +558,6 @@ proc recursiveFindAllBlocks(nwtns: seq[NwtNode]): seq[NwtNode] =
     result.add nwtn
     result.add recursiveFindAllBlocks(nwtn.blockBody)
 
-
 proc fillBlocks(nodes: seq[NwtNode], blocks: Table[string, seq[NwtNode]]): seq[NwtNode] =
   for node in nodes:
     if node.kind == NBlock:
@@ -580,96 +569,68 @@ proc fillBlocks(nodes: seq[NwtNode], blocks: Table[string, seq[NwtNode]]): seq[N
     else:
       result.add node
 
+proc compile(str: string): seq[NwtNode] =
+  var templateCache = initDeque[seq[NwtNode]]()
+  extend(str, templateCache)
+  var blocks: Table[string, seq[NwtNode]]
+  for idx, tmp in templateCache.pairs():
+    for nwtn in tmp.recursiveFindAllBlocks():
+      blocks[nwtn.blockName] = nwtn.blockBody
+  var base = templateCache[0]
+  return fillBlocks(base, blocks)
 
-# macro compileTemplateStr*(str: typed, iter: static bool = false): untyped =
+template doCompile(str: untyped): untyped =
+  let nwtNodes = compile(str)
+  when defined(dumpNwtAst): echo nwtNodes
+  when defined(dumpNwtAstPretty): echo nwtNodes.pretty
+  result = newStmtList()
+  for nwtNode in nwtNodes:
+    result.add astAstOne(nwtNode)
+  when defined(dumpNwtMacro): echo toStrLit(result)
+
 macro compileTemplateStr*(str: typed, iter: static bool = false): untyped =
+  ## Compiles a nimja template from a string.
+  ##
+  ## .. code-block:: Nim
+  ##  proc yourFunc(yourParams: bool): string =
+  ##    compileTemplateString("{%if yourParams%}TRUE{%endif%}")
+  ##
+  ##  echo yourFunc(true)
+  ##
+  ## If `iter = true` then the macro can be used in an interator body
+  ## this could be used for streaming templates, or to save memory when a big template
+  ## is rendered and the http server can send data in chunks.
+  ##
+  ## .. code-block:: nim
+  ##  iterator yourIter(yourParams: bool): string =
+  ##    compileTemplateString("{%for idx in 0 .. 100%}{{idx}}{%endfor%}", iter = true)
+  ##
+  ##  for elem in yourIter(true):
+  ##    echo elem
+  ##
   nwtIter = iter
-  var templateCache = initDeque[seq[NwtNode]]()
-  # echo compile2("""{% extends "doubleExtends/outer.nwt" %}{%block outer%}inner{%endblock%}""", templateCache)
-  discard compile2(str.strVal, templateCache)
-  var blocks: Table[string, seq[NwtNode]]
-  for idx, tmp in templateCache.pairs():
-    # echo idx, " :", tmp
-    for nwtn in tmp.recursiveFindAllBlocks():
-      blocks[nwtn.blockName] = nwtn.blockBody
-    # echo blocks
-  var base = templateCache[0]
-  let filledBlocks = fillBlocks(base, blocks)
-  # echo filledBlocks
+  doCompile(str.strVal)
 
-  result = newStmtList()
-  for nwtNode in filledBlocks:
-    result.add astAstOne(nwtNode)
-
-# macro compileTemplateFile*(path: typed, iter: static bool = false): untyped =
 macro compileTemplateFile*(path: static string, iter: static bool = false): untyped =
+  ## Compiles a nimja template from a file.
+  ##
+  ## .. code-block:: nim
+  ##  proc yourFunc(yourParams: bool): string =
+  ##    compileTemplateFile(getScriptDir() / "relative/path.nwt")
+  ##
+  ##  echo yourFunc(true)
+  ##
+  ## If `iter = true` then the macro can be used in an interator body
+  ## this could be used for streaming templates, or to save memory when a big template
+  ## is rendered and the http server can send data in chunks.
+  ##
+  ## .. code-block:: nim
+  ##  iterator yourIter(yourParams: bool): string =
+  ##    compileTemplateFile(getScriptDir() / "relative/path.nwt", iter = true)
+  ##
+  ##  for elem in yourIter(true):
+  ##    echo elem
+  ##
   nwtIter = iter
-  var str = read(path)
-  # compileTemplateStr(str)
-  var templateCache = initDeque[seq[NwtNode]]()
-  # echo compile2("""{% extends "doubleExtends/outer.nwt" %}{%block outer%}inner{%endblock%}""", templateCache)
-  discard compile2(str, templateCache)
-  var blocks: Table[string, seq[NwtNode]]
-  for idx, tmp in templateCache.pairs():
-    # echo idx, " :", tmp
-    for nwtn in tmp.recursiveFindAllBlocks():
-      blocks[nwtn.blockName] = nwtn.blockBody
-    # echo blocks
-  var base = templateCache[0]
-  let filledBlocks = fillBlocks(base, blocks)
-  # echo filledBlocks
-
-  result = newStmtList()
-  for nwtNode in filledBlocks:
-    result.add astAstOne(nwtNode)
-####################################
-
-# import ../tests/basic/foo
-# export compileTemplateStr, compileTemplateFile
-
-# macro compileTemplateStr*(str: typed, iter: static bool = false): untyped =
-#   ## Compiles a nimja template from a string.
-#   ##
-#   ## .. code-block:: Nim
-#   ##  proc yourFunc(yourParams: bool): string =
-#   ##    compileTemplateString("{%if yourParams%}TRUE{%endif%}")
-#   ##
-#   ##  echo yourFunc(true)
-#   ##
-#   ## If `iter = true` then the macro can be used in an interator body
-#   ## this could be used for streaming templates, or to save memory when a big template
-#   ## is rendered and the http server can send data in chunks.
-#   ##
-#   ## .. code-block:: nim
-#   ##  iterator yourIter(yourParams: bool): string =
-#   ##    compileTemplateString("{%for idx in 0 .. 100%}{{idx}}{%endfor%}", iter = true)
-#   ##
-#   ##  for elem in yourIter(true):
-#   ##    echo elem
-#   ##
-#   nwtIter = iter
-#   doCompile(str.strVal)
-
-# macro compileTemplateFile*(path: static string, iter: static bool = false): untyped =
-#   ## Compiles a nimja template from a file.
-#   ##
-#   ## .. code-block:: nim
-#   ##  proc yourFunc(yourParams: bool): string =
-#   ##    compileTemplateFile(getScriptDir() / "relative/path.nwt")
-#   ##
-#   ##  echo yourFunc(true)
-#   ##
-#   ## If `iter = true` then the macro can be used in an interator body
-#   ## this could be used for streaming templates, or to save memory when a big template
-#   ## is rendered and the http server can send data in chunks.
-#   ##
-#   ## .. code-block:: nim
-#   ##  iterator yourIter(yourParams: bool): string =
-#   ##    compileTemplateFile(getScriptDir() / "relative/path.nwt", iter = true)
-#   ##
-#   ##  for elem in yourIter(true):
-#   ##    echo elem
-#   ##
-#   nwtIter = iter
-#   let str = loadCacheFile(path)
-#   doCompile(str)
+  let str = loadCacheFile(path)
+  doCompile(str)
