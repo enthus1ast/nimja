@@ -1,0 +1,1 @@
+{%block outer%}outer1{%block inner%}inner{% endblock inner%}outer2{% endblock outer%}

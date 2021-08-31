@@ -1,6 +1,6 @@
 discard """
   joinable: false
-  errormsg: '''unhandled exception: only one extend is allowed! [ValueError]'''
+  errormsg: '''unhandled exception: found multiple extends'''
   file: "parser.nim"
 """
 include ../../src/nimja/parser
