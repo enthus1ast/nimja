@@ -478,7 +478,7 @@ proc extend(str: string, templateCache: var Deque[seq[NwtNode]]) =
   var secondsStepTokens = loadCache(str)
   let foundExtendAt = validExtend(secondsStepTokens)
   if foundExtendAt > -1:
-    echo "EXTENDS"
+    # echo "EXTENDS"
     templateCache.addFirst secondsStepTokens
     let ext = loadCacheFile(getScriptDir() / secondsStepTokens[foundExtendAt].extendsPath)
     extend(ext, templateCache)
