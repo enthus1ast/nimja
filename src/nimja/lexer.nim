@@ -1,20 +1,17 @@
 import strformat, strutils
 
 type
-
   NwtTokenKind* = enum # TODO rename to TokenKind or TokenType
     NwtNone,
     NwtString, # a string block
     NwtComment,
     NwtEval,
     NwtVariable,
-
   Token* = object
     kind*: NwtTokenKind
     value*: string # the value
     line*: int
     charinbuf*: int
-
 
 proc debugPrint(buffer: string, pos: int) =
   let pointPos = if pos - 1 < 0: 0 else: pos - 1
@@ -44,9 +41,6 @@ template nomatch() =
 
 proc lexerMsg(str: string, line: int) =
   echo fmt"[{line}] {str}"
-
-# func lexStr(buf: string, pos: var int): LexReturn =
-#   discard
 
 func lexInnerStr(buf: string, pos: var int): string =
   result &= buf[pos] # the '"'
@@ -95,8 +89,6 @@ proc lexBetween(buf: string, pos: var int, line: var int, bstart = "{{", bend = 
       break
     elif thisIs('"'):
       result.token.value &= lexInnerStr(buf, pos)
-    # elif thisIs('"'):
-    #   result.token.value &= lexInnerStr(buf, pos)
     else:
       store
     pos.inc
@@ -121,7 +113,7 @@ proc lexStr(buf: string, pos: var int, line: var int): LexReturn =
     let ch = buf[pos]
     handleNl
     if thisIs('{') and (nextIs('#') or nextIs('%') or nextIs('{')):
-      pos.dec # go back to last for next lexer
+      pos.dec # go back to last; for next lexer
       break
     else:
       store
