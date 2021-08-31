@@ -6,13 +6,11 @@ block:
   proc test(): string = compileTemplateStr("""{{ "{{" }}""")
   doAssert test() == "{{"
 
-## THIS FAILS seems like a lexer issue maybe even #1
-# block:
-#   proc test(): string = compileTemplateStr("""{{ "}}" }} """)
-#   doAssert test() == "}}"
+block:
+  proc test(): string = compileTemplateStr("""{{ "}}" }}""")
+  doAssert test() == "}}"
 
-## THIS FAILS seems like a lexer issue maybe even #1
-# block:
-#   proc test(): string = compileTemplateStr("""{{ "{{}}" }}""")
-#   doAssert test() == "{{}}"
+block:
+  proc test(): string = compileTemplateStr("""{{ "{{}}" }}""")
+  doAssert test() == "{{}}"
 
