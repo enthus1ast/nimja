@@ -12,6 +12,8 @@ typed and compiled template engine inspired by [jinja2](https://jinja.palletspro
 FEATURES
 ========
 
+[![test](https://github.com/enthus1ast/nimja/actions/workflows/test.yml/badge.svg)](https://github.com/enthus1ast/nimja/actions/workflows/test.yml)
+
 - compiled
 - statically typed
 - extends (a master template)
