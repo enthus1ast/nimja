@@ -1,0 +1,7 @@
+<h1>LOREM!!</h1>
+
+{% for (loop, each) in @["foo", "baa", "baz"].loop() %}
+  <p>Lorem ipsum dolor sit, amet consectetur adipisicing elit. Distinctio adipisci officia quod quisquam, dolorum modi iure perspiciatis accusamus, unde expedita iste possimus ipsa dignissimos doloremque enim maiores error aliquam ab!</p>
+  {{ each.repeat(loop.index) }}
+{% endfor %}
+Lorem ipsum, dolor sit amet consectetur adipisicing elit. Nihil repudiandae saepe quia. Non odio, ratione quia perferendis voluptates sed dolores voluptate rem molestias asperiores ex ab, recusandae hic nihil enim.
