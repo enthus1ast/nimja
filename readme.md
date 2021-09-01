@@ -409,6 +409,53 @@ for elem in yourIter(true):
   echo elem
 ```
 
+Nimjautils
+==========
+
+The optional `nimjautils` module, implements some convenient procedures.
+
+```nim
+import nimja/nimjautils
+```
+
+Mainly:
+
+Loop variable/iterator
+-------------
+
+yields a `Loop` object with every item.
+Inside the loop body you have access to the following fields.
+Unlike jinja2 or twig where the loop variable is implicitly bound and available, we must use the `loop()` iterator explicity.
+
+```twig
+{% for (loop, row) in rows.loop() %}
+    {{ loop.index0 }} {# which elemen (start from 0) #}
+    {{ loop.index }} {# which element (start from 1) #}
+    {{ loop.revindex0 }} {# which element, counted from the end (last one is 0) #}
+    {{ loop.revindex }} {# which element, counted from the end (last one is 1) #}
+    {{ loop.length }} {# the length of the seq, (same as mySeq.len()) #}
+    {% if loop.first %}The first item{% endif %} {# if this is the first loop iteration #}
+    {% if loop.last %}The last item{% endif %} {# if this is the last loop iteration #}
+    {% if loop.previtem.isSome() %}{{ loop.previtem.get() }}{% endif %} {# get the item from the last loop iteration #}
+    {% if loop.nextitem.isSome() %}{{ loop.nextitem.get() }}{% endif %} {# get the item from the next loop iteration #}
+    <li class="{{ loop.cycle(@["odd", "even"]) }}">{{row}}</li>
+{% endfor %}
+```
+
+however, the element you iterate over must match the Concept `Loopable`.
+This means you can propably not use `loop()` with an iterator, since they do not have a `len()` and `[]`
+
+Cycle
+-----
+
+within a loop you can cycle through elements:
+
+```twig
+{% for (loop, row) in rows.loop() %}
+    <li class="{{ loop.cycle(@["odd", "even"]) }}">{{ row }}</li>
+{% endfor %}
+```
+
 Compile / Use
 =============
 
@@ -428,6 +475,8 @@ Then compile with "-f" (force)
 ```bash
 nim c -f -r  yourfile.nim
 ```
+
+
 
 Debugging
 =====================

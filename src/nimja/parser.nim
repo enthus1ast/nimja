@@ -236,8 +236,9 @@ proc astVariable(token: NwtNode): NimNode =
   var varb: NimNode
   try:
     varb = parseStmt(token.variableBody)
+    echo token.variableBody
   except:
-    error "Cannot parse variable body: " & getCurrentExceptionMsg()
+    error "Cannot parse variable body: " & token.variableBody
   return nnkStmtList.newTree(
     nnkInfix.newTree(
       newIdentNode("&="),
