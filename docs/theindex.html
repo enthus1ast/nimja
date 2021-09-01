@@ -63,7 +63,7 @@ function main() {
 <div class="document" id="documentId">
   <div class="container">
     <h1 class="title">Index</h1>
-    Modules: <a href="nimja/nwtTokenizer.html">nimja/nwtTokenizer</a>, <a href="nimja/parser.html">nimja/parser</a>.<br/><p /><h2>API symbols</h2>
+    Modules: <a href="nimja/lexer.html">nimja/lexer</a>, <a href="nimja/nimjautils.html">nimja/nimjautils</a>, <a href="nimja/nwtTokenizer.html">nimja/nwtTokenizer</a>, <a href="nimja/parser.html">nimja/parser</a>.<br/><p /><h2>API symbols</h2>
 <dl><dt><a name="Block" href="#Block"><span>Block:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nwtTokenizer: Block" href="nimja/nwtTokenizer.html#Block">nwtTokenizer: Block</a></li>
@@ -76,6 +76,10 @@ function main() {
 <li><a class="reference external"
           data-doc-search-tag="parser: compileTemplateStr(str: typed; iter: static bool = false): untyped" href="nimja/parser.html#compileTemplateStr.m%2Ctyped%2Cstaticbool">parser: compileTemplateStr(str: typed; iter: static bool = false): untyped</a></li>
           </ul></dd>
+<dt><a name="cycle" href="#cycle"><span>cycle:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nimjautils: cycle[T](loop: Loop; elems: openArray[T]): T" href="nimja/nimjautils.html#cycle%2CLoop%2CopenArray%5BT%5D">nimjautils: cycle[T](loop: Loop; elems: openArray[T]): T</a></li>
+          </ul></dd>
 <dt><a name="extractTemplateName" href="#extractTemplateName"><span>extractTemplateName:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nwtTokenizer: extractTemplateName(raw: string): string" href="nimja/nwtTokenizer.html#extractTemplateName%2Cstring">nwtTokenizer: extractTemplateName(raw: string): string</a></li>
@@ -84,20 +88,46 @@ function main() {
 <li><a class="reference external"
           data-doc-search-tag="parser: getScriptDir(): string" href="nimja/parser.html#getScriptDir.t">parser: getScriptDir(): string</a></li>
           </ul></dd>
+<dt><a name="lex" href="#lex"><span>lex:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="lexer: lex(buf: string): Token" href="nimja/lexer.html#lex.i%2Cstring">lexer: lex(buf: string): Token</a></li>
+          </ul></dd>
+<dt><a name="Loop" href="#Loop"><span>Loop:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nimjautils: Loop" href="nimja/nimjautils.html#Loop">nimjautils: Loop</a></li>
+          </ul></dd>
+<dt><a name="loop" href="#loop"><span>loop:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nimjautils: loop[T](a: openArray[T]): tuple[loop: Loop[T], val: T]" href="nimja/nimjautils.html#loop.i%2CopenArray%5BT%5D">nimjautils: loop[T](a: openArray[T]): tuple[loop: Loop[T], val: T]</a></li>
+          </ul></dd>
+<dt><a name="Loopable" href="#Loopable"><span>Loopable:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nimjautils: Loopable" href="nimja/nimjautils.html#Loopable">nimjautils: Loopable</a></li>
+          </ul></dd>
 <dt><a name="newToken" href="#newToken"><span>newToken:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nwtTokenizer: newToken(tokenType: NwtToken; value: string): Token" href="nimja/nwtTokenizer.html#newToken%2CNwtToken%2Cstring">nwtTokenizer: newToken(tokenType: NwtToken; value: string): Token</a></li>
           </ul></dd>
 <dt><a name="NwtComment" href="#NwtComment"><span>NwtComment:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
+          data-doc-search-tag="NwtTokenKind.NwtComment" href="nimja/lexer.html#NwtComment">NwtTokenKind.NwtComment</a></li>
+          <li><a class="reference external"
           data-doc-search-tag="NwtToken.NwtComment" href="nimja/nwtTokenizer.html#NwtComment">NwtToken.NwtComment</a></li>
           </ul></dd>
 <dt><a name="NwtEval" href="#NwtEval"><span>NwtEval:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
+          data-doc-search-tag="NwtTokenKind.NwtEval" href="nimja/lexer.html#NwtEval">NwtTokenKind.NwtEval</a></li>
+          <li><a class="reference external"
           data-doc-search-tag="NwtToken.NwtEval" href="nimja/nwtTokenizer.html#NwtEval">NwtToken.NwtEval</a></li>
+          </ul></dd>
+<dt><a name="NwtNone" href="#NwtNone"><span>NwtNone:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="NwtTokenKind.NwtNone" href="nimja/lexer.html#NwtNone">NwtTokenKind.NwtNone</a></li>
           </ul></dd>
 <dt><a name="NwtString" href="#NwtString"><span>NwtString:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
+          data-doc-search-tag="NwtTokenKind.NwtString" href="nimja/lexer.html#NwtString">NwtTokenKind.NwtString</a></li>
+          <li><a class="reference external"
           data-doc-search-tag="NwtToken.NwtString" href="nimja/nwtTokenizer.html#NwtString">NwtToken.NwtString</a></li>
           </ul></dd>
 <dt><a name="NwtToken" href="#NwtToken"><span>NwtToken:</span></a></dt><dd><ul class="simple">
@@ -108,8 +138,14 @@ function main() {
 <li><a class="reference external"
           data-doc-search-tag="nwtTokenizer: nwtTokenize(s: string): Token" href="nimja/nwtTokenizer.html#nwtTokenize.i%2Cstring">nwtTokenizer: nwtTokenize(s: string): Token</a></li>
           </ul></dd>
+<dt><a name="NwtTokenKind" href="#NwtTokenKind"><span>NwtTokenKind:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="lexer: NwtTokenKind" href="nimja/lexer.html#NwtTokenKind">lexer: NwtTokenKind</a></li>
+          </ul></dd>
 <dt><a name="NwtVariable" href="#NwtVariable"><span>NwtVariable:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
+          data-doc-search-tag="NwtTokenKind.NwtVariable" href="nimja/lexer.html#NwtVariable">NwtTokenKind.NwtVariable</a></li>
+          <li><a class="reference external"
           data-doc-search-tag="NwtToken.NwtVariable" href="nimja/nwtTokenizer.html#NwtVariable">NwtToken.NwtVariable</a></li>
           </ul></dd>
 <dt><a name="TemplateSyntaxError" href="#TemplateSyntaxError"><span>TemplateSyntaxError:</span></a></dt><dd><ul class="simple">
@@ -118,6 +154,8 @@ function main() {
           </ul></dd>
 <dt><a name="Token" href="#Token"><span>Token:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
+          data-doc-search-tag="lexer: Token" href="nimja/lexer.html#Token">lexer: Token</a></li>
+          <li><a class="reference external"
           data-doc-search-tag="nwtTokenizer: Token" href="nimja/nwtTokenizer.html#Token">nwtTokenizer: Token</a></li>
           </ul></dd>
 <dt><a name="UnknownTemplate" href="#UnknownTemplate"><span>UnknownTemplate:</span></a></dt><dd><ul class="simple">
@@ -129,7 +167,7 @@ function main() {
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-08-19 12:13:23 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2021-09-01 15:24:15 UTC</small>
       </div>
     </div>
   </div>

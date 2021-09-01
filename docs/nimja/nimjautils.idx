@@ -1,0 +1,4 @@
+Loop	nimja/nimjautils.html#Loop	nimjautils: Loop	
+Loopable	nimja/nimjautils.html#Loopable	nimjautils: Loopable	
+cycle	nimja/nimjautils.html#cycle,Loop,openArray[T]	nimjautils: cycle[T](loop: Loop; elems: openArray[T]): T	
+loop	nimja/nimjautils.html#loop.i,openArray[T]	nimjautils: loop[T](a: openArray[T]): tuple[loop: Loop[T], val: T]	
