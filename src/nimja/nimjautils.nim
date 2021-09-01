@@ -27,8 +27,8 @@ proc cycle*[T](loop: Loop, elems: openArray[T]): T =
   ##
   return elems[loop.index0 mod elems.len]
 
-iterator loop*[T](a: Loopable[T]): tuple[loop: Loop[T], val: T] = # TODO cannot access fields in the template; why?
-# iterator loop*[T](a: openArray[T]): tuple[loop: Loop[T], val: T] {.inline.} =
+# iterator loop*[T](a: Loopable[T]): tuple[loop: Loop[T], val: T] = # TODO cannot access fields in the template; why?
+iterator loop*[T](a: openArray[T]): tuple[loop: Loop[T], val: T] {.inline.} =
   ## yields a `Loop` object with every item.
   ## Inside the loop body you have access to the following fields.
   ##
