@@ -11,8 +11,7 @@ type
 
 proc foo(elems: seq[Elem]): string =
   compileTemplateStr("""
-{# {% for (zaa, elem) in elems.loop() %} #}
-{% for (zaa, elem) in elems.loop() %}
+{% for (loop, elem) in elems.loop() %}
   {{ elem.baa }}
 {% endfor %}
   """)
