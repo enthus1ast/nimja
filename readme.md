@@ -442,7 +442,7 @@ Unlike jinja2 or twig where the loop variable is implicitly bound and available,
 {% endfor %}
 ```
 
-~~however, the element you iterate over must match the Concept `Loopable`.~~ #23
+~~however, the element you iterate over must match the Concept `Loopable`.~~ https://github.com/enthus1ast/nimja/issues/23
 This means you can propably not use `loop()` with an iterator, since they do not have a `len()` and `[]`
 
 Cycle
