@@ -8,17 +8,22 @@ suite "test_if_complex":
   test "if/else":
     block:
       proc test(): string = compileTemplateStr("{%if false %}A{%else%}B{%endif%}")
-      doAssert test() == "B"
+      check test() == "B"
 
   test "if/else 2":
     block:
       proc test(ii: int): string = compileTemplateStr("{%if ii == 1 %}A{%elif ii == 2%}B{%elif ii == 3%}C{%else%}D{%endif%}")
-      doAssert test(1) == "A"
-      doAssert test(2) == "B"
-      doAssert test(3) == "C"
-      doAssert test(4) == "D"
+      check test(1) == "A"
+      check test(2) == "B"
+      check test(3) == "C"
+      check test(4) == "D"
 
   test "if/else IN if/else":
     block:
       proc test(): string = compileTemplateStr("{%if false %}A{%else%}{%if 1 == 1%}1{%if false == false%}2{%endif%}{%endif%}{%endif%}")
-      doAssert test() == "12"
+      check test() == "12"
+
+  test "if #25":
+    block:
+      proc test2(): string = compileTemplateStr("{%if false%}{%if true%}A{%else%}B{%endif%}{%endif%}{%if true%}123{%else%}345{%endif%}")
+      check test2() == "123"

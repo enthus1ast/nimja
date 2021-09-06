@@ -94,6 +94,19 @@ iterator findAll(fsns: seq[FsNode], kind: FsNodeKind | set[FsNodeKind]): FsNode 
     else:
       if kind.contains(fsn.kind): yield fsn
 
+proc consumeBlock(fsTokens: seq[FSNode], pos: var int, endTags: set[FsNodeKind]): seq[NwtNode] =
+  # pos.inc # skip the elem we where called about
+  while pos < fsTokens.len:
+    let fsToken = fsTokens[pos]
+    # echo fsToken.kind
+    if endTags.contains(fsToken.kind):
+      # pos.dec(1) # for the next ## TODO does nothing....what?
+      # pos.inc
+      break
+    else:
+      result.add parseSecondStepOne(fsTokens, pos)
+    pos.inc
+
 proc parseFirstStep(tokens: seq[Token]): seq[FSNode] =
   result = @[]
 
@@ -126,33 +139,46 @@ proc parseSsIf(fsTokens: seq[FsNode], pos: var int): NwtNode =
   result = NwtNode(kind: NwtNodeKind.NIf)
   result.ifStmt = elem.value
   pos.inc # skip the if
-  var ifstate = IfState.InThen
+  # var ifstate = IfState.InThen
   while pos < fsTokens.len:
     elem = fsTokens[pos]
     case elem.kind
     of FsIf:
-      case ifState
-      of IfState.InThen:
-        result.nnThen.add parseSecondStep(fsTokens, pos)
-      of IfState.InElse:
-        result.nnElse.add parseSecondStep(fsTokens, pos)
-      of IfState.InElif:
-        result.nnElif[^1].elifBody.add parseSecondStep(fsTokens, pos)
+      # pos.inc
+      result.nnThen.add consumeBlock(fsTokens, pos, {FsElif, FsElse, FsEndif}) ## TODO these consume to much
+      # case ifState
+      # of IfState.InThen:
+      # of IfState.InElse:
+        # result.nnElse.add consumeBlock(fsTokens, pos, {FsEndif}) ## TODO these consume to much
+      # of IfState.InElif:
+        # result.nnElif[^1].elifBody.add consumeBlock(fsTokens, pos, {FsElif, FsElse, FsEndif} ) ## TODO these consume to much
     of FsElif:
-      ifstate = IfState.InElif
+      # ifstate = IfState.InElif
+      # pos.inc
       result.nnElif.add NwtNode(kind: NElif, elifStmt: elem.value)
+      # result.nnElif[^1].elifBody &= parseSecondStepOne(fsTokens, pos)
+      result.nnElif[^1].elifBody.add consumeBlock(fsTokens, pos, {FsElif, FsElse, FsEndif} ) ## TODO these consume to much
+
     of FsElse:
-      ifstate = IfState.InElse
+      # ifstate = IfState.InElse
+      # result.nnElse &= parseSecondStepOne(fsTokens, pos)
+      # pos.inc
+      result.nnElse.add consumeBlock(fsTokens, pos, {FsEndif}) ## TODO these consume to much
+
     of FsEndif:
+      # pos.inc() # ??
       break
     else:
-      case ifState
-      of IfState.InThen:
-        result.nnThen &= parseSecondStepOne(fsTokens, pos)
-      of IfState.InElse:
-        result.nnElse &= parseSecondStepOne(fsTokens, pos)
-      of IfState.InElif:
-        result.nnElif[^1].elifBody &= parseSecondStepOne(fsTokens, pos)
+      # raise newException(ValueError, "should not happen: " & $elem)
+      echo "should not happen: " & $elem
+    # else:
+    #   case ifState
+    #   of IfState.InThen:
+    #     result.nnThen &= parseSecondStepOne(fsTokens, pos)
+    #   of IfState.InElse:
+    #     result.nnElse &= parseSecondStepOne(fsTokens, pos)
+    #   of IfState.InElif:
+    #     result.nnElif[^1].elifBody &= parseSecondStepOne(fsTokens, pos)
     pos.inc
 
 proc parseSsWhile(fsTokens: seq[FsNode], pos: var int): NwtNode =
