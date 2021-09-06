@@ -2,7 +2,7 @@ Nimja Template Engine
 =====================
 
 <p align="center">
-  <img width="460" src="logo/logojanina.png">
+  <img width="460" src="https://raw.githubusercontent.com/enthus1ast/nimja/master/logo/logojanina.png">
 </p>
 
 
