@@ -1,9 +1,10 @@
 discard """
   joinable: false
 """
+{.define: dumpNwtAstPretty.}
+{.define: dumpNwtMacro.}
 import ../../src/nimja
 import unittest
-
 suite "test_if_complex":
   test "if/else":
     block:
@@ -22,6 +23,26 @@ suite "test_if_complex":
     block:
       proc test(): string = compileTemplateStr("{%if false %}A{%else%}{%if 1 == 1%}1{%if false == false%}2{%endif%}{%endif%}{%endif%}")
       check test() == "12"
+
+  test "if 1":
+    block:
+      proc test(): string = compileTemplateStr("{%if true %}{%else%}false{%endif%}")
+      check test() == ""
+
+  test "if 2":
+    block:
+      proc test(): string = compileTemplateStr("{%if false %}{%else%}false{%endif%}")
+      check test() == "false"
+
+  test "if 3":
+    block:
+      proc test(): string = compileTemplateStr("{%if false %}{%elif false%}{%else%}false{%endif%}")
+      check test() == "false"
+
+  test "if 4":
+    block:
+      proc test(): string = compileTemplateStr("{%if true %}{%elif false%}{%else%}false{%endif%}")
+      check test() == ""
 
   test "if #25":
     block:
