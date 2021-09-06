@@ -4,7 +4,7 @@ discard """
 {.define: dumpNwtMacro.}
 {.define: dumpNwtAst.}
 include ../../src/nimja/parser
-import unittest
+# import unittest
 
 # proc inner(): string =
 #   compileTemplateFile(getScriptDir() / "doubleExtends" / "inner.nwt")
@@ -12,7 +12,7 @@ import unittest
 
 proc outer(): string =
   compileTemplateFile(getScriptDir() / "doubleExtends" / "outer.nwt")
-echo outer()
+assert outer() == "baseouterouterbase"
 
 # proc base(): string =
 #   compileTemplateFile(getScriptDir() / "doubleExtends" / "base.nwt")
