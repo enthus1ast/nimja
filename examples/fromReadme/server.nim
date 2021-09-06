@@ -30,6 +30,7 @@ proc main {.async.} =
     let users: seq[User] = @[
       User(name: "Katja", lastname: "Kopylevych", age: 32),
       User(name: "David", lastname: "Krause", age: 32),
+      User(name: "dank", lastname: "r4d", age: 27),
     ]
     await req.respond(Http200, renderIndex("index", users))
 

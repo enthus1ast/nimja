@@ -38,9 +38,6 @@ type
       extendsPath: string
     else: discard
 
-type IfState {.pure.} = enum
-  InThen, InElif, InElse
-
 # First step nodes
 type
   FsNodeKind = enum
@@ -121,79 +118,65 @@ proc parseFirstStep(tokens: seq[Token]): seq[FSNode] =
     of NwtComment: discard # ignore comments
     else: echo "[FS] Not catched:", token
 
-proc parseSsIf(fsTokens: seq[FsNode], pos: var int): NwtNode =
-  var elem: FsNode = fsTokens[pos] # first is the if that we got called about
-  result = NwtNode(kind: NwtNodeKind.NIf)
-  result.ifStmt = elem.value
-  pos.inc # skip the if
-  var ifstate = IfState.InThen
+proc consumeBlock(fsTokens: seq[FSNode], pos: var int, endTags: set[FsNodeKind]): seq[NwtNode] =
   while pos < fsTokens.len:
-    elem = fsTokens[pos]
-    case elem.kind
-    of FsIf:
-      case ifState
-      of IfState.InThen:
-        result.nnThen.add parseSecondStep(fsTokens, pos)
-      of IfState.InElse:
-        result.nnElse.add parseSecondStep(fsTokens, pos)
-      of IfState.InElif:
-        result.nnElif[^1].elifBody.add parseSecondStep(fsTokens, pos)
-    of FsElif:
-      ifstate = IfState.InElif
-      result.nnElif.add NwtNode(kind: NElif, elifStmt: elem.value)
-    of FsElse:
-      ifstate = IfState.InElse
-    of FsEndif:
+    let fsToken = fsTokens[pos]
+    if endTags.contains(fsToken.kind):
       break
     else:
-      case ifState
-      of IfState.InThen:
-        result.nnThen &= parseSecondStepOne(fsTokens, pos)
-      of IfState.InElse:
-        result.nnElse &= parseSecondStepOne(fsTokens, pos)
-      of IfState.InElif:
-        result.nnElif[^1].elifBody &= parseSecondStepOne(fsTokens, pos)
-    pos.inc
+      result.add parseSecondStepOne(fsTokens, pos)
+
+proc parseSsIf(fsTokens: seq[FsNode], pos: var int): NwtNode =
+  while pos < fsTokens.len:
+    let elem = fsTokens[pos]
+    case elem.kind
+    of FsIf:
+      pos.inc
+      result = NwtNode(kind: NwtNodeKind.NIf)
+      result.ifStmt = elem.value
+      result.nnThen.add consumeBlock(fsTokens, pos, {FsElif, FsElse, FsEndif})
+    of FsElif:
+      pos.inc
+      result.nnElif.add NwtNode(kind: NElif, elifStmt: elem.value)
+      result.nnElif[^1].elifBody.add consumeBlock(fsTokens, pos, {FsElif, FsElse, FsEndif} )
+    of FsElse:
+      pos.inc
+      result.nnElse.add consumeBlock(fsTokens, pos, {FsEndif})
+    of FsEndif:
+      pos.inc
+      break
+    else:
+      # echo "should not happen: " & $elem
+      raise newException(ValueError, "should not happen: " & $elem)
 
 proc parseSsWhile(fsTokens: seq[FsNode], pos: var int): NwtNode =
   var elem: FsNode = fsTokens[pos] # first is the while that we got called about
   result = NwtNode(kind: NwtNodeKind.NWhile)
   result.whileStmt = elem.value
-  while pos < fsTokens.len:
-    pos.inc # skip the while
-    elem = fsTokens[pos]
-    if elem.kind == FsEndWhile:
-      break
-    else:
-      result.whileBody &= parseSecondStepOne(fsTokens, pos)
+  pos.inc # skip FsWhile
+  result.whileBody = consumeBlock(fsTokens, pos, {FsEndWhile})
+  pos.inc # skip FsEndWhile
 
 proc parseSsFor(fsTokens: seq[FsNode], pos: var int): NwtNode =
   var elem: FsNode = fsTokens[pos] # first is the for that we got called about
   result = NwtNode(kind: NwtNodeKind.NFor)
   result.forStmt = elem.value
-  while pos < fsTokens.len:
-    pos.inc # skip the for
-    elem = fsTokens[pos]
-    if elem.kind == FsEndFor:
-      break
-    else:
-      result.forBody &= parseSecondStepOne(fsTokens, pos)
+  pos.inc #skip FsFor
+  result.forBody = consumeBlock(fsTokens, pos, {FsEndFor})
+  pos.inc # skip FsEndBlock
 
 proc parseSsBlock(fsTokens: seq[FsNode], pos: var int): NwtNode =
   var elem: FsNode = fsTokens[pos]
   let blockName = elem.value
   result = NwtNode(kind: NwtNodeKind.NBlock, blockName: blockName)
-  while pos < fsTokens.len:
-    pos.inc # skip the block
-    elem = fsTokens[pos]
-    if elem.kind == FsEndBlock:
-      break
-    else:
-      result.blockBody &= parseSecondStepOne(fsTokens, pos)
+  pos.inc # skip FsBlock
+  result.blockBody = consumeBlock(fsTokens, pos, {FsEndBlock})
+  pos.inc # skip FsEndBlock
 
 proc parseSsExtends(fsTokens: seq[FsNode], pos: var int): NwtNode =
   var elem: FsNode = fsTokens[pos]
   let extendsPath = elem.value.strip(true, true, {'"'})
+  pos.inc # skip FsExtends
   return NwtNode(kind: NExtends, extendsPath: extendsPath)
 
 converter singleNwtNodeToSeq(nwtNode: NwtNode): seq[NwtNode] =
@@ -220,23 +203,33 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     of FsBlock: return parseSsBlock(fsTokens, pos)
 
     # Simple Types
-    of FsStr: return NwtNode(kind: NStr, strBody: fsToken.value)
-    of FsVariable: return NwtNode(kind: NVariable, variableBody: fsToken.value)
-    of FsEval: return NwtNode(kind: NEval, evalBody: fsToken.value)
-    of FsExtends: return parseSsExtends(fsTokens, pos)
-    of FsImport: includeNwt(result, fsToken.value)
-    else: echo "[SS] NOT IMPL: ", fsToken
+    of FsStr:
+      pos.inc
+      return NwtNode(kind: NStr, strBody: fsToken.value)
+    of FsVariable:
+      pos.inc
+      return NwtNode(kind: NVariable, variableBody: fsToken.value)
+    of FsEval:
+      pos.inc
+      return NwtNode(kind: NEval, evalBody: fsToken.value)
+    of FsExtends:
+      # pos.inc
+      return parseSsExtends(fsTokens, pos)
+    of FsImport:
+      pos.inc
+      includeNwt(result, fsToken.value)
+    # else: echo "[SS] NOT IMPL: ", fsToken
+    else: raise newException(ValueError, "[SS] NOT IMPL: " & $fsToken)
 
 proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
   while pos < fsTokens.len:
     result &= parseSecondStepOne(fsTokens, pos)
-    pos.inc # skip the current elem
+    # pos.inc # skip the current elem
 
 proc astVariable(token: NwtNode): NimNode =
   var varb: NimNode
   try:
     varb = parseStmt(token.variableBody)
-    echo token.variableBody
   except:
     error "Cannot parse variable body: " & token.variableBody
   return nnkStmtList.newTree(
