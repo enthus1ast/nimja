@@ -456,6 +456,18 @@ within a loop you can cycle through elements:
 {% endfor %}
 ```
 
+'~' (tilde)
+----------
+
+Converts all operands into strings and concatenates them.
+like: `$aa & $bb`
+
+```twig
+{{ "Hello " ~ name ~ "!" }}
+```
+
+would return (assuming name is set to 'Nim') Hello Nim!.
+
 Compile / Use
 =============
 
