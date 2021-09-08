@@ -67,7 +67,16 @@ iterator loop*[T](a: openArray[T]): tuple[loop: Loop[T], val: T] {.inline.} =
     yield (loop, each)
 
 
-when isMainModule:
+template `~`*(aa, bb: untyped): string =
+  ## ~ (tilde)
+  ## Converts all operands into strings and concatenates them.
+  ## like: `$aa & $bb`
+  ##
+  ## {{ "Hello " ~ name ~ "!" }} would return (assuming name is set to 'Nim') Hello Nim!.
+  $aa & $bb
+
+
+when isMainModule and false:
 
   for loop, elem in @["foo", "baa", "baz"].loop():
     if loop.first:
@@ -96,3 +105,9 @@ when isMainModule:
 {% endfor %}
     """)
   echo foo(@["foo","baa", "baz"])
+
+when isMainModule:
+  import nimja
+  proc testTilde(name: string): string =
+    compileTemplateStr("""{{ "Hello " ~ name ~ "!" }}""")
+  assert testTilde("Nim") == "Hello Nim!"
