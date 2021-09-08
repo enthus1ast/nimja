@@ -392,6 +392,36 @@ I AM CONTENT
 </html>
 ```
 
+procedures (macro)
+========
+
+Procedures can defined like so:
+
+```twig
+{% proc foo(): string = %}
+  baa
+{% end %}
+{{ foo() }}
+```
+
+```twig
+{% proc input(name: string, value="", ttype="text"): string = %}
+    <input type="{{ ttype }}" value="{{ value }}" name="{{ name }}">
+{% end %}
+{{ input("name", "value", ttype="text") }}
+```
+
+`macro` is an alias for `proc`
+
+```twig
+{% macro textarea(name, value="", rows=10, cols=40): string = %}
+    <textarea name="{{ name }}" rows="{{ rows }}" cols="{{ cols
+        }}">{{ value }}</textarea>
+{% end %}
+{{ textarea("name", "value") }}
+```
+
+
 Iterator
 ========
 

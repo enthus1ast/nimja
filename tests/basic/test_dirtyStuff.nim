@@ -6,9 +6,6 @@ discard """
 
 import ../../src/nimja
 
-block:
-  proc test(): string = compileTemplateStr("{% proc foo(): string = return \"FOO!!\" %}{{foo()}}")
-  doAssert test() == "FOO!!"
 
 block:
   proc test(): string = compileTemplateStr("""
