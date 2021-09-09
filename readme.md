@@ -395,7 +395,7 @@ I AM CONTENT
 procedures (macro)
 ========
 
-Procedures can defined like so:
+Procedures can be defined like so:
 
 ```twig
 {% proc foo(): string = %}
@@ -409,6 +409,15 @@ Procedures can defined like so:
     <input type="{{ ttype }}" value="{{ value }}" name="{{ name }}">
 {% end %}
 {{ input("name", "value", ttype="text") }}
+```
+
+Func's have the same semantic as nim funcs, they are not allowed to have a side effect.
+
+```twig
+{% func foo(): string = %}
+  baa
+{% end %}
+{{ foo() }}
 ```
 
 `macro` is an alias for `proc`
@@ -497,6 +506,10 @@ like: `$aa & $bb`
 ```
 
 would return (assuming name is set to 'Nim') Hello Nim!.
+
+> if you need more utils in nimjautils, please pr!
+> they should all be quite easy to implement,
+> so they make up a good first issue/pull request!
 
 Compile / Use
 =============
