@@ -395,7 +395,7 @@ I AM CONTENT
 procedures (macro)
 ========
 
-Procedures can defined like so:
+Procedures can be defined like so:
 
 ```twig
 {% proc foo(): string = %}

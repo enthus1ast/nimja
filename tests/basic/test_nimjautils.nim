@@ -1,8 +1,8 @@
 discard """
   joinable: false
 """
-import nimja
-import nimja/nimjautils
+import ../../src/nimja
+import ../../src/nimja/nimjautils
 import strutils
 import unittest
 
