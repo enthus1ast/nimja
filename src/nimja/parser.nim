@@ -6,7 +6,8 @@ type Path = string
 type
   NwtNodeKind = enum
     NStr, NIf, NElif, NElse, NWhile, NFor,
-    NVariable, NEval, NImport, NBlock, NExtends, NProc
+    NVariable, NEval, NImport, NBlock,
+    NExtends, NProc, NFunc
   NwtNode = object
     case kind: NwtNodeKind
     of NStr:
@@ -182,7 +183,7 @@ proc parseSsBlock(fsTokens: seq[FsNode], pos: var int): NwtNode =
   result.blockBody = consumeBlock(fsTokens, pos, {FsEndBlock})
   pos.inc # skip FsEndBlock
 
-proc parseSsProc(fsTokens: seq[FsNode], pos: var int): NwtNode =
+proc parseSsProc(fsTokens: seq[FsNode], pos: var int, kind: NwtNodeKind = NProc): NwtNode =
   var elem: FsNode = fsTokens[pos]
   result = NwtNode(kind: NwtNodeKind.NProc)
   result.procHeader = elem.value
@@ -219,8 +220,9 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     of FsFor: return parseSsFor(fsTokens, pos)
     of FsBlock: return parseSsBlock(fsTokens, pos)
 
-    of FsProc: return parseSsProc(fsTokens, pos)
-
+    # Proc / Func / Macro are very simliar
+    of FsProc: return parseSsProc(fsTokens, pos, NProc)
+    of FsFunc: return parseSsProc(fsTokens, pos, NFunc)
 
     # Simple Types
     of FsStr:
@@ -344,9 +346,9 @@ proc astIf(token: NwtNode): NimNode =
         )
       )
 
-proc astProc(token: NwtNode): NimNode =
+proc astProc(token: NwtNode, procStr = "proc"): NimNode =
   discard
-  let easyProc = "proc " & token.procHeader & " discard"
+  let easyProc =  procStr & " " & token.procHeader & " discard"
   result = parseStmt(easyProc) # dummy to build valid procBody
   result[0].body = nnkStmtList.newTree(
     astAst(token.procBody) # fill the proc body with content
@@ -366,7 +368,8 @@ proc astAstOne(token: NwtNode): NimNode =
   of NWhile: return astWhile(token)
   of NExtends: return parseStmt("discard")
   of NBlock: return parseStmt("discard")
-  of NProc: return astProc(token)
+  of NProc: return astProc(token, procStr = "proc")
+  of NFunc: return astProc(token, procStr = "func")
   else: raise newException(ValueError, "cannot convert to ast:" & $token.kind)
 
 proc astAst(tokens: seq[NwtNode]): seq[NimNode] =

@@ -37,4 +37,14 @@ suite "proc":
       """)
     check test().strip() == """<textarea name="name" rows="10" cols="40">value</textarea>"""
 
+  test "#28 3 func":
+    proc test(): string =
+      compileTemplateStr("""
+        {% func textarea(name, value="", rows=10, cols=40): string = %}
+            <textarea name="{{ name }}" rows="{{ rows }}" cols="{{ cols
+                }}">{{ value }}</textarea>
+        {% end %}
+        {{ textarea("name", "value") }}
+      """)
+    check test().strip() == """<textarea name="name" rows="10" cols="40">value</textarea>"""
 
