@@ -1,5 +1,6 @@
 import options
 export options
+import sharedhelper
 type
   Loop*[T] = object
     index*: int ## which element (start from 1)
@@ -75,6 +76,10 @@ template `~`*(aa, bb: untyped): string =
   ## {{ "Hello " ~ name ~ "!" }} would return (assuming name is set to 'Nim') Hello Nim!.
   $aa & $bb
 
+proc includeRaw*(path: string): string =
+  ## Includes the content of a file literally without any parsing
+  ## Good for documentation etc..
+  result = read(path)
 
 when isMainModule and false:
 
