@@ -75,7 +75,7 @@ template `~`*(aa, bb: untyped): string =
   ## Converts all operands into strings and concatenates them.
   ## like: `$aa & $bb`
   ##
-  ## {{ "Hello " ~ name ~ "!" }} would return (assuming name is set to 'Nim') Hello Nim!.
+  ## `{{ "Hello " ~ name ~ "!" }}` would return (assuming name is set to 'Nim') Hello Nim!.
   $aa & $bb
 
 proc includeRaw*(path: string): string =
