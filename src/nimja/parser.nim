@@ -1,6 +1,8 @@
 import strutils, macros, sequtils, parseutils, os
 import lexer
 import tables, sets, deques
+import sharedhelper
+export getScriptDir
 
 type Path = string
 type
@@ -61,17 +63,6 @@ when defined(dumpNwtAstPretty):
   proc pretty*(nwtNodes: seq[NwtNode]): string {.compileTime.} =
     (%* nwtNodes).pretty()
 
-template getScriptDir*(): string =
-  ## Helper for staticRead.
-  ##
-  ## returns the absolute path to your project, on compile time.
-  getProjectPath()
-
-template read(path: untyped): untyped =
-  when nimvm:
-    staticRead(path)
-  else:
-    readFile(path)
 
 # Forward decleration
 proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]

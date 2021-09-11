@@ -2,3 +2,6 @@ Loop	nimja/nimjautils.html#Loop	nimjautils: Loop
 Loopable	nimja/nimjautils.html#Loopable	nimjautils: Loopable	
 cycle	nimja/nimjautils.html#cycle,Loop,openArray[T]	nimjautils: cycle[T](loop: Loop; elems: openArray[T]): T	
 loop	nimja/nimjautils.html#loop.i,openArray[T]	nimjautils: loop[T](a: openArray[T]): tuple[loop: Loop[T], val: T]	
+`~`	nimja/nimjautils.html#~.t,untyped,untyped	nimjautils: `~`(aa, bb: untyped): string	
+includeRaw	nimja/nimjautils.html#includeRaw,string	nimjautils: includeRaw(path: string): string	
+truncate	nimja/nimjautils.html#truncate,string,Natural,string	nimjautils: truncate(str: string; num: Natural; preserveWords = true; suf = &quot;...&quot;): string	

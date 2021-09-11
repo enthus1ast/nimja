@@ -152,8 +152,6 @@ iterator lex*(buf: string): Token =
       continue
 
 
-
-
 when isMainModule:
   import sequtils
   import unittest

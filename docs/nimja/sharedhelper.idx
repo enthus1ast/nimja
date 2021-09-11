@@ -1,0 +1,2 @@
+read	nimja/sharedhelper.html#read.t,untyped	sharedhelper: read(path: untyped): untyped	
+getScriptDir	nimja/sharedhelper.html#getScriptDir.t	sharedhelper: getScriptDir(): string	
