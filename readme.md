@@ -507,9 +507,45 @@ like: `$aa & $bb`
 
 would return (assuming name is set to 'Nim') Hello Nim!.
 
-> if you need more utils in nimjautils, please pr!
+includeRaw
+----------
+Includes the content of a file literally without any parsing
+Good for documentation etc..
+
+```nim
+proc test(): string =
+  let path = (getScriptDir() / "tests/basic" / "includeRawT.txt")
+  compileTemplateStr("""pre{{ includeRaw(path) }}suf""")
+```
+
+truncate
+--------
+
+truncates a string to "num" characters.
+when the string was truncated it appends the `suf` to the text.
+if `preserveWords` is true it will not cut words in half but
+the output string could be shorter than `num` characters.
+
+```nim
+proc truncate*(str: string, num: Natural, preserveWords = true, suf = "..."): string
+```
+
+```nim
+let lorem = "Lorem ipsum, dolor sit amet consectetur adipisicing elit. Rem voluptates odio tempore voluptas beatae eum consequatur laudantium totam. Delectus fuga eveniet ab cum nulla aperiam iste ducimus odio fugit voluptas."
+
+proc test(lorem: string): string =
+  compileTemplateStr("{{lorem.truncate(65)}}")
+assert test(lorem) == "Lorem ipsum, dolor sit amet consectetur adipisicing elit. Rem..."
+```
+
+Want to hack?
+-------------
+> if you need more utils in nimjautils, please PR!
 > they should all be quite easy to implement,
 > so they make up a good first issue/pull request!
+>
+>a good inspiration WHAT to hack is jinja and twig filters.
+
 
 Compile / Use
 =============

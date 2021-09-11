@@ -36,3 +36,18 @@ suite "nimjautils":
       let path = (getScriptDir() / "tests/basic" / "includeRawT.txt")
       compileTemplateStr("""pre{{ includeRaw(path) }}suf""")
     check test() == "pre123suf"
+
+  test "truncate":
+    check truncate("foo baa", 7) == "foo baa"
+    check truncate("foo baa", 3) == "foo..."
+    check truncate("foo baa", 4) == "foo..."
+    let lorem = "Lorem ipsum, dolor sit amet consectetur adipisicing elit. Rem voluptates odio tempore voluptas beatae eum consequatur laudantium totam. Delectus fuga eveniet ab cum nulla aperiam iste ducimus odio fugit voluptas."
+    check truncate(lorem, 65, false).len == 65 + "...".len
+    check truncate(lorem, 65, true).len <= 65 + "...".len
+    check truncate(lorem, 65, true) == "Lorem ipsum, dolor sit amet consectetur adipisicing elit. Rem..."
+
+    proc test(lorem: string): string =
+      compileTemplateStr("{{lorem.truncate(65)}}")
+    check test(lorem) == "Lorem ipsum, dolor sit amet consectetur adipisicing elit. Rem..."
+
+

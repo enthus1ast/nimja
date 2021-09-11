@@ -1,6 +1,8 @@
 import options
 export options
 import sharedhelper
+import strutils
+
 type
   Loop*[T] = object
     index*: int ## which element (start from 1)
@@ -81,8 +83,25 @@ proc includeRaw*(path: string): string =
   ## Good for documentation etc..
   result = read(path)
 
-when isMainModule and false:
+proc truncate*(str: string, num: Natural, preserveWords = true, suf = "..."): string =
+  ## truncates a string to "num" characters.
+  ## when the string was truncated it appends the `suf` to the text.
+  ## if `preserveWords` is true it will not cut words in half but
+  ## the output string could be shorter than `num` characters.
+  if str.len <= num: return str
+  if preserveWords == false:
+    return str[0 .. num - 1] & suf
+  else:
+    for idx, word in str.splitWhitespace.pairs():
+      if result.len + (word.len) <= num:
+        if idx != 0:
+          result.add " "
+        result.add word
+      else:
+        result.add suf
+        break
 
+when isMainModule and false:
   for loop, elem in @["foo", "baa", "baz"].loop():
     if loop.first:
       echo "<ul>"
