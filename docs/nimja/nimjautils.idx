@@ -5,3 +5,4 @@ loop	nimja/nimjautils.html#loop.i,openArray[T]	nimjautils: loop[T](a: openArray[
 `~`	nimja/nimjautils.html#~.t,untyped,untyped	nimjautils: `~`(aa, bb: untyped): string	
 includeRaw	nimja/nimjautils.html#includeRaw,string	nimjautils: includeRaw(path: string): string	
 truncate	nimja/nimjautils.html#truncate,string,Natural,string	nimjautils: truncate(str: string; num: Natural; preserveWords = true; suf = &quot;...&quot;): string	
+nl2br	nimja/nimjautils.html#nl2br,string	nimjautils: nl2br(str: string; keepNl = true): string	

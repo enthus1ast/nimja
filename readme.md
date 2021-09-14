@@ -540,6 +540,18 @@ proc test(lorem: string): string =
 assert test(lorem) == "Lorem ipsum, dolor sit amet consectetur adipisicing elit. Rem..."
 ```
 
+nl2br
+-----
+
+Converts newline to `<br>`.
+If keepNL == true, the one `\n` is replaced by `<br>\n` thus keeping the newlines.
+
+```func nl2br*(str: string, keepNl = true): string =```
+
+```nim
+assert "foo\nbaa".nl2br == "foo<br>\nbaa"
+```
+
 Want to hack?
 -------------
 > if you need more utils in nimjautils, please PR!

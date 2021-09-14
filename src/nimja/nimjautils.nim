@@ -101,6 +101,17 @@ proc truncate*(str: string, num: Natural, preserveWords = true, suf = "..."): st
         result.add suf
         break
 
+func nl2br*(str: string, keepNl = true): string =
+  ## Converts all \n to <br>
+  ## if keepNL == true: newlines will still be in the output.
+  for ch in str:
+    if ch == '\n':
+      result.add("<br>")
+      if keepNl:
+        result.add(ch)
+    else:
+      result.add ch
+
 when isMainModule and false:
   for loop, elem in @["foo", "baa", "baz"].loop():
     if loop.first:

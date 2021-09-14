@@ -50,4 +50,7 @@ suite "nimjautils":
       compileTemplateStr("{{lorem.truncate(65)}}")
     check test(lorem) == "Lorem ipsum, dolor sit amet consectetur adipisicing elit. Rem..."
 
-
+  test "nl2br":
+    check "foo\nbaa".nl2br == "foo<br>\nbaa"
+    check "foo\nbaa".nl2br(false) == "foo<br>baa"
+    check "foo\n\n\nbaa".nl2br == "foo<br>\n<br>\n<br>\nbaa"
