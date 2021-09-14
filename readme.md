@@ -2,7 +2,9 @@ Nimja Template Engine
 =====================
 
 <p align="center">
-  <img width="460" src="https://raw.githubusercontent.com/enthus1ast/nimja/master/logo/logojanina.png">
+  <!-- <img style="max-width: 100%" src="https://user-images.githubusercontent.com/13794470/133277242-018982c8-3969-48b0-80b5-43f72ce043c9.png"> -->
+  <img style="max-width: 100%" src="https://user-images.githubusercontent.com/13794470/133277541-01de699e-9699-4d8f-b65c-595bc309a1ee.png">
+  
 </p>
 
 
