@@ -92,7 +92,7 @@ proc lexBetween(buf: string, pos: var int, line: var int, bstart = "{{", bend = 
     else:
       store
     pos.inc
-  result.token.value = result.token.value.strip()
+  result.token.value = result.token.value.strip() ## TODO trip later? is this even correct for strings?
   if isEof and endchar == false:
     lexerMsg(fmt"Endchar expected but not found... '{bend}'", line)
 
@@ -160,9 +160,7 @@ when isMainModule:
       var pos = 0
     test "only var":
       check toSeq(lex("{{foo}}")) == @[Token(kind: NwtVariable, value: "foo", line: 0)]
-      # echo toSeq(lex("{{foo}}"))[0].value
     test "only var escaped":
-      # echo toSeq(lex("""{{foo\}\}}}"""))[0].value
       check toSeq(lex("""{{foo\}\}}}""")) == @[Token(kind: NwtVariable, value: """foo}}""", line: 0)]
     test "only var escaped 1":
       check toSeq(lex("""{{foo\}}}""")) == @[Token(kind: NwtVariable, value: """foo}""", line: 0)]
@@ -177,7 +175,6 @@ when isMainModule:
       check toSeq(lex("{#fo#o#}")) == @[Token(kind: NwtComment, value: "fo#o", line: 0)]
     test "only comment3":
       check toSeq(lex("""{#fo\#}o#}""")) == @[Token(kind: NwtComment, value: """fo#}o""", line: 0)]
-    #   echo toSeq(lex("""{#fo\#}o#}"""))[0].value
     # test "str as var":
       # echo toSeq(lex("""{{"foo"}}"""))
 
