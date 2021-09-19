@@ -92,7 +92,7 @@ proc lexBetween(buf: string, pos: var int, line: var int, bstart = "{{", bend = 
     else:
       store
     pos.inc
-  result.token.value = result.token.value.strip() ## TODO trip later? is this even correct for strings?
+  result.token.value = result.token.value.strip() ## TODO strip later? is this even correct for strings?
   if isEof and endchar == false:
     lexerMsg(fmt"Endchar expected but not found... '{bend}'", line)
 

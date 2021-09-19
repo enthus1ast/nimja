@@ -71,20 +71,21 @@ proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc astAst(tokens: seq[NwtNode]): seq[NimNode]
 
-func mustStrip(str: string): tuple[cleanedStr: string, stripPre, stripPost: bool] =
+func mustStrip(token: Token): tuple[token: Token, stripPre, stripPost: bool] =
   ## identifies if whitespaceControl chars are in the string,
   ## clear the string of these, but fill `stripPre` and `stripPost` accordingly
-  result.cleanedStr = str
+  if token.kind == NwtString: return (token, false, false) # if a string we do not touch it
+  result.token = token
   result.stripPre = false
   result.stripPost = false
-  if result.cleanedStr[0] == '-':
+  if result.token.value[0] == '-':
     result.stripPre = true
-    result.cleanedStr = result.cleanedStr[1 .. ^1] # remove the first
-  if result.cleanedStr[^1] == '-':
+    result.token.value = result.token.value[1 .. ^1] # remove the first
+  if result.token.value[^1] == '-':
     result.stripPost = true
-    result.cleanedStr = result.cleanedStr[0 .. ^2] # remove the last
+    result.token.value = result.token.value[0 .. ^2] # remove the last
   # if "-" was removed, lex() has not stripped it. Strip it here
-  result.cleanedStr = result.cleanedStr.strip(true, true)
+  result.token.value = result.token.value.strip(true, true)
 
 func splitStmt(str: string): tuple[pref: string, suf: string] {.inline.} =
   ## the prefix is normalized (transformed to lowercase)
@@ -106,10 +107,10 @@ proc parseFirstStep(tokens: seq[Token]): seq[FSNode] =
   result = @[]
 
   for token in tokens:
-    let (cleanedStr, stripPre, stripPost) = mustStrip(token.value)
+    let (cleanedToken, stripPre, stripPost) = mustStrip(token)
     case token.kind
     of NwtEval:
-      let (pref, suf) = splitStmt(cleanedStr)
+      let (pref, suf) = splitStmt(cleanedToken.value)
       case pref
       of "if": result.add FSNode(kind: FsIf, value: suf, stripPre: stripPre, stripPost: stripPost)
       of "elif": result.add FSNode(kind: FsElif, value: suf, stripPre: stripPre, stripPost: stripPost)
@@ -127,11 +128,10 @@ proc parseFirstStep(tokens: seq[Token]): seq[FSNode] =
       of "macro": result.add FSNode(kind: FsProc, value: suf, stripPre: stripPre, stripPost: stripPost)
       of "func": result.add FSNode(kind: FsFunc, value: suf, stripPre: stripPre, stripPost: stripPost)
       of "end": result.add FSNode(kind: FsEnd, value: suf, stripPre: stripPre, stripPost: stripPost)
-
       else:
-        result.add FSNode(kind: FsEval, value: cleanedStr, stripPre: stripPre, stripPost: stripPost)
+        result.add FSNode(kind: FsEval, value: cleanedToken.value, stripPre: stripPre, stripPost: stripPost)
     of NwtString: result.add FSNode(kind: FsStr, value: token.value)
-    of NwtVariable: result.add FSNode(kind: FsVariable, value: cleanedStr, stripPre: stripPre, stripPost: stripPost)
+    of NwtVariable: result.add FSNode(kind: FsVariable, value: cleanedToken.value, stripPre: stripPre, stripPost: stripPost)
     of NwtComment: discard # ignore comments
     else: echo "[FS] Not catched:", token
 
