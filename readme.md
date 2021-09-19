@@ -4,7 +4,7 @@ Nimja Template Engine
 <p align="center">
   <!-- <img style="max-width: 100%" src="https://user-images.githubusercontent.com/13794470/133277242-018982c8-3969-48b0-80b5-43f72ce043c9.png"> -->
   <img style="max-width: 100%" src="https://user-images.githubusercontent.com/13794470/133277541-01de699e-9699-4d8f-b65c-595bc309a1ee.png">
-  
+
 </p>
 
 
@@ -449,6 +449,44 @@ iterator yourIter(yourParams: bool): string =
 for elem in yourIter(true):
   echo elem
 ```
+
+Whitespace Control
+==================
+
+```twig
+###############
+{% if true %}
+  <li>   {{foo}}   </li>
+{% endif %}
+###############
+```
+is expanded to:
+
+```html
+###############
+
+  <li>   FOO   </li>
+
+###############
+```
+
+the nimja template control statements leave their newline and whitespace when rendered.
+To fix this you can annotate them with "-":
+
+```twig
+###############
+{% if true -%}
+  <li>   {{-foo-}}   </li>
+{%- endif %}
+###############
+```
+
+```html
+###############
+<li>FOO</li>
+###############
+```
+
 
 Nimjautils
 ==========

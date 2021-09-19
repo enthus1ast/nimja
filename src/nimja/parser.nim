@@ -53,6 +53,8 @@ type
   FSNode = object
     kind: FsNodeKind
     value: string
+    stripPre: bool
+    stripPost: bool
 
 var cacheNwtNode {.compileTime.}: Table[string, seq[NwtNode]] ## a cache for rendered NwtNodes
 var cacheNwtNodeFile {.compileTime.}: Table[Path, string] ## a cache for content of a path
@@ -69,6 +71,21 @@ proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc astAst(tokens: seq[NwtNode]): seq[NimNode]
 
+func mustStrip(token: Token): tuple[token: Token, stripPre, stripPost: bool] =
+  ## identifies if whitespaceControl chars are in the string,
+  ## clear the string of these, but fill `stripPre` and `stripPost` accordingly
+  if token.kind == NwtString: return (token, false, false) # if a string we do not touch it
+  result.token = token
+  result.stripPre = false
+  result.stripPost = false
+  if result.token.value[0] == '-':
+    result.stripPre = true
+    result.token.value = result.token.value[1 .. ^1] # remove the first
+  if result.token.value[^1] == '-':
+    result.stripPost = true
+    result.token.value = result.token.value[0 .. ^2] # remove the last
+  # if "-" was removed, lex() has not stripped it. Strip it here
+  result.token.value = result.token.value.strip(true, true)
 
 func splitStmt(str: string): tuple[pref: string, suf: string] {.inline.} =
   ## the prefix is normalized (transformed to lowercase)
@@ -77,7 +94,6 @@ func splitStmt(str: string): tuple[pref: string, suf: string] {.inline.} =
   pos += str.skipWhitespace(pos)
   result.pref = toLowerAscii(pref)
   result.suf = str[pos..^1]
-
 
 iterator findAll(fsns: seq[FsNode], kind: FsNodeKind | set[FsNodeKind]): FsNode =
   # Finds all FsNodes with given kind
@@ -91,31 +107,31 @@ proc parseFirstStep(tokens: seq[Token]): seq[FSNode] =
   result = @[]
 
   for token in tokens:
+    let (cleanedToken, stripPre, stripPost) = mustStrip(token)
     case token.kind
     of NwtEval:
-      let (pref, suf) = splitStmt(token.value)
+      let (pref, suf) = splitStmt(cleanedToken.value)
       case pref
-      of "if": result.add FSNode(kind: FsIf, value: suf)
-      of "elif": result.add FSNode(kind: FsElif, value: suf)
-      of "else": result.add FSNode(kind: FsElse, value: suf)
-      of "endif": result.add FSNode(kind: FsEndif, value: suf)
-      of "for": result.add FSNode(kind: FsFor, value: suf)
-      of "endfor": result.add FSNode(kind: FsEndfor, value: suf)
-      of "while": result.add FSNode(kind: FsWhile, value: suf)
-      of "endwhile": result.add FSNode(kind: FsEndWhile, value: suf)
-      of "importnwt": result.add FSNode(kind: FsImport, value: suf)
-      of "block": result.add FSNode(kind: FsBlock, value: suf)
-      of "endblock": result.add FSNode(kind: FsEndBlock, value: suf)
-      of "extends": result.add FSNode(kind: FsExtends, value: suf)
-      of "proc": result.add FSNode(kind: FsProc, value: suf)
-      of "macro": result.add FSNode(kind: FsProc, value: suf)
-      of "func": result.add FSNode(kind: FsFunc, value: suf)
-      of "end": result.add FSNode(kind: FsEnd, value: suf)
-
+      of "if": result.add FSNode(kind: FsIf, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "elif": result.add FSNode(kind: FsElif, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "else": result.add FSNode(kind: FsElse, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "endif": result.add FSNode(kind: FsEndif, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "for": result.add FSNode(kind: FsFor, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "endfor": result.add FSNode(kind: FsEndfor, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "while": result.add FSNode(kind: FsWhile, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "endwhile": result.add FSNode(kind: FsEndWhile, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "importnwt": result.add FSNode(kind: FsImport, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "block": result.add FSNode(kind: FsBlock, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "endblock": result.add FSNode(kind: FsEndBlock, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "extends": result.add FSNode(kind: FsExtends, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "proc": result.add FSNode(kind: FsProc, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "macro": result.add FSNode(kind: FsProc, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "func": result.add FSNode(kind: FsFunc, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "end": result.add FSNode(kind: FsEnd, value: suf, stripPre: stripPre, stripPost: stripPost)
       else:
-        result.add FSNode(kind: FsEval, value: token.value)
+        result.add FSNode(kind: FsEval, value: cleanedToken.value, stripPre: stripPre, stripPost: stripPost)
     of NwtString: result.add FSNode(kind: FsStr, value: token.value)
-    of NwtVariable: result.add FSNode(kind: FsVariable, value: token.value)
+    of NwtVariable: result.add FSNode(kind: FsVariable, value: cleanedToken.value, stripPre: stripPre, stripPost: stripPost)
     of NwtComment: discard # ignore comments
     else: echo "[FS] Not catched:", token
 
@@ -405,6 +421,24 @@ func condenseStrings(nodes: seq[FsNode]): seq[FsNode] =
     if curStr.len != 0:
       result.add FsNode(kind: FsStr, value: curStr)
 
+func whitespaceControl(nodes: seq[FsNode]): seq[FsNode] =
+  ## Implements the handling of "WhitespaceControl" chars.
+  ## eg.: {%- if true -%}
+  var nextStrip = false
+  for node in nodes:
+    var mnode = node
+    if nextStrip:
+      if node.kind == FsStr:
+        mnode.value = mnode.value.strip(true, false)
+      nextStrip = false
+    if node.stripPre:
+      if result.len > 0: # if there is something
+        if result[^1].kind == FsStr:
+          result[^1].value = result[^1].value.strip(false, true) # remove trailing whitespace from last node
+    if node.stripPost:
+      nextStrip = true
+    result.add mnode
+
 proc errorOnDoublicatedBlocks(fsns: seq[FSNode]) =
   ## Find doublicated blocks
   # TODO give context and line
@@ -467,6 +501,7 @@ proc loadCache(str: string): seq[NwtNode] =
     var fsns = parseFirstStep(lexerTokens)
     fsns.firstStepErrorChecks()
     fsns = fsns.condenseStrings()
+    fsns = fsns.whitespaceControl()
     var pos = 0
     when defined(nwtCacheOff):
       return parseSecondStep(fsns, pos)
