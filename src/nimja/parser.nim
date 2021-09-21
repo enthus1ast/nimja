@@ -70,6 +70,7 @@ when defined(dumpNwtAstPretty):
 proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc astAst(tokens: seq[NwtNode]): seq[NimNode]
+proc compile(str: string): seq[NwtNode]
 
 func mustStrip(token: Token): tuple[token: Token, stripPre, stripPost: bool] =
   ## identifies if whitespaceControl chars are in the string,
@@ -210,12 +211,7 @@ converter singleNwtNodeToSeq(nwtNode: NwtNode): seq[NwtNode] =
 proc includeNwt(nodes: var seq[NwtNode], path: string) =
   const basePath = getProjectPath()
   var str = read( basePath  / path.strip(true, true, {'"'}) )
-  var lexerTokens = toSeq(lex(str))
-  var firstStepTokens = parseFirstStep(lexerTokens)
-  var pos = 0
-  var secondsStepTokens = parseSecondStep(firstStepTokens, pos)
-  for secondStepToken in secondsStepTokens:
-    nodes.add secondStepToken
+  nodes = compile(str)
 
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     let fsToken = fsTokens[pos]
@@ -429,12 +425,16 @@ func whitespaceControl(nodes: seq[FsNode]): seq[FsNode] =
     var mnode = node
     if nextStrip:
       if node.kind == FsStr:
-        mnode.value = mnode.value.strip(true, false)
+        debugEcho mnode.value
+        mnode.value = mnode.value.strip(true, false, {' ', '\n'})
+        debugEcho mnode.value
       nextStrip = false
     if node.stripPre:
       if result.len > 0: # if there is something
         if result[^1].kind == FsStr:
-          result[^1].value = result[^1].value.strip(false, true) # remove trailing whitespace from last node
+          debugEcho result[^1].value
+          result[^1].value = result[^1].value.strip(false, true, {' ', '\n'}) # remove trailing whitespace from last node
+          debugEcho result[^1].value
     if node.stripPost:
       nextStrip = true
     result.add mnode
