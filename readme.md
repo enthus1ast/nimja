@@ -590,6 +590,18 @@ If keepNL == true, the one `\n` is replaced by `<br>\n` thus keeping the newline
 assert "foo\nbaa".nl2br == "foo<br>\nbaa"
 ```
 
+spaceless
+---------
+
+Removes unneeded whitespaces between html tags,
+warning, this is NOT smart. So it will destroy `<textarea>` and `<pre>` content!
+
+```nim
+  check "<foo>\n\nbaa  </foo>".spaceless == "<foo> baa </foo>"
+  check "<foo tag='tag tag'>\n\nbaa  </foo>".spaceless == "<foo tag='tag tag'> baa </foo>"
+  check "<foo>baa  baz</foo>".spaceless == "<foo>baa baz</foo>"
+```
+
 Want to hack?
 -------------
 > if you need more utils in nimjautils, please PR!

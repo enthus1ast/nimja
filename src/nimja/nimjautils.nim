@@ -2,6 +2,7 @@ import options
 export options
 import sharedhelper
 import strutils
+import parseutils
 
 type
   Loop*[T] = object
@@ -111,6 +112,23 @@ func nl2br*(str: string, keepNl = true): string =
         result.add(ch)
     else:
       result.add ch
+
+func spaceless*(str: string): string =
+  var pos = 0
+  var intag = false
+  while pos < str.len:
+    let ch = str[pos]
+    if ch == '<': intag = true
+    if ch == '>': intag = false
+    if intag: result.add ch
+    else:
+      let skipped = str.skipWhile(Whitespace, pos)
+      if skipped > 1:
+        result.add ' ' # only one whitespace for multiple ones
+        pos.inc skipped - 1
+      else: result.add ch
+    pos.inc
+
 
 when isMainModule and false:
   for loop, elem in @["foo", "baa", "baz"].loop():
