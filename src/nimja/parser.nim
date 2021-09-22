@@ -425,16 +425,12 @@ func whitespaceControl(nodes: seq[FsNode]): seq[FsNode] =
     var mnode = node
     if nextStrip:
       if node.kind == FsStr:
-        debugEcho mnode.value
         mnode.value = mnode.value.strip(true, false, {' ', '\n'})
-        debugEcho mnode.value
       nextStrip = false
     if node.stripPre:
       if result.len > 0: # if there is something
         if result[^1].kind == FsStr:
-          debugEcho result[^1].value
           result[^1].value = result[^1].value.strip(false, true, {' ', '\n'}) # remove trailing whitespace from last node
-          debugEcho result[^1].value
     if node.stripPost:
       nextStrip = true
     result.add mnode
