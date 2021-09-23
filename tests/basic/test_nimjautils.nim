@@ -54,3 +54,8 @@ suite "nimjautils":
     check "foo\nbaa".nl2br == "foo<br>\nbaa"
     check "foo\nbaa".nl2br(false) == "foo<br>baa"
     check "foo\n\n\nbaa".nl2br == "foo<br>\n<br>\n<br>\nbaa"
+
+  test "spaceless":
+    check "<foo>\n\nbaa  </foo>".spaceless == "<foo> baa </foo>"
+    check "<foo tag='tag tag'>\n\nbaa  </foo>".spaceless == "<foo tag='tag tag'> baa </foo>"
+    check "<foo>baa  baz</foo>".spaceless == "<foo>baa baz</foo>"
