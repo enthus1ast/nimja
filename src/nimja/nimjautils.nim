@@ -3,7 +3,7 @@ export options
 import sharedhelper
 import strutils
 import parseutils
-
+import unidecode
 type
   Loop*[T] = object
     index*: int ## which element (start from 1)
@@ -20,6 +20,7 @@ type
     x[int] is T
     x.items is T
 
+const allowedCharsInSlug* = Letters + Digits
 
 proc cycle*[T](loop: Loop, elems: openArray[T]): T =
   ## within a loop you can cycle through elements:
@@ -129,6 +130,17 @@ func spaceless*(str: string): string =
       else: result.add ch
     pos.inc
 
+proc slugify*(str: string, sperator = "-", allowedChars = allowedCharsInSlug): string =
+  ## converts any string to an url friendly one.
+  ## Removes any special chars and replaces non ASCII runes to their ASCII representation.
+  var cleaned = str.unidecode().strip(true, true).toLower()
+  for ch in cleaned:
+    if ch in Whitespace:
+      result.add sperator
+    elif ch in allowedChars:
+      result.add ch
+    else:
+      discard
 
 when isMainModule and false:
   for loop, elem in @["foo", "baa", "baz"].loop():
