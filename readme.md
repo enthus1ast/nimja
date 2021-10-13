@@ -602,6 +602,25 @@ warning, this is NOT smart. So it will destroy `<textarea>` and `<pre>` content!
   check "<foo>baa  baz</foo>".spaceless == "<foo>baa baz</foo>"
 ```
 
+slugify
+-------
+
+converts any string to an url friendly one.
+Removes any special chars and replaces non ASCII runes to their ASCII representation.
+
+```slugify("Lession learned german umlauts: öüä")```
+
+will output:
+
+```lession-learned-german-umlauts-oua```
+
+
+```
+allowedCharsInSlug = Letters + Digits
+proc slugify*(str: string, sperator = "-", allowedChars = allowedCharsInSlug): string =
+```
+
+
 Want to hack?
 -------------
 > if you need more utils in nimjautils, please PR!
