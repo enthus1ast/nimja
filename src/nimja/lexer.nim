@@ -125,7 +125,6 @@ iterator lex*(buf: string): Token =
   var pos = 0
   var lexReturn: LexReturn
   while pos < buf.len:
-    var ch = buf[pos]
     handleNl
     lexReturn = lexVar(buf, pos, line)
     if lexReturn.good:
