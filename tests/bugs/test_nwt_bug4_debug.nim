@@ -1,8 +1,8 @@
 discard """
   joinable: false
 """
-import nimja, os
-import base64
+import ../../src/nimja
+import base64, os
 
 proc foo(key1 = "one", key2 = "two"): string =
   compileTemplateFile(getScriptDir() / "test_nwt_bug4_child.nwt")
