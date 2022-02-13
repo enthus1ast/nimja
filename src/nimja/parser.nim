@@ -79,12 +79,13 @@ func mustStrip(token: Token): tuple[token: Token, stripPre, stripPost: bool] =
   result.token = token
   result.stripPre = false
   result.stripPost = false
-  if result.token.value[0] == '-':
-    result.stripPre = true
-    result.token.value = result.token.value[1 .. ^1] # remove the first
-  if result.token.value[^1] == '-':
-    result.stripPost = true
-    result.token.value = result.token.value[0 .. ^2] # remove the last
+  if result.token.value.len != 0:
+    if result.token.value[0] == '-':
+      result.stripPre = true
+      result.token.value = result.token.value[1 .. ^1] # remove the first
+    if result.token.value[^1] == '-':
+      result.stripPost = true
+      result.token.value = result.token.value[0 .. ^2] # remove the last
   # if "-" was removed, lex() has not stripped it. Strip it here
   result.token.value = result.token.value.strip(true, true)
 
@@ -164,7 +165,6 @@ proc parseSsIf(fsTokens: seq[FsNode], pos: var int): NwtNode =
       pos.inc
       break
     else:
-      # echo "should not happen: " & $elem
       raise newException(ValueError, "should not happen: " & $elem)
 
 proc parseSsWhile(fsTokens: seq[FsNode], pos: var int): NwtNode =
@@ -238,18 +238,15 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
       pos.inc
       return NwtNode(kind: NEval, evalBody: fsToken.value)
     of FsExtends:
-      # pos.inc
       return parseSsExtends(fsTokens, pos)
     of FsImport:
       pos.inc
       includeNwt(result, fsToken.value)
-    # else: echo "[SS] NOT IMPL: ", fsToken
     else: raise newException(ValueError, "[SS] NOT IMPL: " & $fsToken)
 
 proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
   while pos < fsTokens.len:
     result &= parseSecondStepOne(fsTokens, pos)
-    # pos.inc # skip the current elem
 
 proc astVariable(token: NwtNode): NimNode =
   var varb: NimNode
@@ -515,7 +512,6 @@ proc loadCacheFile(path: Path): string =
     return read(path)
   else:
     if cacheNwtNodeFile.contains(path):
-      # echo "cache hit file"
       return cacheNwtNodeFile[path]
     else:
       cacheNwtNodeFile[path] = read(path)
@@ -525,7 +521,6 @@ proc extend(str: string, templateCache: var Deque[seq[NwtNode]]) =
   var secondsStepTokens = loadCache(str)
   let foundExtendAt = validExtend(secondsStepTokens)
   if foundExtendAt > -1:
-    # echo "EXTENDS"
     templateCache.addFirst secondsStepTokens
     let ext = loadCacheFile(getScriptDir() / secondsStepTokens[foundExtendAt].extendsPath)
     extend(ext, templateCache)

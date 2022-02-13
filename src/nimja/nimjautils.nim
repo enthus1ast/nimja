@@ -83,6 +83,7 @@ template `~`*(aa, bb: untyped): string =
 proc includeRaw*(path: string): string =
   ## Includes the content of a file literally without any parsing
   ## Good for documentation etc..
+  ## This includes on runtime!
   result = read(path)
 
 proc truncate*(str: string, num: Natural, preserveWords = true, suf = "..."): string =
@@ -115,6 +116,9 @@ func nl2br*(str: string, keepNl = true): string =
       result.add ch
 
 func spaceless*(str: string): string =
+  ## Removes unneeded whitespaces between html tags,
+  ## warning, this is NOT smart.
+  ## So it will destroy `<textarea>` and `<pre>` content!
   var pos = 0
   var intag = false
   while pos < str.len:

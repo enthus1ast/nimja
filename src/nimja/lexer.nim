@@ -9,7 +9,7 @@ type
     NwtVariable,
   Token* = object
     kind*: NwtTokenKind
-    value*: string # the value
+    value*: string
     line*: int
     charinbuf*: int
 
@@ -70,7 +70,6 @@ proc lexBetween(buf: string, pos: var int, line: var int, bstart = "{{", bend = 
   result.good = true
   result.token = Token(kind: kind)
   result.token.line = line
-  # pos += skipWhitespace(buf, pos) # is stripped later...
   var escaped = false
   var endchar = false
   while pos < buf.len:
@@ -165,19 +164,12 @@ when isMainModule:
       check toSeq(lex("""{{foo\}}}""")) == @[Token(kind: NwtVariable, value: """foo}""", line: 0)]
     test "string var":
       check toSeq(lex("{{\"foo\"}}")) == @[Token(kind: NwtVariable, value: "\"foo\"", line: 0)]
-    # test "string var escaped":
-      # check toSeq(lex("""{{\"fo\\\"o\"}}""")) == @[Token(kind: NwtVariable, value: "\"fo\\\"o\"", line: 0)]
-
     test "only comment1":
       check toSeq(lex("{#foo#}")) == @[Token(kind: NwtComment, value: "foo", line: 0)]
     test "only comment2":
       check toSeq(lex("{#fo#o#}")) == @[Token(kind: NwtComment, value: "fo#o", line: 0)]
     test "only comment3":
       check toSeq(lex("""{#fo\#}o#}""")) == @[Token(kind: NwtComment, value: """fo#}o""", line: 0)]
-    # test "str as var":
-      # echo toSeq(lex("""{{"foo"}}"""))
 
-    # test "str":
-    #   echo toSeq(lex("foo"))
   var pos = 0
   echo toSeq(lex("""foo {# fjo {% aasd %} #} {%%} ba baz"""))
