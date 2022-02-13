@@ -558,6 +558,27 @@ proc test(): string =
   compileTemplateStr("""pre{{ includeRaw(path) }}suf""")
 ```
 
+includeRawStatic
+----------------
+Includes the content of a file literally without any parsing, on compiletime.
+This means it is included into the executable.
+
+includeStaticAsDataurl
+----------------------
+Includes the content of a file on compile time, it is converted to a data url.
+Eg:
+
+```html
+  <img src="{{includeStaticAsDataurl(getScriptDir() / "logo.jpg")}}">
+```
+
+  is transformed to:
+
+```html
+  <img src="data:image/jpeg;charset=utf-8;base64,/9j/4AAQSkZJRg..."/>
+```
+
+
 truncate
 --------
 
