@@ -11,7 +11,7 @@ type
     lastname: string
     age: int
 
-var users = @[
+const users = @[
   User(name: "Katja", lastname: "Kopylevych", age: 32),
   User(name: "David", lastname: "Krause", age: 32),
 ]
