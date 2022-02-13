@@ -4,6 +4,9 @@ import sharedhelper
 import strutils
 import parseutils
 import unidecode
+import os, mimetypes, uri, tables
+export uri
+
 type
   Loop*[T] = object
     index*: int ## which element (start from 1)
@@ -95,18 +98,8 @@ proc includeRawStatic*(path: static string): string =
   const cont = staticRead(path)
   return cont
 
-import os, mimetypes, uri, tables
-export uri
-
-# const mm = mimes.toTable()
-
-proc includeRawStaticAsDataurl*(path: static string, mimeOverride: static string = ""): string =
+proc includeStaticAsDataurl*(path: static string, mimeOverride: static string = ""): string =
   ## Includes a ressource as a dataurl on compile time.
-  # This does not work yet, because mimedb cannot be used on compile time yet.
-  # static:
-  #   const mimedb = newMimetypes()
-  #   var (path, name, ext) = splitFile(path)
-  #   return staticRead(path).getDataUri(mimedb.getMimetype(ext.strip(chars = {'.'})))
   const mimedb = mimes.toTable()
   const (A, B, ext) = splitFile(path)
   const mime =
