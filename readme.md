@@ -663,3 +663,9 @@ nim c -d:nwtCacheOff -r yourfile.nim   # <-- disables the NwtNode cache
 nim c -d:noCondenseStrings -r yourfile.nim # <-- disables string condense see #12
 nim c -d:dumpNwtMacro -r yourfile.nim # <-- dump generated Nim macros
 ```
+
+
+Changelog
+=========
+
+- 0.4.2 Added `includeRawStatic` and `includeStaticAsDataurl`
