@@ -37,6 +37,12 @@ suite "nimjautils":
       compileTemplateStr("""pre{{ includeRaw(path) }}suf""")
     check test() == "pre123suf"
 
+  test "includeRawStatic":
+    proc test(): string =
+      const path = (getScriptDir()  / "includeRawT.txt") # TODO why is there a difference to the test above??
+      compileTemplateStr("""pre{{ includeRawStatic(path) }}suf""")
+    check test() == "pre123suf"
+
   test "truncate":
     check truncate("foo baa", 7) == "foo baa"
     check truncate("foo baa", 3) == "foo..."

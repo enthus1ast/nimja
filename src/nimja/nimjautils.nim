@@ -84,7 +84,38 @@ proc includeRaw*(path: string): string =
   ## Includes the content of a file literally without any parsing
   ## Good for documentation etc..
   ## This includes on runtime!
+  ## For a compile time include see `includeRawStatic`
   result = read(path)
+
+proc includeRawStatic*(path: static string): string =
+  ## Includes the content of a file literally without any parsing
+  ## Good for documentation etc..
+  ## This includes at compiletime!
+  ## For a runtimetime include see `includeRaw`
+  const cont = staticRead(path)
+  return cont
+
+import os, mimetypes, uri, tables
+export uri
+
+# const mm = mimes.toTable()
+
+proc includeRawStaticAsDataurl*(path: static string, mimeOverride: static string = ""): string =
+  ## Includes a ressource as a dataurl on compile time.
+  # This does not work yet, because mimedb cannot be used on compile time yet.
+  # static:
+  #   const mimedb = newMimetypes()
+  #   var (path, name, ext) = splitFile(path)
+  #   return staticRead(path).getDataUri(mimedb.getMimetype(ext.strip(chars = {'.'})))
+  const mimedb = mimes.toTable()
+  const (A, B, ext) = splitFile(path)
+  const mime =
+    if mimeOverride == "":
+      mimedb.getOrDefault(ext.strip(chars = {'.'}))
+    else:
+      mimeOverride
+  const content = staticRead(path).getDataUri(mime)
+  return content
 
 proc truncate*(str: string, num: Natural, preserveWords = true, suf = "..."): string =
   ## truncates a string to "num" characters.
