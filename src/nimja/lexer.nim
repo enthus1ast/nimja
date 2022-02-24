@@ -170,6 +170,3 @@ when isMainModule:
       check toSeq(lex("{#fo#o#}")) == @[Token(kind: NwtComment, value: "fo#o", line: 0)]
     test "only comment3":
       check toSeq(lex("""{#fo\#}o#}""")) == @[Token(kind: NwtComment, value: """fo#}o""", line: 0)]
-
-  var pos = 0
-  echo toSeq(lex("""foo {# fjo {% aasd %} #} {%%} ba baz"""))
