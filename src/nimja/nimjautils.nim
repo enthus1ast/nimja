@@ -170,7 +170,7 @@ proc slugify*(str: string, sperator = "-", allowedChars = allowedCharsInSlug): s
     else:
       discard
 
-template `?`*(con, body: untyped): untyped {.dirty.} =
+template `?`*(con, body: untyped): untyped =
   ## shorthand `if` eg. for toggling html classes.
   ##
   ## .. code-block:: Nim
