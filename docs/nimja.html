@@ -34,7 +34,6 @@ function main() {
     }
   }
 
-  const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
   function switchTheme(e) {
       if (e.target.checked) {
           document.documentElement.setAttribute('data-theme', 'dark');
@@ -45,21 +44,29 @@ function main() {
       }
   }
 
-  toggleSwitch.addEventListener('change', switchTheme, false);
+  const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+  if (toggleSwitch !== null) {
+    toggleSwitch.addEventListener('change', switchTheme, false);
+  }
 
-  const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+  var currentTheme = localStorage.getItem('theme');
+  if (!currentTheme && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    currentTheme = 'dark';
+  }
   if (currentTheme) {
     document.documentElement.setAttribute('data-theme', currentTheme);
 
-    if (currentTheme === 'dark') {
+    if (currentTheme === 'dark' && toggleSwitch !== null) {
       toggleSwitch.checked = true;
     }
   }
 }
+
+window.addEventListener('DOMContentLoaded', main);
 </script>
 
 </head>
-<body onload="main()">
+<body>
 <div class="document" id="documentId">
   <div class="container">
     <h1 class="title">nimja</h1>
@@ -107,6 +114,7 @@ function main() {
 </ul>
 
   </div>
+  
   <div class="nine columns" id="content">
   <div id="tocRoot"></div>
   
@@ -119,7 +127,7 @@ function main() {
 <div class="section" id="19">
 <h1><a class="toc-backref" href="#19">Exports</a></h1>
 <dl class="item">
-<a href="nimja/parser.html#compileTemplateStr.m,typed,staticbool"><span class="Identifier">compileTemplateStr</span></a>, <a href="nimja/parser.html#compileTemplateFile.m,staticstring,staticbool"><span class="Identifier">compileTemplateFile</span></a>, <a href="nimja/sharedhelper.html#getScriptDir.t"><span class="Identifier">getScriptDir</span></a>, <a href="nimja/nimjautils.html#loop.i,openArray[T]"><span class="Identifier">loop</span></a>, <a href="nimja/nimjautils.html#Loop"><span class="Identifier">Loop</span></a>, <a href="nimja/nimjautils.html#includeRaw,string"><span class="Identifier">includeRaw</span></a>, <a href="nimja/nimjautils.html#nl2br,string"><span class="Identifier">nl2br</span></a>, <a href="nimja/nimjautils.html#cycle,Loop,openArray[T]"><span class="Identifier">cycle</span></a>, <a href="nimja/nimjautils.html#~.t,untyped,untyped"><span class="Identifier">~</span></a>, <a href="nimja/nimjautils.html#Loopable"><span class="Identifier">Loopable</span></a>, <a href="nimja/nimjautils.html#truncate,string,Natural,string"><span class="Identifier">truncate</span></a>
+<a href="nimja/parser.html#compileTemplateStr.m,typed,staticbool"><span class="Identifier">compileTemplateStr</span></a>, <a href="nimja/parser.html#compileTemplateFile.m,staticstring,staticbool"><span class="Identifier">compileTemplateFile</span></a>, <a href="nimja/sharedhelper.html#getScriptDir.t"><span class="Identifier">getScriptDir</span></a>, <a href="nimja/nimjautils.html#Loop"><span class="Identifier">Loop</span></a>, <a href="nimja/nimjautils.html#includeRaw,string"><span class="Identifier">includeRaw</span></a>, <a href="nimja/nimjautils.html#slugify,string,string"><span class="Identifier">slugify</span></a>, <a href="nimja/nimjautils.html#Loopable"><span class="Identifier">Loopable</span></a>, <a href="nimja/nimjautils.html#allowedCharsInSlug"><span class="Identifier">allowedCharsInSlug</span></a>, <a href="nimja/nimjautils.html#loop.i,openArray[T]"><span class="Identifier">loop</span></a>, <a href="nimja/nimjautils.html#nl2br,string"><span class="Identifier">nl2br</span></a>, <a href="nimja/nimjautils.html#includeStaticAsDataurl,staticstring,staticstring"><span class="Identifier">includeStaticAsDataurl</span></a>, <a href="nimja/nimjautils.html#includeRawStatic,staticstring"><span class="Identifier">includeRawStatic</span></a>, <a href="nimja/nimjautils.html#~.t,untyped,untyped"><span class="Identifier">~</span></a>, <a href="nimja/nimjautils.html#?.t,untyped,untyped"><span class="Identifier">?</span></a>, <a href="nimja/nimjautils.html#cycle,Loop,openArray[T]"><span class="Identifier">cycle</span></a>, <a href="nimja/nimjautils.html#truncate,string,Natural,string"><span class="Identifier">truncate</span></a>, <a href="nimja/nimjautils.html#spaceless,string"><span class="Identifier">spaceless</span></a>
 </dl></div>
 
   </div>
@@ -129,7 +137,7 @@ function main() {
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-09-14 21:42:33 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2022-02-27 13:41:27 UTC</small>
       </div>
     </div>
   </div>
