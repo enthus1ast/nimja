@@ -641,6 +641,21 @@ allowedCharsInSlug = Letters + Digits
 proc slugify*(str: string, sperator = "-", allowedChars = allowedCharsInSlug): string =
 ```
 
+shorthand if `?`
+----------------
+
+a shorthand for a condition, this could be used for example
+to toggle html classes:
+
+````
+proc foo(isDisabled: bool): string =
+  compileTemplateStr("""{% ?isDisabled: "disabled" %}""")
+check "disabled" == foo(true)
+check "" == foo(false)
+
+````
+
+
 
 Want to hack?
 -------------

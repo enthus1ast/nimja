@@ -170,6 +170,13 @@ proc slugify*(str: string, sperator = "-", allowedChars = allowedCharsInSlug): s
     else:
       discard
 
+template `?`*(con, body: untyped): untyped =
+  ## shorthand `if` eg. for toggling html.
+  ##
+  ## .. code-block:: Nim
+  ##  <input class="{% ?isDisabled: "disable" %}">
+  if con: result.add body
+
 when isMainModule and false:
   for loop, elem in @["foo", "baa", "baz"].loop():
     if loop.first:

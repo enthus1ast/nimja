@@ -65,3 +65,9 @@ suite "nimjautils":
     check "<foo>\n\nbaa  </foo>".spaceless == "<foo> baa </foo>"
     check "<foo tag='tag tag'>\n\nbaa  </foo>".spaceless == "<foo tag='tag tag'> baa </foo>"
     check "<foo>baa  baz</foo>".spaceless == "<foo>baa baz</foo>"
+
+  test "short if `?`":
+    proc foo(isDisabled: bool): string =
+      compileTemplateStr("""{% ?isDisabled: "disabled" %}""")
+    check "disabled" == foo(true)
+    check "" == foo(false)
