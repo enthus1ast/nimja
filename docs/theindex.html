@@ -34,7 +34,6 @@ function main() {
     }
   }
 
-  const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
   function switchTheme(e) {
       if (e.target.checked) {
           document.documentElement.setAttribute('data-theme', 'dark');
@@ -45,28 +44,44 @@ function main() {
       }
   }
 
-  toggleSwitch.addEventListener('change', switchTheme, false);
+  const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+  if (toggleSwitch !== null) {
+    toggleSwitch.addEventListener('change', switchTheme, false);
+  }
 
-  const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+  var currentTheme = localStorage.getItem('theme');
+  if (!currentTheme && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    currentTheme = 'dark';
+  }
   if (currentTheme) {
     document.documentElement.setAttribute('data-theme', currentTheme);
 
-    if (currentTheme === 'dark') {
+    if (currentTheme === 'dark' && toggleSwitch !== null) {
       toggleSwitch.checked = true;
     }
   }
 }
+
+window.addEventListener('DOMContentLoaded', main);
 </script>
 
 </head>
-<body onload="main()">
+<body>
 <div class="document" id="documentId">
   <div class="container">
     <h1 class="title">Index</h1>
     Modules: <a href="nimja/lexer.html">nimja/lexer</a>, <a href="nimja/nimjautils.html">nimja/nimjautils</a>, <a href="nimja/nwtTokenizer.html">nimja/nwtTokenizer</a>, <a href="nimja/parser.html">nimja/parser</a>, <a href="nimja/sharedhelper.html">nimja/sharedhelper</a>.<br/><p /><h2>API symbols</h2>
-<dl><dt><a name="%60~%60" href="#%60~%60"><span>`~`:</span></a></dt><dd><ul class="simple">
+<dl><dt><a name="%60%3F%60" href="#%60%3F%60"><span>`?`:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nimjautils: `?`(con, body: untyped): untyped" href="nimja/nimjautils.html#%3F.t%2Cuntyped%2Cuntyped">nimjautils: `?`(con, body: untyped): untyped</a></li>
+          </ul></dd>
+<dt><a name="%60~%60" href="#%60~%60"><span>`~`:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nimjautils: `~`(aa, bb: untyped): string" href="nimja/nimjautils.html#~.t%2Cuntyped%2Cuntyped">nimjautils: `~`(aa, bb: untyped): string</a></li>
+          </ul></dd>
+<dt><a name="allowedCharsInSlug" href="#allowedCharsInSlug"><span>allowedCharsInSlug:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nimjautils: allowedCharsInSlug" href="nimja/nimjautils.html#allowedCharsInSlug">nimjautils: allowedCharsInSlug</a></li>
           </ul></dd>
 <dt><a name="Block" href="#Block"><span>Block:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -95,6 +110,14 @@ function main() {
 <dt><a name="includeRaw" href="#includeRaw"><span>includeRaw:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nimjautils: includeRaw(path: string): string" href="nimja/nimjautils.html#includeRaw%2Cstring">nimjautils: includeRaw(path: string): string</a></li>
+          </ul></dd>
+<dt><a name="includeRawStatic" href="#includeRawStatic"><span>includeRawStatic:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nimjautils: includeRawStatic(path: static string): string" href="nimja/nimjautils.html#includeRawStatic%2Cstaticstring">nimjautils: includeRawStatic(path: static string): string</a></li>
+          </ul></dd>
+<dt><a name="includeStaticAsDataurl" href="#includeStaticAsDataurl"><span>includeStaticAsDataurl:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nimjautils: includeStaticAsDataurl(path: static string; mimeOverride: static string = &quot;&quot;): string" href="nimja/nimjautils.html#includeStaticAsDataurl%2Cstaticstring%2Cstaticstring">nimjautils: includeStaticAsDataurl(path: static string; mimeOverride: static string = &quot;&quot;): string</a></li>
           </ul></dd>
 <dt><a name="lex" href="#lex"><span>lex:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -164,6 +187,14 @@ function main() {
 <li><a class="reference external"
           data-doc-search-tag="sharedhelper: read(path: untyped): untyped" href="nimja/sharedhelper.html#read.t%2Cuntyped">sharedhelper: read(path: untyped): untyped</a></li>
           </ul></dd>
+<dt><a name="slugify" href="#slugify"><span>slugify:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nimjautils: slugify(str: string; sperator = &quot;-&quot;; allowedChars = allowedCharsInSlug): string" href="nimja/nimjautils.html#slugify%2Cstring%2Cstring">nimjautils: slugify(str: string; sperator = &quot;-&quot;; allowedChars = allowedCharsInSlug): string</a></li>
+          </ul></dd>
+<dt><a name="spaceless" href="#spaceless"><span>spaceless:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nimjautils: spaceless(str: string): string" href="nimja/nimjautils.html#spaceless%2Cstring">nimjautils: spaceless(str: string): string</a></li>
+          </ul></dd>
 <dt><a name="TemplateSyntaxError" href="#TemplateSyntaxError"><span>TemplateSyntaxError:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nwtTokenizer: TemplateSyntaxError" href="nimja/nwtTokenizer.html#TemplateSyntaxError">nwtTokenizer: TemplateSyntaxError</a></li>
@@ -187,7 +218,7 @@ function main() {
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-09-14 21:42:33 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2022-02-27 13:41:27 UTC</small>
       </div>
     </div>
   </div>
