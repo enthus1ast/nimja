@@ -170,12 +170,16 @@ proc slugify*(str: string, sperator = "-", allowedChars = allowedCharsInSlug): s
     else:
       discard
 
-template `?`*(con, body: untyped): untyped =
-  ## shorthand `if` eg. for toggling html.
+template `?`*(con, body: untyped): untyped {.dirty.} =
+  ## shorthand `if` eg. for toggling html classes.
   ##
   ## .. code-block:: Nim
   ##  <input class="{% ?isDisabled: "disable" %}">
-  if con: result.add body
+  ##
+  when compiles(result.add body): # TODO find a better way to test for iterator
+    if con: result.add body
+  else:
+    if con: yield body
 
 when isMainModule and false:
   for loop, elem in @["foo", "baa", "baz"].loop():

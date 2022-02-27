@@ -5,6 +5,7 @@ import ../../src/nimja
 import ../../src/nimja/nimjautils
 import strutils, os
 import unittest
+import sequtils
 
 
 type
@@ -71,3 +72,9 @@ suite "nimjautils":
       compileTemplateStr("""{% ?isDisabled: "disabled" %}""")
     check "disabled" == foo(true)
     check "" == foo(false)
+
+  test "short if `?`, iterator":
+    iterator foo(isDisabled: bool): string =
+      compileTemplateStr("""{% ?isDisabled: "disabled" %}""", iter = true)
+    check "disabled" == toSeq(foo(true))[0]
+    check toSeq(foo(false)).len() == 0
