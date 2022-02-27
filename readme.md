@@ -570,6 +570,23 @@ proc test(): string =
   compileTemplateStr("""pre{{ includeRaw(path) }}suf""")
 ```
 
+raw strings
+-----------
+to include raw strings, or nimja code itself to a template (for documentation purpose),
+you could use this construct `{{"raw code"}}`
+
+```nim
+proc foo(): string =
+  compileTemplateStr("""
+    foo {{"{if true}baa{%endif%}"}}
+  """)
+```
+this would then be rendered like so:
+
+```
+foo {if true}baa{%endif%}
+```
+
 includeRawStatic
 ----------------
 Includes the content of a file literally without any parsing, on compiletime.
