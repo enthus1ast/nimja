@@ -578,13 +578,13 @@ you could use this construct `{{"raw code"}}`
 ```nim
 proc foo(): string =
   compileTemplateStr("""
-    foo {{"{if true}baa{%endif%}"}}
+    foo {{"{%if true%}baa{%endif%}"}}
   """)
 ```
 this would then be rendered like so:
 
 ```
-foo {if true}baa{%endif%}
+foo {%if true%}baa{%endif%}
 ```
 
 includeRawStatic
