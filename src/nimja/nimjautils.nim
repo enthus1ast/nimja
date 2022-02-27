@@ -101,7 +101,7 @@ proc includeRawStatic*(path: static string): string =
 proc includeStaticAsDataurl*(path: static string, mimeOverride: static string = ""): string =
   ## Includes a ressource as a dataurl on compile time.
   const mimedb = mimes.toTable()
-  const (A, B, ext) = splitFile(path)
+  const (_, _, ext) = splitFile(path)
   const mime =
     if mimeOverride == "":
       mimedb.getOrDefault(ext.strip(chars = {'.'}))
