@@ -22,7 +22,18 @@ FEATURES
 - control structures (if elif else / for / while)
 - import other templates
 - most nim code is valid in the templates
-
+- very fast:
+```
+# https://github.com/ajusa/dekao/blob/master/bench.nim
+# nim c --gc:arc -d:release -d:danger -d:lto --opt:speed -r bench.nim
+name ............................... min time      avg time    std dv   runs
+dekao .............................. 0.104 ms      0.112 ms    ±0.009  x1000
+karax .............................. 0.124 ms      0.131 ms    ±0.009  x1000
+htmlgen ............................ 0.021 ms      0.022 ms    ±0.001  x1000
+nimja .............................. 0.016 ms      0.017 ms    ±0.003  x1000 <--
+scf ................................ 0.023 ms      0.028 ms    ±0.006  x1000
+nim-mustache ....................... 0.745 ms      0.790 ms    ±0.067  x1000
+```
 
 DOCUMENTATION
 =============
