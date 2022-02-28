@@ -68,7 +68,7 @@ proc renderIndex(title: string, users: seq[User]): string =
   ## so it can access all variables like `title` and `users`
   ## the return variable could be `string` or `Rope` or
   ## anything which has a `&=`(obj: YourObj, str: string) proc.
-  compileTemplateFile(getCurrentDir() / "index.nwt")
+  compileTemplateFile(getScriptDir() / "index.nwt")
 
 proc main {.async.} =
   var server = newAsyncHttpServer()
@@ -249,6 +249,38 @@ there are only three relevant procedures:
 - `getScriptDir()`
   returns the path to your current project, on compiletime.
 
+compileTemplateFile
+-------------------
+
+compileTemplateFile transforms the given file into the nim code.
+you should use it like so:
+
+```nim
+import os # for `/`
+proc myRenderProc(someParam: string): string =
+  compileTemplateFile(getScriptDir() / "myFile.html")
+
+echo myRenderProc("test123")
+```
+
+compileTemplateFile can also generate an iterator body, for details look at the
+iteratior section.
+
+compileTemplateStr
+-------------------
+
+compileTemplateStr compiles the given string into nim code.
+
+
+```nim
+proc myRenderProc(someParam: string): string =
+  compileTemplateStr("some nimja code {{someParam}}")
+
+echo myRenderProc("test123")
+```
+
+compileTemplateStr can also generate an iterator body, for details look at the
+iteratior section.
 
 if / elif / else
 -----------------
@@ -389,7 +421,7 @@ if the child.nwt is compiled then rendered like so:
 
 ```nim
 proc renderChild(): string =
-  compileTemplateFile("child.nwt")
+  compileTemplateFile(getScriptDir() / "child.nwt")
 
 echo renderChild()
 ```
