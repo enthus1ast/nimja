@@ -666,7 +666,9 @@ nl2br
 Converts newline to `<br>`.
 If keepNL == true, the one `\n` is replaced by `<br>\n` thus keeping the newlines.
 
-```func nl2br*(str: string, keepNl = true): string =```
+```nim
+func nl2br*(str: string, keepNl = true): string =
+```
 
 ```nim
 assert "foo\nbaa".nl2br == "foo<br>\nbaa"
@@ -690,15 +692,17 @@ slugify
 converts any string to an url friendly one.
 Removes any special chars and replaces non ASCII runes to their ASCII representation.
 
-```slugify("Lession learned german umlauts: öüä")```
+```nim
+slugify("Lession learned german umlauts: öüä")
+```
 
 will output:
 
 ```lession-learned-german-umlauts-oua```
 
 
-```
-allowedCharsInSlug = Letters + Digits
+```nim
+let allowedCharsInSlug = Letters + Digits
 proc slugify*(str: string, sperator = "-", allowedChars = allowedCharsInSlug): string =
 ```
 
@@ -708,7 +712,7 @@ shorthand if `?`
 a shorthand for a condition, this could be used for example
 to toggle html classes:
 
-````
+````nim
 proc foo(isDisabled: bool): string =
   compileTemplateStr("""{% ?isDisabled: "disabled" %}""")
 check "disabled" == foo(true)
