@@ -21,8 +21,8 @@ proc debugPrint(buffer: string, pos: int) =
 template thisIs(chr: char): bool =
   (not (pos > buf.len)) and (buf[pos] == chr)
 
-template nextIs(chr: char): bool =
-  (not (pos + 1 >= buf.len)) and (buf[pos + 1] == chr)
+template nextIs(chr: char, cnt = 1): bool =
+  (not (pos + cnt >= buf.len)) and (buf[pos + cnt] == chr)
 
 template lastIs(chr: char): bool =
   (not (pos - 1 >= buf.len)) and (not(pos - 1 < 0)) and (buf[pos - 1] == chr)
@@ -60,6 +60,29 @@ func lexInnerStr(buf: string, pos: var int): string =
       result &= ch
     pos.inc
 
+func lexInnerStrTripple(buf: string, pos: var int): string =
+  result &= buf[pos .. pos + 2] # the '"""'
+  pos.inc # skip '"'
+  pos.inc # skip '"'
+  pos.inc # skip '"'
+  var escape = false
+  while pos < buf.len:
+    let ch = buf[pos]
+    if escape:
+      result &= ch
+      escape = false
+    elif ch == '\\':
+      escape = true
+    elif ch == '"' and nextIs('"') and nextIs('"', 2):
+      result &= '"'
+      result &= '"'
+      result &= '"'
+      pos.inc 2
+      break
+    else:
+      result &= ch
+    pos.inc
+
 template store() =
   result.token.value &= ch
 
@@ -86,6 +109,9 @@ proc lexBetween(buf: string, pos: var int, line: var int, bstart = "{{", bend = 
       endchar = true
       pos.inc # skip next '}'
       break
+    elif thisIs('"') and nextIs('"') and nextIs('"', 2):
+      # echo "Triple quotes"
+      result.token.value &= lexInnerStrTripple(buf, pos)
     elif thisIs('"'):
       result.token.value &= lexInnerStr(buf, pos)
     else:
@@ -170,3 +196,5 @@ when isMainModule:
       check toSeq(lex("{#fo#o#}")) == @[Token(kind: NwtComment, value: "fo#o", line: 0)]
     test "only comment3":
       check toSeq(lex("""{#fo\#}o#}""")) == @[Token(kind: NwtComment, value: """fo#}o""", line: 0)]
+    test "triple quotes":
+      echo toSeq(lex("""{{\"\"\"foo\"\"\"}}"""))
