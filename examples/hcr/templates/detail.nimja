@@ -1,0 +1,8 @@
+{% extends "templates/partials/_master.nimja" %}
+{% block content %}
+
+
+detail of {{id}}
+<a href="/id/{{id}}">{{id}}</a>
+{% endblock %}
+
