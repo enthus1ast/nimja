@@ -802,9 +802,7 @@ routes:
 
   get "/id/@id":
     resp dyn(ProcId, "detail", @"id")
-
-
-````
+```
 
 
 `tmpls.nim`
