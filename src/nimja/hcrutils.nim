@@ -3,8 +3,6 @@ import std/dynlib, asyncdispatch, osproc, os, times,
 
 export dynlib
 
-{.pragma: NimjaDyn, gcsafe, stdcall.}
-
 type
   Exec* = proc(cw: ChangeWatcher)
   Paths* = Table[string, Time]
@@ -72,34 +70,3 @@ macro dyn*(kind, name: untyped, params: varargs[untyped]): untyped =
       ps.add ", "
   let cc = fmt"""cast[{$kind}](cw.lib.symAddr("{$name}"))({ps})"""
   return parseStmt(cc)
-
-{.pragma: NimjaDyn, gcsafe, stdcall.}
-
-when isMainModule:
-  import jester
-  type
-      ProcNoParam = proc (): string {.NimjaDyn.}
-      ProcId = proc (id: string): string {.NimjaDyn.}
-      ProcSSeq = proc (a: seq[string]): string {.NimjaDyn.}
-      ProcIS = proc (ii: int, ss: string): string {.NimjaDyn.}
-      # ProcNoParam = proc (): string {.gcsafe, stdcall.}
-      # ProcId = proc (id: string): string {.gcsafe, stdcall.}
-      # ProcSSeq = proc (a: seq[string]): string {.gcsafe, stdcall.}
-      # ProcIS = proc (ii: int, ss: string): string {.gcsafe, stdcall.}
-
-  var cw = newChangeWatcher(@[getAppDir() / "templates/"], doRecompile)
-  asyncCheck cw.recompile()
-
-  routes:
-    get "/":
-      resp dyn(ProcNoParam, "index")
-
-    get "/id/@id":
-      resp dyn(ProcId, "detail", @"id")
-
-    get "/error":
-      resp dyn(ProcSSeq, "error", @["a"])
-
-    get "/iss":
-      resp dyn(ProcIS, "iss", 1234, "foobaa")
-
