@@ -1,0 +1,19 @@
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hello, world!</title>
+</head>
+<body>
+
+  <h1><a href="/">Nimja dynamic test</a></h1>
+
+  {% importnwt "templates/partials/_menu.nimja" %}
+
+  <div>
+    {% block content %}{% endblock %}
+  </div>
+
+  {% importnwt "templates/partials/_menu.nimja" %}
+  </body>
+</html>

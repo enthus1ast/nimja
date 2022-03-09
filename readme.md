@@ -2,9 +2,7 @@ Nimja Template Engine
 =====================
 
 <p align="center">
-  <!-- <img style="max-width: 100%" src="https://user-images.githubusercontent.com/13794470/133277242-018982c8-3969-48b0-80b5-43f72ce043c9.png"> -->
   <img style="max-width: 100%" src="https://user-images.githubusercontent.com/13794470/133277541-01de699e-9699-4d8f-b65c-595bc309a1ee.png">
-
 </p>
 
 
@@ -702,7 +700,7 @@ will output:
 
 
 ```nim
-let allowedCharsInSlug = Letters + Digits
+allowedCharsInSlug = Letters + Digits
 proc slugify*(str: string, sperator = "-", allowedChars = allowedCharsInSlug): string =
 ```
 
@@ -712,13 +710,12 @@ shorthand if `?`
 a shorthand for a condition, this could be used for example
 to toggle html classes:
 
-````nim
+```nim
 proc foo(isDisabled: bool): string =
   compileTemplateStr("""{% ?isDisabled: "disabled" %}""")
 check "disabled" == foo(true)
 check "" == foo(false)
-
-````
+```
 
 
 
@@ -738,7 +735,8 @@ This is a COMPILED template engine.
 This means you must _recompile_ your application
 for every change you do in the templates!
 
-_Automatic recompilation / hot code reloading / dynamic execution is a [planned feature](https://github.com/enthus1ast/nimja/issues/6)._
+~~_Automatic recompilation / hot code reloading / dynamic execution is a [planned feature](https://github.com/enthus1ast/nimja/issues/6)._~~ see the
+`Automatic Recompilation / Hot Code Reloading (hcr)` section
 
 ```bash
 nim c -r yourfile.nim
@@ -750,6 +748,141 @@ Then compile with "-f" (force)
 ```bash
 nim c -f -r  yourfile.nim
 ```
+
+Automatic Recompilation / Hot Code Reloading (hcr)
+============================================
+
+(Still an experimental feature, help wanted.)
+Automatic Recompilation enables you to change your templates and without
+recompiling your application, see the changes lives.
+
+How it works:
+
+Nimja compiles your templates (and template render functions)
+to a shared library (.so/.dll/.dynlib), then your host application loads
+this library, then on source code change, the shared library is unloaded from
+your host, recompiled, and loaded again.
+
+This is normally way faster, than recompiling your whole application.
+
+For this to work, Nimja now contains a small file watcher, you must utilize this
+tool in your own application.
+
+You also must restructure you application a little bit,
+all you render functions must be in a separate file,
+this file is then compiled to a shared lib and loaded by your host.
+
+When you go live later, you can just disable the recompilation,
+and compile the shared library for release, it should be very fast as well.
+
+Below is a minimal example, [a more complete example is in the example folder](https://github.com/enthus1ast/nimja/tree/master/examples/hcr)
+
+Minimal example:
+
+`host.nim`
+
+```nim
+# this is the file that eg. implements your webserver and loads
+# the templates as a shared lib.
+import nimja/hcrutils # Nimja's hot code reloading utilities
+import jester, os
+
+# We watch the templates folder for change (and also tmpls.nim implicitly)
+var cw = newChangeWatcher(@[getAppDir() / "templates/"])
+asyncCheck cw.recompile() # if a change is detected we recompile tmpls.nim
+
+type
+    # You must declare the proc definition from your tmpls.nim here as well.
+    ProcNoParam = proc (): string {.gcsafe, stdcall.}
+    ProcId = proc (id: string): string {.gcsafe, stdcall.}
+
+routes:
+  get "/":
+    resp dyn(ProcNoParam, "index")
+
+  get "/id/@id":
+    resp dyn(ProcId, "detail", @"id")
+
+
+````
+
+
+`tmpls.nim`
+
+```nim
+# this file contains you render functions
+# is compiled to a shared lib and loaded by your host application
+# to keep compilation fast, use this file only for templates.
+# this file is also watched by the filewatcher.
+# It can also be changed dynamically!
+import nimja
+import os # for `/`
+
+proc index*(): string {.exportc, dynlib.} =
+  var foos =  1351 # change me i'm dynamic :)
+  compileTemplateFile(getScriptDir() / "templates/index.nimja")
+
+proc detail*(id: string): string {.exportc, dynlib.} =
+  compileTemplateFile(getScriptDir() / "templates/detail.nimja")
+
+```
+
+`templates/`
+
+`templates/partials/_master.nimja`
+
+```html
+<head>
+  <title>Hello, world!</title>
+</head>
+<body>
+  <h1><a href="/">Nimja dynamic test</a></h1>
+  <div>
+    {% block content %}{% endblock %}
+  </div>
+  </body>
+</html>
+```
+
+
+`templates/index.nimja`
+```html
+{% extends "templates/partials/_master.nimja" %}
+{% block content %}
+
+<h1>Hello, world! {{foos}}</h1>
+
+index
+
+{% for idx in 0..100 %}
+  <a href="/id/{{idx}}">{{idx}}</a>
+{%- endfor %}
+
+{% endblock %}
+
+```
+
+
+`templates/detail.nimja`
+```html
+{% extends "templates/partials/_master.nimja" %}
+{% block content %}
+detail
+<a href="/id/{{id}}">{{id}}</a>
+{% endblock %}
+
+```
+
+you can now change any of the templates or the `tmpls.nim`
+files.
+Later if you wanna go live, comment out the
+
+```
+asyncCheck cw.recompile() # if a change is detected we recompile tmpls.nim
+```
+
+line.
+
 
 
 
@@ -769,4 +902,5 @@ nim c -d:dumpNwtMacro -r yourfile.nim # <-- dump generated Nim macros
 Changelog
 =========
 
+- 0.5.0 Added hot code reloading.
 - 0.4.2 Added `includeRawStatic` and `includeStaticAsDataurl`
