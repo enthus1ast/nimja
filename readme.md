@@ -736,7 +736,7 @@ tool in your own application.
 
 You also must restructure you application a little bit,
 all you render functions must be in a separate file,
-this fill is then compiled to a shared lib and loaded by your host.
+this file is then compiled to a shared lib and loaded by your host.
 
 When you go live later, you can just disable the recompilation,
 and compile the shared library for release, it should be very fast as well.
@@ -782,12 +782,10 @@ routes:
 # this file is also watched by the filewatcher.
 # It can also be changed dynamically!
 import nimja
-import times
-import os
-import shared # for the TestObj
+import os # for `/`
 
 proc index*(): string {.exportc, dynlib.} =
-  var foos =  1351
+  var foos =  1351 # change me i'm dynamic :)
   compileTemplateFile(getScriptDir() / "templates/index.nimja")
 
 proc detail*(id: string): string {.exportc, dynlib.} =
