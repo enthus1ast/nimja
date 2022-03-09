@@ -6,8 +6,9 @@
   index
 {%- endfor %}
 
-
-foo baa ba baa bazz
+{% for idx in 0..100 %}
+  <a href="/id/{{idx}}">{{idx}}</a>
+{%- endfor %}
 
 {% endblock %}
 
