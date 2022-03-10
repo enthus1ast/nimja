@@ -59,6 +59,7 @@ type
 var cacheNwtNode {.compileTime.}: Table[string, seq[NwtNode]] ## a cache for rendered NwtNodes
 var cacheNwtNodeFile {.compileTime.}: Table[Path, string] ## a cache for content of a path
 var nwtIter {.compileTime.} = false
+var blocks {.compileTime.} : Table[string, seq[NwtNode]]
 
 when defined(dumpNwtAstPretty):
   import json
@@ -71,6 +72,7 @@ proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc astAst(tokens: seq[NwtNode]): seq[NimNode]
 proc compile(str: string): seq[NwtNode]
+proc astAstOne(token: NwtNode): NimNode
 
 func mustStrip(token: Token): tuple[token: Token, stripPre, stripPost: bool] =
   ## identifies if whitespaceControl chars are in the string,
@@ -250,6 +252,15 @@ proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
 
 proc astVariable(token: NwtNode): NimNode =
   var varb: NimNode
+  # special case `self` variable, used to referece blocks
+  const specialSelf = "self."
+  if token.variableBody.startsWith(specialSelf):
+    let blockname = token.variableBody[specialSelf.len .. ^1]
+    if blocks.hasKey(blockname):
+      result = newStmtList()
+      for token in blocks[blockname]:
+        result.add astAstOne(token)
+      return
   try:
     varb = parseStmt(token.variableBody)
   except:
@@ -536,12 +547,12 @@ proc recursiveFindAllBlocks(nwtns: seq[NwtNode]): seq[NwtNode] =
     result.add nwtn
     result.add recursiveFindAllBlocks(nwtn.blockBody)
 
-proc fillBlocks(nodes: seq[NwtNode], blocks: Table[string, seq[NwtNode]]): seq[NwtNode] =
+proc fillBlocks(nodes: seq[NwtNode]): seq[NwtNode] =
   for node in nodes:
     if node.kind == NBlock:
       for bnode in blocks[node.blockName]:
         if bnode.kind == NBlock:
-          result.add fillBlocks(bnode, blocks)
+          result.add fillBlocks(bnode)
         else:
           result.add bnode
     else:
@@ -550,12 +561,11 @@ proc fillBlocks(nodes: seq[NwtNode], blocks: Table[string, seq[NwtNode]]): seq[N
 proc compile(str: string): seq[NwtNode] =
   var templateCache = initDeque[seq[NwtNode]]()
   extend(str, templateCache)
-  var blocks: Table[string, seq[NwtNode]]
   for idx, tmp in templateCache.pairs():
     for nwtn in tmp.recursiveFindAllBlocks():
       blocks[nwtn.blockName] = nwtn.blockBody
   var base = templateCache[0]
-  return fillBlocks(base, blocks)
+  return fillBlocks(base)
 
 template doCompile(str: untyped): untyped =
   let nwtNodes = compile(str)
