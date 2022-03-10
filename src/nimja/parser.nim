@@ -1,8 +1,9 @@
-import strutils, macros, sequtils, parseutils, os
-import lexer
-import tables, sets, deques
-import sharedhelper
+import strutils, macros, sequtils, parseutils, os, tables, sets, deques
+import lexer, sharedhelper
 export getScriptDir
+
+# special case `self` variable, used to reference blocks
+const specialSelf {.strdefine.} = "self."
 
 type Path = string
 type
@@ -66,7 +67,6 @@ when defined(dumpNwtAstPretty):
   proc pretty*(nwtNodes: seq[NwtNode]): string {.compileTime.} =
     (%* nwtNodes).pretty()
 
-
 # Forward declaration
 proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
@@ -109,7 +109,6 @@ iterator findAll(fsns: seq[FsNode], kind: FsNodeKind | set[FsNodeKind]): FsNode 
 
 proc parseFirstStep(tokens: seq[Token]): seq[FSNode] =
   result = @[]
-
   for token in tokens:
     let (cleanedToken, stripPre, stripPost) = mustStrip(token)
     case token.kind
@@ -246,14 +245,13 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
       includeNwt(result, fsToken.value)
     else: raise newException(ValueError, "[SS] NOT IMPL: " & $fsToken)
 
+
 proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
   while pos < fsTokens.len:
     result &= parseSecondStepOne(fsTokens, pos)
 
 proc astVariable(token: NwtNode): NimNode =
   var varb: NimNode
-  # special case `self` variable, used to reference blocks
-  const specialSelf = "self."
   if token.variableBody.startsWith(specialSelf):
     let blockname = token.variableBody[specialSelf.len .. ^1]
     if blocks.hasKey(blockname):
@@ -357,6 +355,7 @@ proc astIf(token: NwtNode): NimNode =
         )
       )
 
+
 proc astProc(token: NwtNode, procStr = "proc"): NimNode =
   discard
   let easyProc =  procStr & " " & token.procHeader & " discard"
@@ -433,12 +432,12 @@ func whitespaceControl(nodes: seq[FsNode]): seq[FsNode] =
     var mnode = node
     if nextStrip:
       if node.kind == FsStr:
-        mnode.value = mnode.value.strip(true, false, {' ', '\n'})
+        mnode.value = mnode.value.strip(true, false, {' ', '\n', '\c'})
       nextStrip = false
     if node.stripPre:
       if result.len > 0: # if there is something
         if result[^1].kind == FsStr:
-          result[^1].value = result[^1].value.strip(false, true, {' ', '\n'}) # remove trailing whitespace from last node
+          result[^1].value = result[^1].value.strip(false, true, {' ', '\n', '\c'}) # remove trailing whitespace from last node
     if node.stripPost:
       nextStrip = true
     result.add mnode

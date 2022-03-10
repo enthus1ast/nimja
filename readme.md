@@ -452,6 +452,12 @@ If you want to print a block multiple times, you can, however, use the special s
 <h1>{{ self.title }}</h1>
 {% block body %}{% endblock %}
 
+To change the `specialSelf` variable name compile with eg.:
+
+```
+nim c -d:specialSelf="blocks." file.nim
+```
+
 
 procedures (macro)
 ========
