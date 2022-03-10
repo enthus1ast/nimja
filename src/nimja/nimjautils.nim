@@ -181,6 +181,14 @@ template `?`*(con, body: untyped): untyped =
   else:
     if con: yield body
 
+template `|`*(a, b: untyped): untyped =
+  ## 'filter' alias, often used in other template engines.
+  ## `a | b` is an alias to `a.b`.
+  ## This enables syntax like this:
+  ## .. code-block:: Nim
+  ##  {{ "foo baa baz" | slugify}}
+  a.b
+
 when isMainModule and false:
   for loop, elem in @["foo", "baa", "baz"].loop():
     if loop.first:

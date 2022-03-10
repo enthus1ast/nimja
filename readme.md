@@ -717,6 +717,16 @@ check "disabled" == foo(true)
 check "" == foo(false)
 ```
 
+filter `|`
+---------
+
+`a | b` is an alias to `a.b` this is often used in other template engines.
+
+```nim
+proc foo(): string =
+  compileTemplateStr("""{{"foo baa baz" | slugify}}""")
+check foo() == "foo-baa-baz"
+```
 
 
 Want to hack?

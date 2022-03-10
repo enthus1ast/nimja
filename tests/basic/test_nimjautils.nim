@@ -78,3 +78,8 @@ suite "nimjautils":
       compileTemplateStr("""{% ?isDisabled: "disabled" %}""", iter = true)
     check "disabled" == toSeq(foo(true))[0]
     check toSeq(foo(false)).len() == 0
+
+  test "filter `|`":
+    proc foo(): string =
+      compileTemplateStr("""{{"foo baa baz" | slugify}}""")
+    check foo() == "foo-baa-baz"
