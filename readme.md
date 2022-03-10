@@ -448,9 +448,11 @@ If there were two similarly-named {% block %} tags in a template, that template'
 
 If you want to print a block multiple times, you can, however, use the special self variable and call the block with that name:
 
+```twig
 <title>{% block title %}{% endblock %}</title>
 <h1>{{ self.title }}</h1>
 {% block body %}{% endblock %}
+```
 
 To change the `specialSelf` variable name compile with eg.:
 
