@@ -24,14 +24,14 @@ FEATURES
 ```
 # https://github.com/enthus1ast/dekao/blob/master/bench.nim
 # nim c --gc:arc -d:release -d:danger -d:lto --opt:speed -r bench.nim
-name ............................... min time      avg time    std dv   runs
-dekao .............................. 0.105 ms      0.117 ms    ±0.013  x1000
-karax .............................. 0.126 ms      0.132 ms    ±0.008  x1000
-htmlgen ............................ 0.021 ms      0.023 ms    ±0.004  x1000
-nimja .............................. 0.016 ms      0.017 ms    ±0.001  x1000 <--
-nimja iterator ..................... 0.008 ms      0.009 ms    ±0.001  x1000 <--
-scf ................................ 0.023 ms      0.024 ms    ±0.003  x1000
-nim-mustache ....................... 0.745 ms      0.790 ms    ±0.056  x1000
+name ................. min time  avg time  std dv   runs
+dekao ................ 0.105 ms  0.117 ms  ±0.013  x1000
+karax ................ 0.126 ms  0.132 ms  ±0.008  x1000
+htmlgen .............. 0.021 ms  0.023 ms  ±0.004  x1000
+nimja ................ 0.016 ms  0.017 ms  ±0.001  x1000 <--
+nimja iterator ....... 0.008 ms  0.009 ms  ±0.001  x1000 <--
+scf .................. 0.023 ms  0.024 ms  ±0.003  x1000
+nim-mustache ......... 0.745 ms  0.790 ms  ±0.056  x1000
 ```
 
 DOCUMENTATION
