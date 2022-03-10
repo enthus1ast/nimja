@@ -436,6 +436,23 @@ I AM CONTENT
 </html>
 ```
 
+`self` variable
+===============
+
+Jinja describes them like so, we can do the same:
+
+You can't define multiple {% block %} tags with the same name in the same template.
+This limitation exists because a block tag works in "both" directions.
+That is, a block tag doesn't just provide a placeholder to fill - it also defines the content that fills the placeholder in the parent.
+If there were two similarly-named {% block %} tags in a template, that template's parent wouldn't know which one of the blocks content to use.
+
+If you want to print a block multiple times, you can, however, use the special self variable and call the block with that name:
+
+<title>{% block title %}{% endblock %}</title>
+<h1>{{ self.title }}</h1>
+{% block body %}{% endblock %}
+
+
 procedures (macro)
 ========
 
@@ -700,7 +717,7 @@ will output:
 
 
 ```nim
-allowedCharsInSlug = Letters + Digits
+let allowedCharsInSlug = Letters + Digits
 proc slugify*(str: string, sperator = "-", allowedChars = allowedCharsInSlug): string =
 ```
 
@@ -910,5 +927,6 @@ nim c -d:dumpNwtMacro -r yourfile.nim # <-- dump generated Nim macros
 Changelog
 =========
 
+- 0.5.1 Added self variable, to print blocks multiple times
 - 0.5.0 Added hot code reloading.
 - 0.4.2 Added `includeRawStatic` and `includeStaticAsDataurl`
