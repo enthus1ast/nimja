@@ -67,7 +67,7 @@ when defined(dumpNwtAstPretty):
     (%* nwtNodes).pretty()
 
 
-# Forward decleration
+# Forward declaration
 proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc astAst(tokens: seq[NwtNode]): seq[NimNode]
@@ -225,7 +225,7 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     of FsFor: return parseSsFor(fsTokens, pos)
     of FsBlock: return parseSsBlock(fsTokens, pos)
 
-    # Proc / Func / Macro are very simliar
+    # Proc / Func / Macro are very similar
     of FsProc: return parseSsProc(fsTokens, pos, NProc)
     of FsFunc: return parseSsProc(fsTokens, pos, NFunc)
 
@@ -252,7 +252,7 @@ proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
 
 proc astVariable(token: NwtNode): NimNode =
   var varb: NimNode
-  # special case `self` variable, used to referece blocks
+  # special case `self` variable, used to reference blocks
   const specialSelf = "self."
   if token.variableBody.startsWith(specialSelf):
     let blockname = token.variableBody[specialSelf.len .. ^1]
@@ -444,17 +444,17 @@ func whitespaceControl(nodes: seq[FsNode]): seq[FsNode] =
     result.add mnode
 
 proc errorOnDoublicatedBlocks(fsns: seq[FSNode]) =
-  ## Find doublicated blocks
+  ## Find duplicated blocks
   # TODO give context and line
   var blocknames: HashSet[string]
   for fsnode in fsns.findAll(FsBlock):
     if blocknames.contains(fsnode.value):
-      raise newException(ValueError, "found doublicated block:" & fsnode.value & " :" & $ fsns)
+      raise newException(ValueError, "found duplicated block:" & fsnode.value & " :" & $ fsns)
     else:
       blocknames.incl fsnode.value
 
 proc errorOnDoublicatedExtends(fsns: seq[FSNode]) =
-  ## Find doublicated extends
+  ## Find duplicated extends
   # TODO give context and line
   var foundExtends = false
   for _ in fsns.findAll(FsExtends):
@@ -577,7 +577,7 @@ template doCompile(str: untyped): untyped =
   when defined(dumpNwtMacro): echo toStrLit(result)
 
 macro compileTemplateStr*(str: typed, iter: static bool = false): untyped =
-  ## Compiles a nimja template from a string.
+  ## Compiles a Nimja template from a string.
   ##
   ## .. code-block:: Nim
   ##  proc yourFunc(yourParams: bool): string =
@@ -585,7 +585,7 @@ macro compileTemplateStr*(str: typed, iter: static bool = false): untyped =
   ##
   ##  echo yourFunc(true)
   ##
-  ## If `iter = true` then the macro can be used in an interator body
+  ## If `iter = true` then the macro can be used in an iterator body
   ## this could be used for streaming templates, or to save memory when a big template
   ## is rendered and the http server can send data in chunks.
   ##
@@ -600,21 +600,21 @@ macro compileTemplateStr*(str: typed, iter: static bool = false): untyped =
   doCompile(str.strVal)
 
 macro compileTemplateFile*(path: static string, iter: static bool = false): untyped =
-  ## Compiles a nimja template from a file.
+  ## Compiles a Nimja template from a file.
   ##
   ## .. code-block:: nim
   ##  proc yourFunc(yourParams: bool): string =
-  ##    compileTemplateFile(getScriptDir() / "relative/path.nwt")
+  ##    compileTemplateFile(getScriptDir() / "relative/path.nimja)
   ##
   ##  echo yourFunc(true)
   ##
-  ## If `iter = true` then the macro can be used in an interator body
+  ## If `iter = true` then the macro can be used in an iterator body
   ## this could be used for streaming templates, or to save memory when a big template
   ## is rendered and the http server can send data in chunks.
   ##
   ## .. code-block:: nim
   ##  iterator yourIter(yourParams: bool): string =
-  ##    compileTemplateFile(getScriptDir() / "relative/path.nwt", iter = true)
+  ##    compileTemplateFile(getScriptDir() / "relative/path.nimja, iter = true)
   ##
   ##  for elem in yourIter(true):
   ##    echo elem
