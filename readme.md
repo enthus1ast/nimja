@@ -700,7 +700,7 @@ will output:
 
 
 ```nim
-allowedCharsInSlug = Letters + Digits
+let allowedCharsInSlug = Letters + Digits
 proc slugify*(str: string, sperator = "-", allowedChars = allowedCharsInSlug): string =
 ```
 
