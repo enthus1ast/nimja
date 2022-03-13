@@ -4,7 +4,7 @@ import sharedhelper
 import strutils
 import parseutils
 import unidecode
-import os, mimetypes, uri, tables
+import os, mimetypes, uri, tables, macros
 export uri
 
 type
@@ -181,13 +181,15 @@ template `?`*(con, body: untyped): untyped =
   else:
     if con: yield body
 
-template `|`*(a, b: untyped): untyped =
+macro `|`*(aa, bb: untyped): string =
   ## 'filter' alias, often used in other template engines.
   ## `a | b` is an alias to `a.b`.
   ## This enables syntax like this:
   ## .. code-block:: Nim
-  ##  {{ "foo baa baz" | slugify}}
-  a.b
+  ##  {{ "foo baa baz" | slugify()}}
+  result = newStmtList()
+  let ss = "(" & (repr aa) & "." & (repr bb) & ")"
+  result.add parseStmt(ss)
 
 when isMainModule and false:
   for loop, elem in @["foo", "baa", "baz"].loop():

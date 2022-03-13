@@ -252,6 +252,7 @@ proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
 
 proc astVariable(token: NwtNode): NimNode =
   var varb: NimNode
+  # The "self." block insertion
   if token.variableBody.startsWith(specialSelf):
     let blockname = token.variableBody[specialSelf.len .. ^1]
     if blocks.hasKey(blockname):
@@ -423,6 +424,11 @@ func condenseStrings(nodes: seq[FsNode]): seq[FsNode] =
         result.add node
     if curStr.len != 0:
       result.add FsNode(kind: FsStr, value: curStr)
+
+# func condenseStrings(nodes: seq[NwtNode]: seq[NwtNode] =
+#   ## tries to combine multiple string assignments into one.
+#   ## operates on NwtNodes (tree)
+
 
 func whitespaceControl(nodes: seq[FsNode]): seq[FsNode] =
   ## Implements the handling of "WhitespaceControl" chars.

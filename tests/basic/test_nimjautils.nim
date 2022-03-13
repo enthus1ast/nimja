@@ -81,5 +81,13 @@ suite "nimjautils":
 
   test "filter `|`":
     proc foo(): string =
-      compileTemplateStr("""{{"foo baa baz" | slugify}}""")
+      compileTemplateStr("""{{"foo baa baz" | slugify()}}""")
     check foo() == "foo-baa-baz"
+
+  test "filter `|` with params":
+    proc fil(a: string, b: int, c: float): string =
+      a.repeat(b) & $c
+    proc foo(): string =
+      compileTemplateStr("""{{"foo" | fil(3, 0.1337)}}""")
+    check foo() == "foofoofoo0.1337"
+
