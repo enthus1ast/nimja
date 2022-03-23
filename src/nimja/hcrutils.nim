@@ -35,7 +35,7 @@ proc walk(cw: ChangeWatcher): seq[string] =
         updateFile(path)
 
 proc doRecompile*(cw: ChangeWatcher) =
-  echo execShellCmd(fmt"nim c --app:lib {cw.libfile}.nim")
+  echo execShellCmd(fmt"nim c --app:lib {getAppDir() / cw.libfile}.nim")
 
 proc newChangeWatcher*(patterns: seq[string], exec: Exec = doRecompile, checkTimeout = 1_000,
     libfile = "tmpls.nim"): ChangeWatcher =
