@@ -627,3 +627,13 @@ macro compileTemplateFile*(path: static string, iter: static bool = false): unty
   nwtIter = iter
   let str = loadCacheFile(path)
   doCompile(str)
+
+proc tmpls*(str: static string): string {.inline.} =
+  ## Compiles a Nimja template string and returns directly.
+  ## Can be used inline, without a wrapper proc.
+  compileTemplateStr(str)
+
+proc tmplf*(path: static string): string {.inline.} =
+  ## Compiles a Nimja template file and returns directly.
+  ## Can be used inline, without a wrapper proc.
+  compileTemplateFile(path)

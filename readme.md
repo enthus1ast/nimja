@@ -935,6 +935,7 @@ nim c -d:dumpNwtMacro -r yourfile.nim # <-- dump generated Nim macros
 Changelog
 =========
 
+- 0.5.5 Added `tmpls` and `tmplf` procs to use inline.
 - 0.5.1 Added self variable, to print blocks multiple times
 - 0.5.0 Added hot code reloading.
 - 0.4.2 Added `includeRawStatic` and `includeStaticAsDataurl`
