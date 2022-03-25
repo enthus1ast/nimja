@@ -311,7 +311,7 @@ for
 ---
 
 ```twig
-% for (cnt, elem) in @["foo", "baa", "baz"].pairs() %}
+{% for (cnt, elem) in @["foo", "baa", "baz"].pairs() %}
   {{cnt}} -> {{elem}}
 {% endfor %}
 ```
