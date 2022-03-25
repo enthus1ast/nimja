@@ -293,6 +293,20 @@ if / elif / else
 {% endif %}
 ```
 
+tmpls / tmplf
+=============
+
+`compileTemplateStr` and `compileTemplateFile` both need a surrounding proc.
+`tmpls` (template str) and `tmplf` (template file) are a shorthand for these
+situations where you want to inline a render call.
+
+```
+let leet = 1337
+echo tmpls("foo {{leet}}")
+echo tmplf(getScriptDir() / "templates" / "myfile.nimja")
+```
+
+
 for
 ---
 
