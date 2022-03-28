@@ -48,3 +48,35 @@ suite "proc":
       """)
     check test().strip() == """<textarea name="name" rows="10" cols="40">value</textarea>"""
 
+  test "#58 endfunc":
+    proc test(): string =
+      compileTemplateStr("""
+        {% func textarea(name, value="", rows=10, cols=40): string = %}
+            <textarea name="{{ name }}" rows="{{ rows }}" cols="{{ cols
+                }}">{{ value }}</textarea>
+        {% endfunc %}
+        {{ textarea("name", "value") }}
+      """)
+    check test().strip() == """<textarea name="name" rows="10" cols="40">value</textarea>"""
+
+  test "#58 endproc":
+    proc test(): string =
+      compileTemplateStr("""
+        {% proc textarea(name, value="", rows=10, cols=40): string = %}
+            <textarea name="{{ name }}" rows="{{ rows }}" cols="{{ cols
+                }}">{{ value }}</textarea>
+        {% endproc%}
+        {{ textarea("name", "value") }}
+      """)
+    check test().strip() == """<textarea name="name" rows="10" cols="40">value</textarea>"""
+
+  test "#58 endmacro":
+    proc test(): string =
+      compileTemplateStr("""
+        {% macro textarea(name, value="", rows=10, cols=40): string = %}
+            <textarea name="{{ name }}" rows="{{ rows }}" cols="{{ cols
+                }}">{{ value }}</textarea>
+        {% endmacro%}
+        {{ textarea("name", "value") }}
+      """)
+    check test().strip() == """<textarea name="name" rows="10" cols="40">value</textarea>"""

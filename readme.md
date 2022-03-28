@@ -483,14 +483,14 @@ Procedures can be defined like so:
 ```twig
 {% proc foo(): string = %}
   baa
-{% end %}
+{% endproc %}
 {{ foo() }}
 ```
 
 ```twig
 {% proc input(name: string, value="", ttype="text"): string = %}
     <input type="{{ ttype }}" value="{{ value }}" name="{{ name }}">
-{% end %}
+{% endproc %}
 {{ input("name", "value", ttype="text") }}
 ```
 
@@ -499,7 +499,7 @@ Func's have the same semantic as nim funcs, they are not allowed to have a side 
 ```twig
 {% func foo(): string = %}
   baa
-{% end %}
+{% endfunc %}
 {{ foo() }}
 ```
 
@@ -509,10 +509,12 @@ Func's have the same semantic as nim funcs, they are not allowed to have a side 
 {% macro textarea(name, value="", rows=10, cols=40): string = %}
     <textarea name="{{ name }}" rows="{{ rows }}" cols="{{ cols
         }}">{{ value }}</textarea>
-{% end %}
+{% endmacro %}
 {{ textarea("name", "value") }}
 ```
 
+for `{{func}}` `{{proc}}` and `{{macro}}` either the `{{end}}` tag or
+the `{{endfunc}}` `{{endproc}}` `{{endmacro}}` are valid closing tags.
 
 Iterator
 ========
@@ -949,6 +951,7 @@ nim c -d:dumpNwtMacro -r yourfile.nim # <-- dump generated Nim macros
 Changelog
 =========
 
+- 0.5.6 Added `{{endfunc}}` `{{endproc}}` `{{endmacro}}` for consistency.
 - 0.5.5 Added `tmpls` and `tmplf` procs to use inline.
 - 0.5.1 Added self variable, to print blocks multiple times
 - 0.5.0 Added hot code reloading.

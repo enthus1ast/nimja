@@ -50,7 +50,7 @@ type
   FsNodeKind = enum
     FsIf, FsStr, FsEval, FsElse, FsElif, FsEndif, FsFor,
     FsEndfor, FsVariable, FsWhile, FsEndWhile, FsImport,
-    FsBlock, FsEndBlock, FsExtends, FsProc, FsFunc, FsEnd
+    FsBlock, FsEndBlock, FsExtends, FsProc, FsEndProc, FsFunc, FsEndFunc, FsEnd
   FSNode = object
     kind: FsNodeKind
     value: string
@@ -128,8 +128,11 @@ proc parseFirstStep(tokens: seq[Token]): seq[FSNode] =
       of "endblock": result.add FSNode(kind: FsEndBlock, value: suf, stripPre: stripPre, stripPost: stripPost)
       of "extends": result.add FSNode(kind: FsExtends, value: suf, stripPre: stripPre, stripPost: stripPost)
       of "proc": result.add FSNode(kind: FsProc, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "endproc": result.add FSNode(kind: FsEndProc, value: suf, stripPre: stripPre, stripPost: stripPost)
       of "macro": result.add FSNode(kind: FsProc, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "endmacro": result.add FSNode(kind: FsEndProc, value: suf, stripPre: stripPre, stripPost: stripPost)
       of "func": result.add FSNode(kind: FsFunc, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "endfunc": result.add FSNode(kind: FsEndFunc, value: suf, stripPre: stripPre, stripPost: stripPost)
       of "end": result.add FSNode(kind: FsEnd, value: suf, stripPre: stripPre, stripPost: stripPost)
       else:
         result.add FSNode(kind: FsEval, value: cleanedToken.value, stripPre: stripPre, stripPost: stripPost)
@@ -197,7 +200,10 @@ proc parseSsProc(fsTokens: seq[FsNode], pos: var int, kind: NwtNodeKind = NProc)
   result = NwtNode(kind: NwtNodeKind.NProc)
   result.procHeader = elem.value
   pos.inc # skip FsProc
-  result.procBody = consumeBlock(fsTokens, pos, {FsEnd})
+  if kind == NProc:
+    result.procBody = consumeBlock(fsTokens, pos, {FsEnd, FsEndProc})
+  elif kind == NFunc:
+    result.procBody = consumeBlock(fsTokens, pos, {FsEnd, FsEndFunc})
   pos.inc # skip FsEnd
 
 proc parseSsExtends(fsTokens: seq[FsNode], pos: var int): NwtNode =
