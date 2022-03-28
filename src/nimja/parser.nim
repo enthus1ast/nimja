@@ -60,6 +60,7 @@ type
 var cacheNwtNode {.compileTime.}: Table[string, seq[NwtNode]] ## a cache for rendered NwtNodes
 var cacheNwtNodeFile {.compileTime.}: Table[Path, string] ## a cache for content of a path
 var nwtIter {.compileTime.} = false
+var nwtVarname {.compileTime.}: string
 var blocks {.compileTime.} : Table[string, seq[NwtNode]]
 
 when defined(dumpNwtAstPretty):
@@ -273,7 +274,7 @@ proc astVariable(token: NwtNode): NimNode =
   return nnkStmtList.newTree(
     nnkInfix.newTree(
       newIdentNode("&="),
-      newIdentNode("result"),
+      newIdentNode(nwtVarname),
       newCall(
         "$",
         varb
@@ -281,11 +282,11 @@ proc astVariable(token: NwtNode): NimNode =
     )
   )
 
-func astStr(token: NwtNode): NimNode =
+proc astStr(token: NwtNode): NimNode =
   return nnkStmtList.newTree(
     nnkInfix.newTree(
       newIdentNode("&="),
-      newIdentNode("result"),
+      newIdentNode(nwtVarname),
       newStrLitNode(token.strBody)
     )
   )
@@ -587,7 +588,8 @@ template doCompile(str: untyped): untyped =
     result.add astAstOne(nwtNode)
   when defined(dumpNwtMacro): echo toStrLit(result)
 
-macro compileTemplateStr*(str: typed, iter: static bool = false): untyped =
+macro compileTemplateStr*(str: typed, iter: static bool = false,
+    varname: static string = "result"): untyped =
   ## Compiles a Nimja template from a string.
   ##
   ## .. code-block:: Nim
@@ -607,10 +609,12 @@ macro compileTemplateStr*(str: typed, iter: static bool = false): untyped =
   ##  for elem in yourIter(true):
   ##    echo elem
   ##
+  nwtVarname = varname
   nwtIter = iter
   doCompile(str.strVal)
 
-macro compileTemplateFile*(path: static string, iter: static bool = false): untyped =
+macro compileTemplateFile*(path: static string, iter: static bool = false,
+    varname: static string = "result"): untyped =
   ## Compiles a Nimja template from a file.
   ##
   ## .. code-block:: nim
@@ -630,16 +634,22 @@ macro compileTemplateFile*(path: static string, iter: static bool = false): unty
   ##  for elem in yourIter(true):
   ##    echo elem
   ##
+  nwtVarname = varname
   nwtIter = iter
   let str = loadCacheFile(path)
   doCompile(str)
 
-proc tmpls*(str: static string): string {.inline.} =
+template tmpls*(str: static string): string =
   ## Compiles a Nimja template string and returns directly.
   ## Can be used inline, without a wrapper proc.
-  compileTemplateStr(str)
+  #var nimjaTmplsVar {.inject.}: string # TODO gen unique name
+  var nimjaTmplsVar: string
+  compileTemplateStr(str, varname = strtoast nimjaTmplsVar)
+  nimjaTmplsVar
 
-proc tmplf*(path: static string): string {.inline.} =
+template tmplf*(path: static string): string =
   ## Compiles a Nimja template file and returns directly.
   ## Can be used inline, without a wrapper proc.
-  compileTemplateFile(path)
+  var nimjaTmplfVar: string
+  compileTemplateFile(path, varname = strtoast nimjaTmplfVar)
+  nimjaTmplfVar
