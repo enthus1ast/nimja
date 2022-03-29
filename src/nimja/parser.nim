@@ -644,12 +644,12 @@ template tmpls*(str: static string): string =
   ## Can be used inline, without a wrapper proc.
   #var nimjaTmplsVar {.inject.}: string # TODO gen unique name
   var nimjaTmplsVar: string
-  compileTemplateStr(str, varname = strtoast nimjaTmplsVar)
+  compileTemplateStr(str, varname = astToStr nimjaTmplsVar)
   nimjaTmplsVar
 
 template tmplf*(path: static string): string =
   ## Compiles a Nimja template file and returns directly.
   ## Can be used inline, without a wrapper proc.
   var nimjaTmplfVar: string
-  compileTemplateFile(path, varname = strtoast nimjaTmplfVar)
+  compileTemplateFile(path, varname = astToStr nimjaTmplfVar)
   nimjaTmplfVar
