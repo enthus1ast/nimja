@@ -962,6 +962,7 @@ nim c -d:dumpNwtMacro -r yourfile.nim # <-- dump generated Nim macros
 Changelog
 =========
 
+- 0.6.1 No codegen for empty string nodes after whitespaceControl.
 - 0.5.6 Added `{{endfunc}}` `{{endproc}}` `{{endmacro}}` for consistency.
 - 0.5.5 Added `tmpls` and `tmplf` procs to use inline.
 - 0.5.1 Added self variable, to print blocks multiple times
