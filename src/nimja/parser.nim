@@ -432,11 +432,6 @@ func condenseStrings(nodes: seq[FsNode]): seq[FsNode] =
     if curStr.len != 0:
       result.add FsNode(kind: FsStr, value: curStr)
 
-# func condenseStrings(nodes: seq[NwtNode]: seq[NwtNode] =
-#   ## tries to combine multiple string assignments into one.
-#   ## operates on NwtNodes (tree)
-
-
 func whitespaceControl(nodes: seq[FsNode]): seq[FsNode] =
   ## Implements the handling of "WhitespaceControl" chars.
   ## eg.: {%- if true -%}
@@ -453,6 +448,9 @@ func whitespaceControl(nodes: seq[FsNode]): seq[FsNode] =
           result[^1].value = result[^1].value.strip(false, true, {' ', '\n', '\c'}) # remove trailing whitespace from last node
     if node.stripPost:
       nextStrip = true
+    if mnode.value.len == 0 and mnode.kind == FsStr:
+      # skip empty string nodes entirely, if they're empty after stripping.
+      continue
     result.add mnode
 
 proc errorOnDoublicatedBlocks(fsns: seq[FSNode]) =
@@ -609,6 +607,8 @@ macro compileTemplateStr*(str: typed, iter: static bool = false,
   ##  for elem in yourIter(true):
   ##    echo elem
   ##
+  ## `varname` specifies the variable that is appended to.
+  ##
   nwtVarname = varname
   nwtIter = iter
   doCompile(str.strVal)
@@ -634,6 +634,8 @@ macro compileTemplateFile*(path: static string, iter: static bool = false,
   ##  for elem in yourIter(true):
   ##    echo elem
   ##
+  ## `varname` specifies the variable that is appended to.
+  ##
   nwtVarname = varname
   nwtIter = iter
   let str = loadCacheFile(path)
@@ -642,7 +644,6 @@ macro compileTemplateFile*(path: static string, iter: static bool = false,
 template tmpls*(str: static string): string =
   ## Compiles a Nimja template string and returns directly.
   ## Can be used inline, without a wrapper proc.
-  #var nimjaTmplsVar {.inject.}: string # TODO gen unique name
   var nimjaTmplsVar: string
   compileTemplateStr(str, varname = astToStr nimjaTmplsVar)
   nimjaTmplsVar

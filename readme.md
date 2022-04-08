@@ -264,6 +264,10 @@ echo myRenderProc("test123")
 compileTemplateFile can also generate an iterator body, for details look at the
 iteratior section.
 
+compileTemplateFile (also compileTemplateString) generates the body of a proc/iterator so it generates
+assign calls to a variable. The default is `result`.
+If you want it to use another variable set it in `varname`
+
 compileTemplateStr
 -------------------
 
@@ -279,6 +283,13 @@ echo myRenderProc("test123")
 
 compileTemplateStr can also generate an iterator body, for details look at the
 iteratior section.
+
+
+compileTemplateString (also compileTemplateFile) generates the body of a proc/iterator so it generates
+assign calls to a variable. The default is `result`.
+If you want it to use another variable set it in `varname`
+
+
 
 if / elif / else
 -----------------
