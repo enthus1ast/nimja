@@ -2,8 +2,22 @@ discard """
   joinable: false
 """
 import ../../src/nimja
+import unittest
 
-proc test(): string =
-  compileTemplateStr("""{% importnwt "procs.html" %}{{foo()}}""")
+suite "proc_import":
 
-doAssert test() == "foo"
+  test "basic":
+    proc test(): string =
+      compileTemplateStr("""{% importnwt "procs.html" %}{{foo()}}""")
+    check test() == "foo"
+
+  test "import on child (in block)":
+    proc test(): string =
+      compileTemplateStr("""
+        {%- extends "procsMaster.html" -%}
+        {%- block "content" -%}
+          {%- importnwt "procs.html" -%}
+          {{- foo() -}}
+        {%- endblock -%}
+      """)
+    check test() == "foo"

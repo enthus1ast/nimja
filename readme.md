@@ -264,6 +264,10 @@ echo myRenderProc("test123")
 compileTemplateFile can also generate an iterator body, for details look at the
 iteratior section.
 
+compileTemplateFile (also compileTemplateString) generates the body of a proc/iterator so it generates
+assign calls to a variable. The default is `result`.
+If you want it to use another variable set it in `varname`
+
 compileTemplateStr
 -------------------
 
@@ -279,6 +283,13 @@ echo myRenderProc("test123")
 
 compileTemplateStr can also generate an iterator body, for details look at the
 iteratior section.
+
+
+compileTemplateString (also compileTemplateFile) generates the body of a proc/iterator so it generates
+assign calls to a variable. The default is `result`.
+If you want it to use another variable set it in `varname`
+
+
 
 if / elif / else
 -----------------
@@ -515,6 +526,28 @@ Func's have the same semantic as nim funcs, they are not allowed to have a side 
 
 for `{{func}}` `{{proc}}` and `{{macro}}` either the `{{end}}` tag or
 the `{{endfunc}}` `{{endproc}}` `{{endmacro}}` are valid closing tags.
+
+Importing func/proc/macro from a file
+------------------------------------
+
+Importing works like any other ordinary Nimja templates with `ìmportnwt`.
+Good practice is to define procs with the "whitespacecontrol":
+
+myMacros.nimja
+```
+{%- proc foo(): string = %}foo{% end -%}
+{%- proc baa(): string = %}baa{% end -%}
+```
+
+myTemplate.nimja
+```
+{% importnwt "myMacros.nimja" %}
+```
+
+When a template `extends` another template, `importnwt` statements must be
+in a `block` they cannot stand on their own.
+It might be a good idea to import these "library templates" in
+the extended template (eg.: master.nimja).
 
 Iterator
 ========
@@ -951,6 +984,7 @@ nim c -d:dumpNwtMacro -r yourfile.nim # <-- dump generated Nim macros
 Changelog
 =========
 
+- 0.6.1 No codegen for empty string nodes after whitespaceControl.
 - 0.5.6 Added `{{endfunc}}` `{{endproc}}` `{{endmacro}}` for consistency.
 - 0.5.5 Added `tmpls` and `tmplf` procs to use inline.
 - 0.5.1 Added self variable, to print blocks multiple times
