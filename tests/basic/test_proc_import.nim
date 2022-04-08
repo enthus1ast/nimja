@@ -21,15 +21,3 @@ suite "proc_import":
         {%- endblock -%}
       """)
     check test() == "foo"
-
-## This cannot work?
-#   test "import on child (no block)":
-#     proc test(): string =
-#       compileTemplateStr("""
-#         {%- extends "procsMaster.html" -%}
-#         {%- importnwt "procs.html" -%}
-#         {%- block "content" -%}
-#           {{- foo() -}}
-#         {%- endblock -%}
-#       """)
-#     check test() == "foo"
