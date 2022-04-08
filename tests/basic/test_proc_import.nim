@@ -22,6 +22,7 @@ suite "proc_import":
       """)
     check test() == "foo"
 
+## This cannot work?
 #   test "import on child (no block)":
 #     proc test(): string =
 #       compileTemplateStr("""

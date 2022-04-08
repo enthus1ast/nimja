@@ -527,6 +527,28 @@ Func's have the same semantic as nim funcs, they are not allowed to have a side 
 for `{{func}}` `{{proc}}` and `{{macro}}` either the `{{end}}` tag or
 the `{{endfunc}}` `{{endproc}}` `{{endmacro}}` are valid closing tags.
 
+Importing func/proc/macro from a file
+------------------------------------
+
+Importing works like any other ordinary Nimja templates with `ìmportnwt`.
+Good practice is to define procs with the "whitespacecontrol":
+
+myMacros.nimja
+```
+{%- proc foo(): string = %}foo{% end -%}
+{%- proc baa(): string = %}baa{% end -%}
+```
+
+myTemplate.nimja
+```
+{% importnwt "myMacros.nimja" %}
+```
+
+When a template `extends` another template, `importnwt` statements must be
+in a `block` they cannot stand on their own.
+It might be a good idea to import these "library templates" in
+the extended template (eg.: master.nimja).
+
 Iterator
 ========
 
