@@ -42,7 +42,8 @@ proc newChangeWatcher*(patterns: seq[string], exec: Exec = doRecompile, checkTim
   result = ChangeWatcher()
   result.exec = exec
   result.checkTimeout = checkTimeout
-  result.libfile = splitFile(libfile).name
+  let lbp = splitFile(libfile)
+  result.libfile = lbp.dir / lbp.name
   result.patterns = patterns
   result.patterns.add libfile # always add the libfile
   result.doRecompile() # compile the lib once on start
