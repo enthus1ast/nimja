@@ -4,7 +4,7 @@ import sharedhelper
 import strutils
 import parseutils
 import unidecode
-import os, mimetypes, uri, tables, macros
+import os, mimetypes, uri, tables, macros, std/enumerate
 export uri
 
 type
@@ -119,7 +119,8 @@ proc truncate*(str: string, num: Natural, preserveWords = true, suf = "..."): st
   if preserveWords == false:
     return str[0 .. num - 1] & suf
   else:
-    for idx, word in str.splitWhitespace.pairs():
+    result = newStringOfCap(num + suf.len)
+    for idx, word in enumerate(str.splitWhitespace()):
       if result.len + (word.len) <= num:
         if idx != 0:
           result.add " "
