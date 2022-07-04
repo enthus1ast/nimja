@@ -1,4 +1,4 @@
-import strutils, macros, sequtils, parseutils, os, tables, sets, deques
+import strutils, macros, sequtils, parseutils, os, tables, sets, deques, std/enumerate
 import lexer, sharedhelper
 export getScriptDir
 
@@ -315,7 +315,6 @@ func astEval(token: NwtNode): NimNode =
   except:
     error "Cannot parse eval body: " & token.evalBody
 
-
 proc astFor(token: NwtNode): NimNode =
   let easyFor = "for " & token.forStmt & ": discard" # `discard` to make a parsable construct
   result = parseStmt(easyFor)
@@ -400,7 +399,7 @@ proc validExtend(secondsStepTokens: seq[NwtNode]): int =
   ## Only Strings and comments are allowed to come before extend
   result = -1
   var validBeforeExtend = true
-  for idx, secondStepToken in secondsStepTokens.pairs:
+  for idx, secondStepToken in enumerate(secondsStepTokens):
     case secondStepToken.kind
     of NStr: discard
     of NExtends:
@@ -548,9 +547,9 @@ proc extend(str: string, templateCache: var Deque[seq[NwtNode]]) =
   else:
     templateCache.addFirst secondsStepTokens
 
-proc findAll(nwtns: seq[NwtNode], kind: NwtNodeKind): seq[NwtNode] =
+iterator findAll(nwtns: seq[NwtNode], kind: NwtNodeKind): NwtNode =
   for nwtn in nwtns:
-    if nwtn.kind == kind: result.add nwtn
+    if nwtn.kind == kind: yield nwtn
 
 proc recursiveFindAllBlocks(nwtns: seq[NwtNode]): seq[NwtNode] =
   for nwtn in nwtns.findAll(NBlock):
@@ -571,7 +570,7 @@ proc fillBlocks(nodes: seq[NwtNode]): seq[NwtNode] =
 proc compile(str: string): seq[NwtNode] =
   var templateCache = initDeque[seq[NwtNode]]()
   extend(str, templateCache)
-  for idx, tmp in templateCache.pairs():
+  for idx, tmp in enumerate(templateCache):
     for nwtn in tmp.recursiveFindAllBlocks():
       blocks[nwtn.blockName] = nwtn.blockBody
   var base = templateCache[0]
