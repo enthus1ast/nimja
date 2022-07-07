@@ -984,6 +984,7 @@ nim c -d:dumpNwtMacro -r yourfile.nim # <-- dump generated Nim macros
 Changelog
 =========
 
+- 0.6.5 Condense strings of extended templates (less assigns -> better runtime performance).
 - 0.6.1 No codegen for empty string nodes after whitespaceControl.
 - 0.5.6 Added `{{endfunc}}` `{{endproc}}` `{{endmacro}}` for consistency.
 - 0.5.5 Added `tmpls` and `tmplf` procs to use inline.
