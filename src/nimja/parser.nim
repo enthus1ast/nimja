@@ -414,22 +414,38 @@ proc validExtend(secondsStepTokens: seq[NwtNode]): int =
     )
 
 func condenseStrings(nodes: seq[FsNode]): seq[FsNode] =
-  ## tries to combine multiple string assignments into one.
-  when defined(noCondenseStrings):
-    return nodes
-  else:
-    var curStr = ""
-    for node in nodes:
-      case node.kind
-      of FsStr:
-        curStr &= node.value
-      else:
-        if curStr.len > 0:
-          result.add FsNode(kind: FsStr, value: curStr)
-        curStr = ""
-        result.add node
-    if curStr.len != 0:
-      result.add FsNode(kind: FsStr, value: curStr)
+  ## tries to combine multiple string assignments into one. Operates on `FsNodes` seq
+  when defined(noCondenseStrings): return nodes
+  var curStr = ""
+  for node in nodes:
+    case node.kind
+    of FsStr:
+      curStr &= node.value
+    else:
+      if curStr.len > 0:
+        result.add FsNode(kind: FsStr, value: curStr)
+      curStr = ""
+      result.add node
+  if curStr.len != 0:
+    result.add FsNode(kind: FsStr, value: curStr)
+
+func condenseStrings(nodes: seq[NwtNode]): seq[NwtNode] =
+  ## tries to combine multiple string assignments into one. Operates on `NwtNode` ast
+  when defined(noCondenseStrings): return nodes
+  # return nodes
+  var curStr = ""
+  for node in nodes:
+    case node.kind
+    of NStr:
+      curStr &= node.strBody
+    else:
+      if curStr.len > 0:
+        result.add NwtNode(kind: NStr, strBody: curStr)
+      curStr = ""
+      result.add node
+  if curStr.len != 0:
+    result.add NwtNode(kind: NStr, strBody: curStr)
+
 
 func whitespaceControl(nodes: seq[FsNode]): seq[FsNode] =
   ## Implements the handling of "WhitespaceControl" chars.
@@ -513,7 +529,7 @@ proc loadCache(str: string): seq[NwtNode] =
     var lexerTokens = toSeq(lex(str))
     var fsns = parseFirstStep(lexerTokens)
     fsns.firstStepErrorChecks()
-    fsns = fsns.condenseStrings()
+    fsns = fsns.condenseStrings() # we condense on the FSNodes that are cached
     fsns = fsns.whitespaceControl()
     var pos = 0
     when defined(nwtCacheOff):
@@ -574,7 +590,7 @@ proc compile(str: string): seq[NwtNode] =
     for nwtn in tmp.recursiveFindAllBlocks():
       blocks[nwtn.blockName] = nwtn.blockBody
   var base = templateCache[0]
-  return fillBlocks(base)
+  return fillBlocks(base).condenseStrings() # ast condense after blocks are filled
 
 template doCompile(str: untyped): untyped =
   let nwtNodes = compile(str)
