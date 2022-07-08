@@ -62,6 +62,7 @@ var cacheNwtNodeFile {.compileTime.}: Table[Path, string] ## a cache for content
 var nwtIter {.compileTime.} = false
 var nwtVarname {.compileTime.}: string
 var blocks {.compileTime.} : Table[string, seq[NwtNode]]
+var guessedStringLen {.compileTime.} = 0
 
 when defined(dumpNwtAstPretty):
   import json
@@ -238,6 +239,8 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     # Simple Types
     of FsStr:
       pos.inc
+      # echo fsToken.value.len, " | ", fsToken
+      guessedStringLen.inc fsToken.value.len
       return NwtNode(kind: NStr, strBody: fsToken.value)
     of FsVariable:
       pos.inc
@@ -592,11 +595,44 @@ proc compile(str: string): seq[NwtNode] =
   var base = templateCache[0]
   return fillBlocks(base).condenseStrings() # ast condense after blocks are filled
 
+
+proc generatePreallocatedStringDef(len: int): NimNode =
+  # dumpAstGen:
+  #   when result is string:
+  #     result = newStringOfCap(10)
+  return nnkStmtList.newTree(
+    nnkWhenStmt.newTree(
+      nnkElifBranch.newTree(
+        nnkInfix.newTree(
+          newIdentNode("is"),
+          newIdentNode(nwtVarname),
+          newIdentNode("string")
+        ),
+        nnkStmtList.newTree(
+          nnkAsgn.newTree(
+            newIdentNode(nwtVarname),
+            nnkCall.newTree(
+              newIdentNode("newStringOfCap"),
+              newLit(len)
+            )
+          )
+        )
+      )
+    )
+  )
+
+
 template doCompile(str: untyped): untyped =
+  guessedStringLen = 0
   let nwtNodes = compile(str)
   when defined(dumpNwtAst): echo nwtNodes
   when defined(dumpNwtAstPretty): echo nwtNodes.pretty
   result = newStmtList()
+
+  if not nwtIter:
+    if (not defined(noPreallocatedString)):
+      result.add generatePreallocatedStringDef(guessedStringLen)
+
   for nwtNode in nwtNodes:
     result.add astAstOne(nwtNode)
   when defined(dumpNwtMacro): echo toStrLit(result)
