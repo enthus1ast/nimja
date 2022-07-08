@@ -976,6 +976,7 @@ Debugging
 nim c -d:dumpNwtAst -r yourfile.nim # <-- dump NwtAst
 nim c -d:dumpNwtAstPretty -r yourfile.nim # <-- dump NwtAst as pretty json
 nim c -d:nwtCacheOff -r yourfile.nim   # <-- disables the NwtNode cache
+nim c -d:noPreallocatedString -r yourfile # <-- do not preallocate the output string
 nim c -d:noCondenseStrings -r yourfile.nim # <-- disables string condense see #12
 nim c -d:dumpNwtMacro -r yourfile.nim # <-- dump generated Nim macros
 ```
@@ -984,6 +985,7 @@ nim c -d:dumpNwtMacro -r yourfile.nim # <-- dump generated Nim macros
 Changelog
 =========
 
+- 0.6.6 Preallocate the minimal known output length if `result` is string.
 - 0.6.5 Condense strings of extended templates (less assigns -> better runtime performance).
 - 0.6.1 No codegen for empty string nodes after whitespaceControl.
 - 0.5.6 Added `{{endfunc}}` `{{endproc}}` `{{endmacro}}` for consistency.
