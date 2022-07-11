@@ -975,7 +975,7 @@ Add this segment to your settings.json in vscode:
 ```json
   "files.associations": {
     "*.nwt": "html", // Nimja deprecated templates
-    "*.nimja": "html", // Nimja deprecated templates
+    "*.nimja": "html", // Nimja new templates
   },
 ```
 
