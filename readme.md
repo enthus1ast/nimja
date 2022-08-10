@@ -966,7 +966,18 @@ asyncCheck cw.recompile() # if a change is detected we recompile tmpls.nim
 line.
 
 
+Nimja Template VSCode Syntax Color Formatting
+============================================
+If you are using VSCode to develop your nim app,
+you can still associate nimja template files for color syntax and formating with vscode as an html file.
+Add this segment to your settings.json in vscode:
 
+```json
+  "files.associations": {
+    "*.nwt": "html", // Nimja deprecated templates
+    "*.nimja": "html", // Nimja new templates
+  },
+```
 
 Debugging
 =====================
