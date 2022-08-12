@@ -5,4 +5,4 @@ discard """
 """
 include ../../src/nimja/parser
 
-const foo = compile("""{%extends "../templates/blockMaster.html"%}{%extends "../templates/blockMaster.html"%}""")
+const foo = compile("""{%extends "../templates/blockMaster.nimja"%}{%extends "../templates/blockMaster.nimja"%}""")

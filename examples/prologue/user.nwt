@@ -1,5 +1,0 @@
-{% extends "partials/_master.nwt" %}
-{% block content %}
-  <h2>{{user.lastname}}, {{user.name}}</h2>
-  {% importnwt "partials/_user.nwt" %}
-{% endblock %}
