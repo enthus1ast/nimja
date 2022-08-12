@@ -1,4 +1,4 @@
-{% extends "test_nwt_bug4_parent.nwt" %}
+{% extends "test_nwt_bug4_parent.nimja" %}
 {% block head %}
 head!
 {{key1}} {{key2}}

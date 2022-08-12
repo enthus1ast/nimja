@@ -1,4 +1,4 @@
-{% extends "partials/_master.nwt" %}
+{% extends "partials/_master.nimja" %}
 {% block content %}
 <p>
 Lorem ipsum dolor sit amet, consectetur adipisicing elit. Tenetur expedita nemo quis similique, soluta odio, quo rerum asperiores officia, dolor repellendus nulla neque perferendis rem saepe! Dolore magni impedit vero.

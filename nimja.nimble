@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.6.6"
+version       = "0.6.7"
 author        = "David Krause"
 description   = "typed and compiled template engine inspired by jinja2, twig and onionhammer/nim-templates for Nim."
 license       = "MIT"
@@ -24,6 +24,10 @@ task tests, "Run all tests":
   # This needs to compile the templates as a shared library first.
   exec "nim c examples/dynlib/templates.nim"
   exec """testament  --directory:"./examples/dynlib"  p "runner.nim""""
+
+  # We cannot easily test if the compilation of the hcr works.
+  # for this we must actually execute the hcrex binary...
+  exec "nim c examples/hcr/hcrex.nim"
 
 
 task docs, "Generate all docs":

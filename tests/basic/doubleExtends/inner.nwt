@@ -1,2 +1,0 @@
-{% extends "doubleExtends/outer.nwt" %}
-{%block outer%}inner{%endblock%}

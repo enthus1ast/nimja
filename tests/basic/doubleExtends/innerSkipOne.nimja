@@ -1,0 +1,2 @@
+{% extends "doubleExtends/outerSkipOne.nimja" %}
+{%block base%}inner{%endblock%}

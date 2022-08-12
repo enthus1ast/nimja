@@ -1,0 +1,1 @@
+{%extends "../templates/blockMaster.nimja"%}{%block mytitle%}{{title}}{%endblock%}{%block mybody%}{{body}}{%endblock%}

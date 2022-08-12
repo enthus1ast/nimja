@@ -13,4 +13,4 @@ suite "shorthands":
   test "tmplf":
     block:
       let ii = 123
-      doAssert tmplf(getScriptDir() / "../templates/foo.html") == "I AM THE FOO 123"
+      doAssert tmplf(getScriptDir() / "../templates/foo.nimja") == "I AM THE FOO 123"

@@ -8,4 +8,4 @@ proc foo*(ss: string, ii: int): string {.cdecl, exportc, dynlib.} =
   compileTemplateStr("template from a dynlib {{ss}} {{ii}}")
 
 proc baa*(ss: string, ii: int): string {.cdecl, exportc, dynlib.} =
-  compileTemplateFile(getScriptDir() / "template.nwt")
+  compileTemplateFile(getScriptDir() / "template.nimja")
