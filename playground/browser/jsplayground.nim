@@ -12,9 +12,9 @@ proc renderArticle(article: int): string =
   compileTemplateStr("""
     {%extends master.html%}{%block content%}
       {% if article == 1 %}
-        {% importnwt article1.html %}
+        {% importnimja article1.html %}
       {% elif article == 2 %}
-        {% importnwt article2.html %}
+        {% importnimja article2.html %}
       {% endif %}
     {%endblock%}
   """)

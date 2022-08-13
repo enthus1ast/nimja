@@ -8,7 +8,7 @@ suite "proc_import":
 
   test "basic":
     proc test(): string =
-      compileTemplateStr("""{% importnwt "procs.nimja" %}{{foo()}}""")
+      compileTemplateStr("""{% importnimja "procs.nimja" %}{{foo()}}""")
     check test() == "foo"
 
   test "import on child (in block)":
@@ -16,7 +16,7 @@ suite "proc_import":
       compileTemplateStr("""
         {%- extends "procsMaster.nimja" -%}
         {%- block "content" -%}
-          {%- importnwt "procs.nimja" -%}
+          {%- importnimja "procs.nimja" -%}
           {{- foo() -}}
         {%- endblock -%}
       """)

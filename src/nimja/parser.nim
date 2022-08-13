@@ -125,7 +125,7 @@ proc parseFirstStep(tokens: seq[Token]): seq[FSNode] =
       of "endfor": result.add FSNode(kind: FsEndfor, value: suf, stripPre: stripPre, stripPost: stripPost)
       of "while": result.add FSNode(kind: FsWhile, value: suf, stripPre: stripPre, stripPost: stripPost)
       of "endwhile": result.add FSNode(kind: FsEndWhile, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "importnwt": result.add FSNode(kind: FsImport, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "importnwt", "importnimja": result.add FSNode(kind: FsImport, value: suf, stripPre: stripPre, stripPost: stripPost)
       of "block": result.add FSNode(kind: FsBlock, value: suf, stripPre: stripPre, stripPost: stripPost)
       of "endblock": result.add FSNode(kind: FsEndBlock, value: suf, stripPre: stripPre, stripPost: stripPost)
       of "extends": result.add FSNode(kind: FsExtends, value: suf, stripPre: stripPre, stripPost: stripPost)
@@ -311,7 +311,6 @@ func astStrIter(token: NwtNode): NimNode =
     )
   )
 
-
 func astEval(token: NwtNode): NimNode =
   try:
     return parseStmt(token.evalBody)
@@ -449,7 +448,6 @@ func condenseStrings(nodes: seq[NwtNode]): seq[NwtNode] =
   if curStr.len != 0:
     result.add NwtNode(kind: NStr, strBody: curStr)
 
-
 func whitespaceControl(nodes: seq[FsNode]): seq[FsNode] =
   ## Implements the handling of "WhitespaceControl" chars.
   ## eg.: {%- if true -%}
@@ -471,7 +469,7 @@ func whitespaceControl(nodes: seq[FsNode]): seq[FsNode] =
       continue
     result.add mnode
 
-proc errorOnDoublicatedBlocks(fsns: seq[FSNode]) =
+proc errorOnDuplicatedBlocks(fsns: seq[FSNode]) =
   ## Find duplicated blocks
   # TODO give context and line
   var blocknames: HashSet[string]
@@ -481,7 +479,7 @@ proc errorOnDoublicatedBlocks(fsns: seq[FSNode]) =
     else:
       blocknames.incl fsnode.value
 
-proc errorOnDoublicatedExtends(fsns: seq[FSNode]) =
+proc errorOnDuplicatedExtends(fsns: seq[FSNode]) =
   ## Find duplicated extends
   # TODO give context and line
   var foundExtends = false
@@ -515,8 +513,8 @@ proc errorOnUnevenBlocks(fsns: seq[FSNode]) =
 
 template firstStepErrorChecks(fsns: seq[FSNode]) =
   ## TODO combine all these?
-  errorOnDoublicatedExtends(fsns)
-  errorOnDoublicatedBlocks(fsns)
+  errorOnDuplicatedExtends(fsns)
+  errorOnDuplicatedBlocks(fsns)
   errorOnUnevenBlocks(fsns)
 
 proc loadCache(str: string): seq[NwtNode] =
@@ -637,6 +635,7 @@ template doCompile(str: untyped): untyped =
     result.add astAstOne(nwtNode)
   when defined(dumpNwtMacro): echo toStrLit(result)
 
+
 macro compileTemplateStr*(str: typed, iter: static bool = false,
     varname: static string = "result"): untyped =
   ## Compiles a Nimja template from a string.
@@ -695,6 +694,10 @@ macro compileTemplateFile*(path: static string, iter: static bool = false,
 template tmpls*(str: static string): string =
   ## Compiles a Nimja template string and returns directly.
   ## Can be used inline, without a wrapper proc.
+  ##
+  ## .. code-block:: nim
+  ##  echo tmpls"""{% if true %}Is true!{% endif %}"""
+  ##
   var nimjaTmplsVar: string
   compileTemplateStr(str, varname = astToStr nimjaTmplsVar)
   nimjaTmplsVar
@@ -702,6 +705,10 @@ template tmpls*(str: static string): string =
 template tmplf*(path: static string): string =
   ## Compiles a Nimja template file and returns directly.
   ## Can be used inline, without a wrapper proc.
+  ##
+  ## .. code-block:: nim
+  ##  echo tmplf"""/some/template.nimja"""
+  ##
   var nimjaTmplfVar: string
   compileTemplateFile(path, varname = astToStr nimjaTmplfVar)
   nimjaTmplfVar

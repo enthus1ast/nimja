@@ -8,12 +8,12 @@
 
   <h1><a href="/">Nimja dynamic test</a></h1>
 
-  {% importnwt "templates/partials/_menu.nimja" %}
+  {% importnimja "templates/partials/_menu.nimja" %}
 
   <div>
     {% block content %}{% endblock %}
   </div>
 
-  {% importnwt "templates/partials/_menu.nimja" %}
+  {% importnimja "templates/partials/_menu.nimja" %}
   </body>
 </html>

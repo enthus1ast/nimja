@@ -124,7 +124,7 @@ index.nimja:
   <h1>Members</h1>
     {# `users` was a param to the `renderIndex` proc #}
     {% for (idx, user) in users.pairs %}
-        <a href="/users/{{idx}}">{% importnwt "./partials/_user.nimja" %}</a><br>
+        <a href="/users/{{idx}}">{% importnimja "./partials/_user.nimja" %}</a><br>
     {% endfor %}
 {% endblock %}
 
@@ -139,7 +139,7 @@ index.nimja:
     imported templates have access to all variables declared in the parent.
     So `user` is usable in "./partials/user.nimja"
   #}
-  This INDEX was presented by.... {% importnwt "./partials/_user.nimja" %}
+  This INDEX was presented by.... {% importnimja "./partials/_user.nimja" %}
 {% endblock footer %} {# the 'footer' in endblock is completely optional #}
 ```
 
@@ -169,7 +169,7 @@ body {
 {% var aVarFromMaster = "aVarFromMaster" %}
 
 {# We import templates to keep the master small #}
-{% importnwt "partials/_menu.nimja" %}
+{% importnimja "partials/_menu.nimja" %}
 
 <h1>{{title}}</h1>
 
@@ -330,8 +330,8 @@ for
 ```twig
 {% for elem in someObj.someIter() %}
   {# `elem` is accessible from the "some/template.nimja" #}
-  {# see importnwt section for more info #}
-  {% importnwt "some/template.nimja" %}
+  {# see importnimja section for more info #}
+  {% importnimja "some/template.nimja" %}
 {% endfor %}
 ```
 
@@ -371,13 +371,13 @@ comments
 declare your own `$` before you call
 `compileTemplateStr()` or `compileTemplateFile()`
 for your custom objects.
-For complex types it is recommend to use the method described in the `importnwt` section.
+For complex types it is recommend to use the method described in the `importnimja` section.
 ```twig
 {{myVar}}
 {{someProc()}}
 ```
 
-importnwt
+importnimja
 ---------
 
 import the content of another template.
@@ -408,7 +408,7 @@ partials/_users.nimja:
 ```twig
 <div class="row">
   {% for user in users: %}
-    {% importnwt "partials/_user.nimja" %}
+    {% importnimja "partials/_user.nimja" %}
   {% endfor %}
 </div>
 ```
@@ -530,7 +530,7 @@ the `{{endfunc}}` `{{endproc}}` `{{endmacro}}` are valid closing tags.
 Importing func/proc/macro from a file
 ------------------------------------
 
-Importing works like any other ordinary Nimja templates with `ìmportnwt`.
+Importing works like any other ordinary Nimja templates with `ìmportnimja`.
 Good practice is to define procs with the "whitespacecontrol":
 
 myMacros.nimja
@@ -541,10 +541,10 @@ myMacros.nimja
 
 myTemplate.nimja
 ```
-{% importnwt "myMacros.nimja" %}
+{% importnimja "myMacros.nimja" %}
 ```
 
-When a template `extends` another template, `importnwt` statements must be
+When a template `extends` another template, `importnimja` statements must be
 in a `block` they cannot stand on their own.
 It might be a good idea to import these "library templates" in
 the extended template (eg.: master.nimja).
@@ -996,6 +996,7 @@ nim c -d:dumpNwtMacro -r yourfile.nim # <-- dump generated Nim macros
 Changelog
 =========
 
+- 0.6.8 Added `importnimja` deprecated `importnwt` (importnwt is still valid for now)
 - 0.6.7 Removed the ".nwt" extention everywhere, we go with ".nimja" now.
 - 0.6.6 Preallocate the minimal known output length if `result` is string.
 - 0.6.5 Condense strings of extended templates (less assigns -> better runtime performance).

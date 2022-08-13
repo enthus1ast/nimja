@@ -1,2 +1,4 @@
-compileTemplateStr	nimja/parser.html#compileTemplateStr.m,typed,staticbool	parser: compileTemplateStr(str: typed; iter: static bool = false): untyped	
-compileTemplateFile	nimja/parser.html#compileTemplateFile.m,staticstring,staticbool	parser: compileTemplateFile(path: static string; iter: static bool = false): untyped	
+compileTemplateStr	nimja/parser.html#compileTemplateStr.m,typed,staticbool,staticstring	parser: compileTemplateStr(str: typed; iter: static bool = false;\n                   varname: static string = &quot;result&quot;): untyped	
+compileTemplateFile	nimja/parser.html#compileTemplateFile.m,staticstring,staticbool,staticstring	parser: compileTemplateFile(path: static string; iter: static bool = false;\n                    varname: static string = &quot;result&quot;): untyped	
+tmpls	nimja/parser.html#tmpls.t,staticstring	parser: tmpls(str: static string): string	
+tmplf	nimja/parser.html#tmplf.t,staticstring	parser: tmplf(path: static string): string	

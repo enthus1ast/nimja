@@ -27,7 +27,7 @@
   <h1>Members</h1>
     {# `users` was a param to the `renderIndex` proc #}
     {% for (idx, user) in users.pairs %}
-        <a href="/users/{{idx}}">{% importnwt "./partials/_user.nimja" %}</a><br>
+        <a href="/users/{{idx}}">{% importnimja "./partials/_user.nimja" %}</a><br>
     {% endfor %}
 {% endblock %}
 
@@ -42,5 +42,5 @@
     imported templates have access to all variables declared in the parent.
     So `user` is usable in "./partials/user.nimja"
   #}
-  This INDEX was presented by.... {% importnwt "./partials/_user.nimja" %}
+  This INDEX was presented by.... {% importnimja "./partials/_user.nimja" %}
 {% endblock footer %} {# the 'footer' in endblock is completely optional #}
