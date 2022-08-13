@@ -239,7 +239,6 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     # Simple Types
     of FsStr:
       pos.inc
-      # echo fsToken.value.len, " | ", fsToken
       guessedStringLen.inc fsToken.value.len
       return NwtNode(kind: NStr, strBody: fsToken.value)
     of FsVariable:
@@ -523,7 +522,6 @@ proc loadCache(str: string): seq[NwtNode] =
   ## Creates NwtNodes only the first time for a given string,
   ## the second time is returned from the cache
   if not defined(nwtCacheOff) and cacheNwtNode.contains(str):
-    # echo "cache hit str"
     return cacheNwtNode[str]
   else:
     # No cache hit (or cache disabled)
