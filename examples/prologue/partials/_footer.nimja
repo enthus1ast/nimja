@@ -4,5 +4,5 @@
   and
   <a href="https://github.com/planety/prologue">prologue</a>
   <br>
-  the menu again: {% importnwt "partials/_menu.nimja" %}
+  the menu again: {% importnimja "partials/_menu.nimja" %}
 </footer>

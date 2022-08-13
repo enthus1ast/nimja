@@ -22,7 +22,7 @@ body {
 {% var aVarFromMaster = "aVarFromMaster" %}
 
 {# We import templates to keep the master small #}
-{% importnwt "partials/_menu.nimja" %}
+{% importnimja "partials/_menu.nimja" %}
 
 <h1>{{title}}</h1>
 
