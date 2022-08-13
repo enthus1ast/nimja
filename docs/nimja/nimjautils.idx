@@ -12,3 +12,4 @@ nl2br	nimja/nimjautils.html#nl2br,string	nimjautils: nl2br(str: string; keepNl =
 spaceless	nimja/nimjautils.html#spaceless,string	nimjautils: spaceless(str: string): string	
 slugify	nimja/nimjautils.html#slugify,string,string	nimjautils: slugify(str: string; sperator = &quot;-&quot;; allowedChars = allowedCharsInSlug): string	
 `?`	nimja/nimjautils.html#?.t,untyped,untyped	nimjautils: `?`(con, body: untyped): untyped	
+`|`	nimja/nimjautils.html#|.m,untyped,untyped	nimjautils: `|`(aa, bb: untyped): string	

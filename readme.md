@@ -62,11 +62,11 @@ type
     age: int
 
 proc renderIndex(title: string, users: seq[User]): string =
-  ## the `index.nwt` template is transformed to nim code.
+  ## the `index.nimja` template is transformed to nim code.
   ## so it can access all variables like `title` and `users`
   ## the return variable could be `string` or `Rope` or
   ## anything which has a `&=`(obj: YourObj, str: string) proc.
-  compileTemplateFile(getScriptDir() / "index.nwt")
+  compileTemplateFile(getScriptDir() / "index.nimja")
 
 proc main {.async.} =
   var server = newAsyncHttpServer()
@@ -91,13 +91,13 @@ asyncCheck main()
 runForever()
 ```
 
-index.nwt:
+index.nimja:
 
 ```twig
-{% extends partials/_master.nwt%}
+{% extends partials/_master.nimja%}
 {#
-  extends uses the master.nwt template as the "base".
-  All the `block`s that are defined in the master.nwt are filled
+  extends uses the master.nimja template as the "base".
+  All the `block`s that are defined in the master.nimja are filled
   with blocks from this template.
 
   If the templates extends another, all content HAVE TO be in a block.
@@ -124,7 +124,7 @@ index.nwt:
   <h1>Members</h1>
     {# `users` was a param to the `renderIndex` proc #}
     {% for (idx, user) in users.pairs %}
-        <a href="/users/{{idx}}">{% importnwt "./partials/_user.nwt" %}</a><br>
+        <a href="/users/{{idx}}">{% importnimja "./partials/_user.nimja" %}</a><br>
     {% endfor %}
 {% endblock %}
 
@@ -137,18 +137,18 @@ index.nwt:
 
   {#
     imported templates have access to all variables declared in the parent.
-    So `user` is usable in "./partials/user.nwt"
+    So `user` is usable in "./partials/user.nimja"
   #}
-  This INDEX was presented by.... {% importnwt "./partials/_user.nwt" %}
+  This INDEX was presented by.... {% importnimja "./partials/_user.nimja" %}
 {% endblock footer %} {# the 'footer' in endblock is completely optional #}
 ```
 
-master.nwt
+master.nimja
 ```twig
 {#
 
-  This template is later expanded from the index.nwt template.
-  All blocks are filled by the blocks from index.nwt
+  This template is later expanded from the index.nimja template.
+  All blocks are filled by the blocks from index.nimja
 
   Variables are also useable.
  #}
@@ -169,7 +169,7 @@ body {
 {% var aVarFromMaster = "aVarFromMaster" %}
 
 {# We import templates to keep the master small #}
-{% importnwt "partials/_menu.nwt" %}
+{% importnimja "partials/_menu.nimja" %}
 
 <h1>{{title}}</h1>
 
@@ -191,12 +191,12 @@ body {
 </html>
 ```
 
-partials/_menu.nwt:
+partials/_menu.nimja:
 ```twig
 <a href="/">index</a>
 ```
 
-partials/_user.nwt:
+partials/_user.nimja:
 ```twig
 User: {{user.name}} {{user.lastname}} age: {{user.age}}
 ```
@@ -329,9 +329,9 @@ for
 
 ```twig
 {% for elem in someObj.someIter() %}
-  {# `elem` is accessible from the "some/template.nwt" #}
-  {# see importnwt section for more info #}
-  {% importnwt "some/template.nwt" %}
+  {# `elem` is accessible from the "some/template.nimja" #}
+  {# see importnimja section for more info #}
+  {% importnimja "some/template.nimja" %}
 {% endfor %}
 ```
 
@@ -371,13 +371,13 @@ comments
 declare your own `$` before you call
 `compileTemplateStr()` or `compileTemplateFile()`
 for your custom objects.
-For complex types it is recommend to use the method described in the `importnwt` section.
+For complex types it is recommend to use the method described in the `importnimja` section.
 ```twig
 {{myVar}}
 {{someProc()}}
 ```
 
-importnwt
+importnimja
 ---------
 
 import the content of another template.
@@ -393,7 +393,7 @@ template and therefore can be included.
 
 This way you create reusable template blocks to use all over your webpage.
 
-partials/_user.nwt:
+partials/_user.nimja:
 ```twig
 <div class="col-3">
   <h2>{{user.name}}</h2>
@@ -404,11 +404,11 @@ partials/_user.nwt:
 </div>
 ```
 
-partials/_users.nwt:
+partials/_users.nimja:
 ```twig
 <div class="row">
   {% for user in users: %}
-    {% importnwt "partials/_user.nwt" %}
+    {% importnimja "partials/_user.nimja" %}
   {% endfor %}
 </div>
 ```
@@ -421,7 +421,7 @@ So that placeholder blocks in the master are filled
 with content from the child.
 
 
-partials/_master.nwt
+partials/_master.nimja
 ```twig
 <html>
 <body>
@@ -433,18 +433,18 @@ A lot of boilerplate
 </html>
 ```
 
-child.nwt
+child.nimja
 ```
-{% extends "partials/_master.nwt" %}
+{% extends "partials/_master.nimja" %}
 {% block content %}I AM CONTENT{% endblock %}
 {% block footer %}...The footer..{% endblock %}
 ```
 
-if the child.nwt is compiled then rendered like so:
+if the child.nimja is compiled then rendered like so:
 
 ```nim
 proc renderChild(): string =
-  compileTemplateFile(getScriptDir() / "child.nwt")
+  compileTemplateFile(getScriptDir() / "child.nimja")
 
 echo renderChild()
 ```
@@ -530,7 +530,7 @@ the `{{endfunc}}` `{{endproc}}` `{{endmacro}}` are valid closing tags.
 Importing func/proc/macro from a file
 ------------------------------------
 
-Importing works like any other ordinary Nimja templates with `ìmportnwt`.
+Importing works like any other ordinary Nimja templates with `ìmportnimja`.
 Good practice is to define procs with the "whitespacecontrol":
 
 myMacros.nimja
@@ -541,10 +541,10 @@ myMacros.nimja
 
 myTemplate.nimja
 ```
-{% importnwt "myMacros.nimja" %}
+{% importnimja "myMacros.nimja" %}
 ```
 
-When a template `extends` another template, `importnwt` statements must be
+When a template `extends` another template, `importnimja` statements must be
 in a `block` they cannot stand on their own.
 It might be a good idea to import these "library templates" in
 the extended template (eg.: master.nimja).
@@ -996,6 +996,8 @@ nim c -d:dumpNwtMacro -r yourfile.nim # <-- dump generated Nim macros
 Changelog
 =========
 
+- 0.6.8 Added `importnimja` deprecated `importnwt` (importnwt is still valid for now)
+- 0.6.7 Removed the ".nwt" extention everywhere, we go with ".nimja" now.
 - 0.6.6 Preallocate the minimal known output length if `result` is string.
 - 0.6.5 Condense strings of extended templates (less assigns -> better runtime performance).
 - 0.6.1 No codegen for empty string nodes after whitespaceControl.

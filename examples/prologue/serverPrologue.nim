@@ -23,15 +23,15 @@ method extend(ctx: Context) =
   ]
 
 proc renderIndex(title: string, users: seq[User]): string =
-  compileTemplateFile(getScriptDir() / "index.nwt")
+  compileTemplateFile(getScriptDir() / "index.nimja")
 
 proc renderUser(title: string, idx: int, users: seq[User]): string =
   let user = users[idx]
-  compileTemplateFile(getScriptDir() / "user.nwt")
+  compileTemplateFile(getScriptDir() / "user.nimja")
 
 proc renderError(title: auto, code: HttpCode, users: seq[User]): string =
   ## title is `auto` here; nim generics work as well!
-  compileTemplateFile(getScriptDir() / "error.nwt")
+  compileTemplateFile(getScriptDir() / "error.nimja")
 
 proc hello*(ctx: Context) {.async.} =
   resp renderIndex("someTitle", UserContext(ctx).users)

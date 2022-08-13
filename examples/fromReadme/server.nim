@@ -15,11 +15,11 @@ type
     age: int
 
 proc renderIndex(title: string, users: seq[User]): string =
-  ## the `index.nwt` template is transformed to nim code.
+  ## the `index.nimja` template is transformed to nim code.
   ## so it can access all variables like `title` and `users`
   ## the return variable could be `string` or `Rope` or
   ## anything which has a `&=`(obj: YourObj, str: string) proc.
-  compileTemplateFile(getScriptDir() / "index.nwt")
+  compileTemplateFile(getScriptDir() / "index.nimja")
 
 proc main {.async.} =
   var server = newAsyncHttpServer()

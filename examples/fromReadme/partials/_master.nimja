@@ -1,7 +1,7 @@
 {#
 
-  This template is later expanded from the index.nwt template.
-  All blocks are filled by the blocks from index.nwt
+  This template is later expanded from the index.nimja template.
+  All blocks are filled by the blocks from index.nimja
 
   Variables are also useable.
  #}
@@ -22,7 +22,7 @@ body {
 {% var aVarFromMaster = "aVarFromMaster" %}
 
 {# We import templates to keep the master small #}
-{% importnwt "partials/_menu.nwt" %}
+{% importnimja "partials/_menu.nimja" %}
 
 <h1>{{title}}</h1>
 

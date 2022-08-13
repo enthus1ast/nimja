@@ -7,15 +7,15 @@ include ../../src/nimja/parser
 # import unittest
 
 # proc inner(): string =
-#   compileTemplateFile(getScriptDir() / "doubleExtends" / "inner.nwt")
+#   compileTemplateFile(getScriptDir() / "doubleExtends" / "inner.nimja")
 # echo inner()
 
 proc outer(): string =
-  compileTemplateFile(getScriptDir() / "doubleExtends" / "outer.nwt")
+  compileTemplateFile(getScriptDir() / "doubleExtends" / "outer.nimja")
 assert outer() == "baseouterouterbase"
 
 # proc base(): string =
-#   compileTemplateFile(getScriptDir() / "doubleExtends" / "base.nwt")
+#   compileTemplateFile(getScriptDir() / "doubleExtends" / "base.nimja")
 # echo base()
 
 

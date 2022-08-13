@@ -1,0 +1,2 @@
+{% extends "doubleExtends/outer.nimja" %}
+{%block outer%}inner{%endblock%}

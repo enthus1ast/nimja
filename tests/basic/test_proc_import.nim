@@ -8,15 +8,15 @@ suite "proc_import":
 
   test "basic":
     proc test(): string =
-      compileTemplateStr("""{% importnwt "procs.html" %}{{foo()}}""")
+      compileTemplateStr("""{% importnimja "procs.nimja" %}{{foo()}}""")
     check test() == "foo"
 
   test "import on child (in block)":
     proc test(): string =
       compileTemplateStr("""
-        {%- extends "procsMaster.html" -%}
+        {%- extends "procsMaster.nimja" -%}
         {%- block "content" -%}
-          {%- importnwt "procs.html" -%}
+          {%- importnimja "procs.nimja" -%}
           {{- foo() -}}
         {%- endblock -%}
       """)
