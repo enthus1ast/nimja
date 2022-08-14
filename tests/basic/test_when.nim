@@ -69,10 +69,20 @@ suite "when":
       check test(123, "simple") == "simple"
       check test(456, "simple") == "not simple"
 
-  test "if/elif/else":
+  test "when/elif/else":
     block:
       proc test(ii: static int): string = compileTemplateStr("{%when ii == 1 %}one{%elif ii == 2%}two{%elif ii == 3%}three{%else%}four{%endwhen%}")
       check test(1) == "one"
       check test(2) == "two"
       check test(3) == "three"
       check test(4) == "four"
+
+  test "when (not) declared":
+    block:
+      proc test(): string = compileTemplateStr("{%when declared(isDeclared)%}declared{%endwhen%}")
+      check test() == ""
+
+  test "when declared":
+    block:
+      const isDeclared = true
+      proc test(): string = compileTemplateStr("{%when declared(isDeclared)%}declared{%endwhen%}")
