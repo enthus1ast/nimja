@@ -295,22 +295,37 @@ proc evaluateTemplateStr*(str: string, foo: int): string =
 proc setOutResult[T](arg: T) = discard
 var result = ""
 var ii = 123
-var foo: int = 111
+#var foo: int = 111
   """), a)
 
+  #echo graph.getIdent("foo")
   # Make parameters available to VM
   # TODO how to get ALL visible vars?
-  processModule3(graph, m,
-    nkBlockStmt.newTree(nkEmpty.newTree(),
-      nkStmtList.newTree(
-        # Pass arguments to the environemtn
-        nkLetSection.newTree(
-          nkIdentDefs.newTree(graph.getIdent("foo"), nkEmpty.newTree(), vmconv.toLit(foo)),
-          # nkIdentDefs.newTree(graph.getIdent("ii"), nkEmpty.newTree(), vmconv.toLit(ii))
-        )
-      )
-    )
-  , a)
+  # processModule3(graph, m,
+  #   nkBlockStmt.newTree(nkEmpty.newTree(),
+  #     nkStmtList.newTree(
+  #       # Pass arguments to the environment
+  #       nkLetSection.newTree(
+  #         nkIdentDefs.newTree(newPIdent("aaa"), nkEmpty.newTree(), vmconv.toLit(foo)),
+  #         # nkIdentDefs.newTree( newIdentNode("foo"), nkEmpty.newTree(), vmconv.toLit(foo)),
+  #         # nkIdentDefs.newTree(graph.getIdent("ii"), nkEmpty.newTree(), vmconv.toLit(ii))
+  #       )
+  #     )
+  #   )
+  # , a)
+  # processModule3(graph, m,
+  #   nkStmtList.newTree(
+  #     # Pass arguments to the environment
+  #     nkVarSection.newTree(
+  #       nkIdentDefs.newTree(newPIdent("aaa"), nkEmpty.newTree(), vmconv.toLit(foo)),
+  #       # nkIdentDefs.newTree( newIdentNode("foo"), nkEmpty.newTree(), vmconv.toLit(foo)),
+  #       # nkIdentDefs.newTree(graph.getIdent("ii"), nkEmpty.newTree(), vmconv.toLit(ii))
+  #     )
+  #   )
+  # , a)
+
+  var varname = newSym(skLet, "aaa")
+  # graph.vm.setGlobalValue(newSym(skVar, "aaa", newIntNode(foo))
 
 
   let nwtNodes = compile(str)
@@ -320,9 +335,9 @@ var foo: int = 111
   processModule3(graph, m, fun, a)
 
   processModule2(graph, m, llStreamOpen("""
-echo "##########"
-echo result
-echo "##########"
+#echo "##########"
+#echo result
+#echo "##########"
 setOutResult(result)
 result = ""
     """), a)
@@ -351,15 +366,21 @@ template dynamicFile*(path: string, foo: int) =
 when isMainModule:
   import print
 
-  # Test pnode generation
-  echo astAstDyn(compile("foo{#baa#}baz"))
-  echo astAstDyn(compile("""{%if true%}true{%else%}false{%endif%}"""))
+  when false:
+    # Test pnode generation
+    echo astAstDyn(compile("foo{#baa#}baz"))
+    echo astAstDyn(compile("""{%if true%}true{%else%}false{%endif%}"""))
 
-  proc renderFoo(): string =
-    return evaluateTemplateStr("{%if true%}true{%else%}false{%endif%}", 1337)
-  print renderFoo()
+    proc renderFoo(): string =
+      return evaluateTemplateStr("{%if true%}true{%else%}false{%endif%}", 1337)
+    print renderFoo()
 
-  proc renderBaa(): string =
-    return evaluateTemplateStr("{%for idx in 0..10%}<li>{{idx}}</li>\n{%endfor%}", 1337)
-  print renderBaa()
+    proc renderBaa(): string =
+      return evaluateTemplateStr("{%for idx in 0..10%}<li>{{idx}}</li>\n{%endfor%}", 1337)
+    print renderBaa()
 
+  when true:
+
+    proc renderFoo(): string =
+      return evaluateTemplateStr("<h1>{{aaa}}</h1>", 1337)
+    echo renderFoo()
