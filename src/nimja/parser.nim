@@ -10,12 +10,12 @@ type
   NwtNodeKind = enum
     NStr, NIf, NElif, NElse, NWhile, NFor,
     NVariable, NEval, NImport, NBlock,
-    NExtends, NProc, NFunc
+    NExtends, NProc, NFunc, NWhen
   NwtNode = object
     case kind: NwtNodeKind
     of NStr:
       strBody: string
-    of NIf:
+    of NIf, NWhen:
       ifStmt: string
       nnThen: seq[NwtNode]
       nnElif: seq[NwtNode]
@@ -50,7 +50,7 @@ type
   FsNodeKind = enum
     FsIf, FsStr, FsEval, FsElse, FsElif, FsEndif, FsFor,
     FsEndfor, FsVariable, FsWhile, FsEndWhile, FsImport,
-    FsBlock, FsEndBlock, FsExtends, FsProc, FsEndProc, FsFunc, FsEndFunc, FsEnd
+    FsBlock, FsEndBlock, FsExtends, FsProc, FsEndProc, FsFunc, FsEndFunc, FsEnd, FsWhen, FsEndWhen
   FSNode = object
     kind: FsNodeKind
     value: string
@@ -136,6 +136,8 @@ proc parseFirstStep(tokens: seq[Token]): seq[FSNode] =
       of "func": result.add FSNode(kind: FsFunc, value: suf, stripPre: stripPre, stripPost: stripPost)
       of "endfunc": result.add FSNode(kind: FsEndFunc, value: suf, stripPre: stripPre, stripPost: stripPost)
       of "end": result.add FSNode(kind: FsEnd, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "when": result.add FSNode(kind: FsWhen, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "endwhen": result.add FSNode(kind: FsEndWhen, value: suf, stripPre: stripPre, stripPost: stripPost)
       else:
         result.add FSNode(kind: FsEval, value: cleanedToken.value, stripPre: stripPre, stripPost: stripPost)
     of NwtString: result.add FSNode(kind: FsStr, value: token.value)
@@ -168,6 +170,28 @@ proc parseSsIf(fsTokens: seq[FsNode], pos: var int): NwtNode =
       pos.inc
       result.nnElse.add consumeBlock(fsTokens, pos, {FsEndif})
     of FsEndif:
+      pos.inc
+      break
+    else:
+      raise newException(ValueError, "should not happen: " & $elem)
+
+proc parseSsWhen(fsTokens: seq[FsNode], pos: var int): NwtNode =
+  while pos < fsTokens.len:
+    let elem = fsTokens[pos]
+    case elem.kind
+    of FsWhen:
+      pos.inc
+      result = NwtNode(kind: NwtNodeKind.NWhen)
+      result.ifStmt = elem.value
+      result.nnThen.add consumeBlock(fsTokens, pos, {FsElif, FsElse, FsEndWhen})
+    of FsElif:
+      pos.inc
+      result.nnElif.add NwtNode(kind: NElif, elifStmt: elem.value)
+      result.nnElif[^1].elifBody.add consumeBlock(fsTokens, pos, {FsElif, FsElse, FsEndWhen} )
+    of FsElse:
+      pos.inc
+      result.nnElse.add consumeBlock(fsTokens, pos, {FsEndWhen})
+    of FsEndWhen:
       pos.inc
       break
     else:
@@ -227,7 +251,9 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
 
     case fsToken.kind
     # Complex Types
-    of FSif: return parseSsIf(fsTokens, pos)
+    of FsIf: return parseSsIf(fsTokens, pos)
+    of FsWhen: return parseSsWhen(fsTokens, pos)
+
     of FsWhile: return parseSsWhile(fsTokens, pos)
     of FsFor: return parseSsFor(fsTokens, pos)
     of FsBlock: return parseSsBlock(fsTokens, pos)
@@ -333,7 +359,11 @@ proc astWhile(token: NwtNode): NimNode =
 
 
 proc astIf(token: NwtNode): NimNode =
-  result = nnkIfStmt.newTree()
+  ## generates code for `if` or `when`
+  if token.kind == NIf:
+    result = nnkIfStmt.newTree()
+  elif token.kind == NWhen:
+    result = nnkWhenStmt.newTree()
 
   # Add the then node
   result.add:
@@ -381,7 +411,7 @@ proc astAstOne(token: NwtNode): NimNode =
     if nwtIter: return astStrIter(token)
     else: return astStr(token)
   of NEval: return astEval(token)
-  of NIf: return astIf(token)
+  of NIf, NWhen: return astIf(token)
   of NFor: return astFor(token)
   of NWhile: return astWhile(token)
   of NExtends: return parseStmt("discard")

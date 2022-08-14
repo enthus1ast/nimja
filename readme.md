@@ -304,6 +304,23 @@ if / elif / else
 {% endif %}
 ```
 
+when / elif / else
+-----------------
+
+`when` is the compile time if statement.
+It has the same semantic than if
+
+```twig
+{% when declared(isDeclared) %}
+  isDeclared
+{% elif true == true %}
+  true
+{% else %}
+  something else
+{% endif %}
+```
+
+
 tmpls / tmplf
 =============
 
