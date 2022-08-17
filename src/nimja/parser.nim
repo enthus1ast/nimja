@@ -665,7 +665,7 @@ template doCompile(str: untyped): untyped =
 
 
 macro compileTemplateStr*(str: typed, iter: static bool = false,
-    varname: static string = "result"): untyped =
+    varname: static string = "result", context: varargs[untyped]): untyped =
   ## Compiles a Nimja template from a string.
   ##
   ## .. code-block:: Nim
