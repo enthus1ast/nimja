@@ -36,3 +36,8 @@ block:
   var foo = 123
   doAssert "42.0" == tmpls("""{% if node.aa == "aaaa" %}{%node.bb = 42.0%}{% endif %}{{node.bb}}""", node = rax, baa = foo)
   doAssert 42.0 == rax.bb
+
+# block:
+  # test if context can contain procs/funcs
+  # proc foo(ii: int): string = return "foo" & $ii
+  # doAssert "foo321" == tmpls("{{baa(321)}}", baa = foo(123))
