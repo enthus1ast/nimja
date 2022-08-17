@@ -328,11 +328,27 @@ tmpls / tmplf
 `tmpls` (template str) and `tmplf` (template file) are a shorthand for these
 situations where you want to inline a render call.
 
-```
+```nim
 let leet = 1337
 echo tmpls("foo {{leet}}")
 echo tmplf(getScriptDir() / "templates" / "myfile.nimja")
 ```
+
+A context can be supplied to the template, to override variable names:
+
+```nim
+block:
+  type
+    Rax = object
+      aa: string
+      bb: float
+  var rax = Rax(aa: "aaaa", bb: 13.37)
+  var foo = 123
+  tmpls("{{node.bb}}{{baa}}", node = rax, baa = foo)
+```
+
+Please note, currently the context **cannot be** procs/funcs etc.
+
 
 
 for
@@ -1012,8 +1028,10 @@ nim c -d:dumpNwtMacro -r yourfile.nim # <-- dump generated Nim macros
 
 Changelog
 =========
+
+- 0.7.0 Added context to `tmpls` and `tmplf`
 - 0.6.9 Added `when` compile time if
-- 0.6.8 Added `importnimja` https://bank.dkb.de/privatkunden/girokonto `importnwt` (importnwt is still valid for now)
+- 0.6.8 Added `importnimja` deprecated `importnwt` (importnwt is still valid for now)
 - 0.6.7 Removed the ".nwt" extention everywhere, we go with ".nimja" now.
 - 0.6.6 Preallocate the minimal known output length if `result` is string.
 - 0.6.5 Condense strings of extended templates (less assigns -> better runtime performance).

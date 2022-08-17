@@ -719,24 +719,97 @@ macro compileTemplateFile*(path: static string, iter: static bool = false,
   let str = loadCacheFile(path)
   doCompile(str)
 
-template tmpls*(str: static string): string =
-  ## Compiles a Nimja template string and returns directly.
-  ## Can be used inline, without a wrapper proc.
-  ##
-  ## .. code-block:: nim
-  ##  echo tmpls"""{% if true %}Is true!{% endif %}"""
-  ##
+template tmplsImpl(str: static string): string =
   var nimjaTmplsVar: string
   compileTemplateStr(str, varname = astToStr nimjaTmplsVar)
   nimjaTmplsVar
 
-template tmplf*(path: static string): string =
+# template tmplsMacroImpl() =
+#   result = newStmtList()
+#   # var vsec = newTree(nnkVarSection)
+#   var vsec = newTree(nnkLetSection)
+#   for node in context:
+#     var idn = newTree(nnkIdentDefs)
+#     idn.add node[0]
+#     idn.add newNimNode(nnkEmpty)
+#     idn.add node[1]
+#     vsec.add idn
+#   result.add vsec
+
+template tmplsMacroImpl() =
+  # we use templates as a "variable alias"
+  # eg: template foo(): untyped = baa
+  # StmtList
+  #   TemplateDef
+  #     Ident "xx"
+  #     Empty
+  #     Empty
+  #     FormalParams
+  #       Ident "untyped"
+  #     Empty
+  #     Empty
+  #     StmtList
+  #       Ident "rax"
+  result = newStmtList()
+  for node in context:
+    var alias = newTree(nnkTemplateDef)
+    alias.add node[0]
+    alias.add newNimNode(nnkEmpty)
+    alias.add newNimNode(nnkEmpty)
+    var formalParams = newNimNode(nnkFormalParams)
+    formalParams.add newIdentNode("untyped")
+    alias.add formalParams
+    alias.add newNimNode(nnkEmpty)
+    alias.add newNimNode(nnkEmpty)
+    var body = newStmtList()
+    body.add node[1]
+    alias.add body
+    result.add alias
+
+macro tmpls*(str: static string, context: varargs[untyped]): string =
+  ## Compiles a Nimja template string and returns directly.
+  ## Can be used inline, without a wrapper proc.
+  ##
+  ## .. code-block:: nim
+  ##  echo tmpls("""{% if true %}Is true!{% endif %}""")
+  ##
+  ## A context can be supplied to the template, to override the variable names:
+  ##
+  ## .. code-block:: nim
+  ##  type
+  ##    Rax = object
+  ##      aa: string
+  ##      bb: float
+  ##  var rax = Rax(aa: "aaaa", bb: 13.37)
+  ##  var foo = 123
+  ##  echo tmpls("""{% if node.aa == "aaaa" %}{{node.bb}}{% endif %}{{baa}}""", node = rax, baa = foo)
+  ##
+  tmplsMacroImpl()
+  result.add quote do:
+    tmplsImpl(`str`)
+
+template tmplfImpl(path: static string): string =
+  var nimjaTmplfVar: string
+  compileTemplateFile(path, varname = astToStr nimjaTmplfVar)
+  nimjaTmplfVar
+
+macro tmplf*(str: static string, context: varargs[untyped]): string =
   ## Compiles a Nimja template file and returns directly.
   ## Can be used inline, without a wrapper proc.
   ##
   ## .. code-block:: nim
-  ##  echo tmplf"""/some/template.nimja"""
+  ##  echo tmplf("""/some/template.nimja""")
   ##
-  var nimjaTmplfVar: string
-  compileTemplateFile(path, varname = astToStr nimjaTmplfVar)
-  nimjaTmplfVar
+  ## A context can be supplied to the template, to override the variable names:
+  ##
+  ## .. code-block:: nim
+  ##  type
+  ##    Rax = object
+  ##      aa: string
+  ##      bb: float
+  ##  var rax = Rax(aa: "aaaa", bb: 13.37)
+  ##  echo tmplf("""/some/template.nimja""", node = rax)
+  ##
+  tmplsMacroImpl()
+  result.add quote do:
+    tmplfImpl(`str`)
