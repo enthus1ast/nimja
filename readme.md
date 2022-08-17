@@ -1030,6 +1030,7 @@ Changelog
 =========
 
 - 0.7.0 Added context to `tmpls` and `tmplf`
+- 0.6.9 Added `when` compile time if
 - 0.6.8 Added `importnimja` deprecated `importnwt` (importnwt is still valid for now)
 - 0.6.7 Removed the ".nwt" extention everywhere, we go with ".nimja" now.
 - 0.6.6 Preallocate the minimal known output length if `result` is string.
