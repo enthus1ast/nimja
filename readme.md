@@ -250,7 +250,7 @@ there are only three relevant procedures:
 compileTemplateFile
 -------------------
 
-compileTemplateFile transforms the given file into the nim code.
+`compileTemplateFile` transforms the given file into the nim code.
 you should use it like so:
 
 ```nim
@@ -261,17 +261,17 @@ proc myRenderProc(someParam: string): string =
 echo myRenderProc("test123")
 ```
 
-compileTemplateFile can also generate an iterator body, for details look at the
+`compileTemplateFile` can also generate an iterator body, for details look at the
 iteratior section.
 
-compileTemplateFile (also compileTemplateString) generates the body of a proc/iterator so it generates
+`compileTemplateFile` (also `compileTemplateString`) generates the body of a proc/iterator so it generates
 assign calls to a variable. The default is `result`.
 If you want it to use another variable set it in `varname`
 
 compileTemplateStr
 -------------------
 
-compileTemplateStr compiles the given string into nim code.
+`compileTemplateStr` compiles the given string into nim code.
 
 
 ```nim
@@ -281,13 +281,29 @@ proc myRenderProc(someParam: string): string =
 echo myRenderProc("test123")
 ```
 
-compileTemplateStr can also generate an iterator body, for details look at the
+`compileTemplateStr` can also generate an iterator body, for details look at the
 iteratior section.
 
 
-compileTemplateString (also compileTemplateFile) generates the body of a proc/iterator so it generates
+`compileTemplateString` (also `compileTemplateFile`) generates the body of a proc/iterator so it generates
 assign calls to a variable. The default is `result`.
 If you want it to use another variable set it in `varname`
+
+A context can be supplied to the `compileTemplateString` (also `compileTemplateFile`), to override variable names:
+
+```nim
+block:
+  type
+    Rax = object
+      aa: string
+      bb: float
+  var rax = Rax(aa: "aaaa", bb: 13.37)
+  var foo = 123
+  proc render(): string =
+    compileTemplateString("{{node.bb}}{{baa}}", {node: rax, baa: foo})
+```
+
+Please note, currently the context **cannot be** procs/funcs etc.
 
 
 
@@ -344,7 +360,7 @@ block:
       bb: float
   var rax = Rax(aa: "aaaa", bb: 13.37)
   var foo = 123
-  tmpls("{{node.bb}}{{baa}}", node = rax, baa = foo)
+  tmpls("{{node.bb}}{{baa}}", {node: rax, baa: foo})
 ```
 
 Please note, currently the context **cannot be** procs/funcs etc.
@@ -1029,6 +1045,10 @@ nim c -d:dumpNwtMacro -r yourfile.nim # <-- dump generated Nim macros
 Changelog
 =========
 
+- 0.8.0
+  - Breaking change!
+  - Changed context to template syntax context = {foo: baa}
+  - Added context to `compileTemplateStr` and `compileTemplateFile`
 - 0.7.0 Added context to `tmpls` and `tmplf`
 - 0.6.9 Added `when` compile time if
 - 0.6.8 Added `importnimja` deprecated `importnwt` (importnwt is still valid for now)
