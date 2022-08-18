@@ -648,12 +648,12 @@ proc generatePreallocatedStringDef(len: int): NimNode =
   )
 
 
-template doCompile(str: untyped): untyped =
+template doCompile(str: untyped, res = newStmtList()): untyped =
   guessedStringLen = 0
   let nwtNodes = compile(str)
   when defined(dumpNwtAst): echo nwtNodes
   when defined(dumpNwtAstPretty): echo nwtNodes.pretty
-  result = newStmtList()
+  result = res
 
   if not nwtIter:
     if (not defined(noPreallocatedString)):
@@ -662,79 +662,6 @@ template doCompile(str: untyped): untyped =
   for nwtNode in nwtNodes:
     result.add astAstOne(nwtNode)
   when defined(dumpNwtMacro): echo toStrLit(result)
-
-
-macro compileTemplateStr*(str: typed, iter: static bool = false,
-    varname: static string = "result", context: varargs[untyped]): untyped =
-  ## Compiles a Nimja template from a string.
-  ##
-  ## .. code-block:: Nim
-  ##  proc yourFunc(yourParams: bool): string =
-  ##    compileTemplateString("{%if yourParams%}TRUE{%endif%}")
-  ##
-  ##  echo yourFunc(true)
-  ##
-  ## If `iter = true` then the macro can be used in an iterator body
-  ## this could be used for streaming templates, or to save memory when a big template
-  ## is rendered and the http server can send data in chunks.
-  ##
-  ## .. code-block:: nim
-  ##  iterator yourIter(yourParams: bool): string =
-  ##    compileTemplateString("{%for idx in 0 .. 100%}{{idx}}{%endfor%}", iter = true)
-  ##
-  ##  for elem in yourIter(true):
-  ##    echo elem
-  ##
-  ## `varname` specifies the variable that is appended to.
-  ##
-  nwtVarname = varname
-  nwtIter = iter
-  doCompile(str.strVal)
-
-macro compileTemplateFile*(path: static string, iter: static bool = false,
-    varname: static string = "result"): untyped =
-  ## Compiles a Nimja template from a file.
-  ##
-  ## .. code-block:: nim
-  ##  proc yourFunc(yourParams: bool): string =
-  ##    compileTemplateFile(getScriptDir() / "relative/path.nimja)
-  ##
-  ##  echo yourFunc(true)
-  ##
-  ## If `iter = true` then the macro can be used in an iterator body
-  ## this could be used for streaming templates, or to save memory when a big template
-  ## is rendered and the http server can send data in chunks.
-  ##
-  ## .. code-block:: nim
-  ##  iterator yourIter(yourParams: bool): string =
-  ##    compileTemplateFile(getScriptDir() / "relative/path.nimja, iter = true)
-  ##
-  ##  for elem in yourIter(true):
-  ##    echo elem
-  ##
-  ## `varname` specifies the variable that is appended to.
-  ##
-  nwtVarname = varname
-  nwtIter = iter
-  let str = loadCacheFile(path)
-  doCompile(str)
-
-template tmplsImpl(str: static string): string =
-  var nimjaTmplsVar: string
-  compileTemplateStr(str, varname = astToStr nimjaTmplsVar)
-  nimjaTmplsVar
-
-# template tmplsMacroImpl() =
-#   result = newStmtList()
-#   # var vsec = newTree(nnkVarSection)
-#   var vsec = newTree(nnkLetSection)
-#   for node in context:
-#     var idn = newTree(nnkIdentDefs)
-#     idn.add node[0]
-#     idn.add newNimNode(nnkEmpty)
-#     idn.add node[1]
-#     vsec.add idn
-#   result.add vsec
 
 template tmplsMacroImpl() =
   # we use templates as a "variable alias"
@@ -766,7 +693,69 @@ template tmplsMacroImpl() =
     alias.add body
     result.add alias
 
-macro tmpls*(str: static string, context: varargs[untyped]): string =
+macro compileTemplateStr*(str: typed, iter: static bool = false,
+    varname: static string = "result", context: untyped = nil): untyped =
+  ## Compiles a Nimja template from a string.
+  ##
+  ## .. code-block:: Nim
+  ##  proc yourFunc(yourParams: bool): string =
+  ##    compileTemplateString("{%if yourParams%}TRUE{%endif%}")
+  ##
+  ##  echo yourFunc(true)
+  ##
+  ## If `iter = true` then the macro can be used in an iterator body
+  ## this could be used for streaming templates, or to save memory when a big template
+  ## is rendered and the http server can send data in chunks.
+  ##
+  ## .. code-block:: nim
+  ##  iterator yourIter(yourParams: bool): string =
+  ##    compileTemplateString("{%for idx in 0 .. 100%}{{idx}}{%endfor%}", iter = true)
+  ##
+  ##  for elem in yourIter(true):
+  ##    echo elem
+  ##
+  ## `varname` specifies the variable that is appended to.
+  ##
+  nwtVarname = varname
+  nwtIter = iter
+  tmplsMacroImpl()
+  doCompile(str.strVal, result)
+
+macro compileTemplateFile*(path: static string, iter: static bool = false,
+    varname: static string = "result", context: untyped = nil): untyped =
+  ## Compiles a Nimja template from a file.
+  ##
+  ## .. code-block:: nim
+  ##  proc yourFunc(yourParams: bool): string =
+  ##    compileTemplateFile(getScriptDir() / "relative/path.nimja)
+  ##
+  ##  echo yourFunc(true)
+  ##
+  ## If `iter = true` then the macro can be used in an iterator body
+  ## this could be used for streaming templates, or to save memory when a big template
+  ## is rendered and the http server can send data in chunks.
+  ##
+  ## .. code-block:: nim
+  ##  iterator yourIter(yourParams: bool): string =
+  ##    compileTemplateFile(getScriptDir() / "relative/path.nimja, iter = true)
+  ##
+  ##  for elem in yourIter(true):
+  ##    echo elem
+  ##
+  ## `varname` specifies the variable that is appended to.
+  ##
+  nwtVarname = varname
+  nwtIter = iter
+  let str = loadCacheFile(path)
+  tmplsMacroImpl()
+  doCompile(str, result)
+
+template tmplsImpl(str: static string): string =
+  var nimjaTmplsVar: string
+  compileTemplateStr(str, varname = astToStr nimjaTmplsVar)
+  nimjaTmplsVar
+
+macro tmpls*(str: static string, context: untyped): string =
   ## Compiles a Nimja template string and returns directly.
   ## Can be used inline, without a wrapper proc.
   ##
@@ -793,7 +782,7 @@ template tmplfImpl(path: static string): string =
   compileTemplateFile(path, varname = astToStr nimjaTmplfVar)
   nimjaTmplfVar
 
-macro tmplf*(str: static string, context: varargs[untyped]): string =
+macro tmplf*(str: static string, context: untyped): string =
   ## Compiles a Nimja template file and returns directly.
   ## Can be used inline, without a wrapper proc.
   ##
