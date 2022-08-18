@@ -58,6 +58,34 @@ block:
     compileTemplateStr("asdf")
   doAssert "asdf" == render()
 
+block:
+  # test if two tmpls can come after another
+  type
+    Rax = object
+      aa: string
+      bb: float
+  var rax = Rax(aa: "aaaa", bb: 13.37)
+  var ii = 123
+  doAssert "idx: 123, aa: aaaa, nodes: aaaa, 13.37" ==
+    tmpls("idx: {{idx}}, aa: {{aa}}, nodes: {{nodes.aa}}, {{nodes.bb}}", context = {
+        idx: ii,
+        aa: rax.aa,
+        nodes: rax
+      }
+    )
+  doAssert "idx: 123, aa: aaaa, nodes: aaaa, 13.37" ==
+    tmpls("idx: {{idx}}, aa: {{aa}}, nodes: {{nodes.aa}}, {{nodes.bb}}", context = {
+        idx: ii,
+        aa: rax.aa,
+        nodes: rax
+      }
+    )
+  proc render(): string =
+    compileTemplateStr("asdf {{node.bb}} {{ss}}", context = {
+      node: rax, ss: rax.aa
+    })
+  doAssert "asdf 13.37 aaaa" == render()
+
 
 # # block:
 #   # test if context can contain procs/funcs
