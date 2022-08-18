@@ -1,4 +1,4 @@
-compileTemplateStr	nimja/parser.html#compileTemplateStr.m,typed,staticbool,staticstring	parser: compileTemplateStr(str: typed; iter: static bool = false;\n                   varname: static string = &quot;result&quot;): untyped	
-compileTemplateFile	nimja/parser.html#compileTemplateFile.m,staticstring,staticbool,staticstring	parser: compileTemplateFile(path: static string; iter: static bool = false;\n                    varname: static string = &quot;result&quot;): untyped	
-tmpls	nimja/parser.html#tmpls.m,staticstring,varargs[untyped]	parser: tmpls(str: static string; context: varargs[untyped]): string	
-tmplf	nimja/parser.html#tmplf.m,staticstring,varargs[untyped]	parser: tmplf(str: static string; context: varargs[untyped]): string	
+compileTemplateStr	nimja/parser.html#compileTemplateStr.m,typed,staticbool,staticstring,untyped	parser: compileTemplateStr(str: typed; iter: static bool = false;\n                   varname: static string = &quot;result&quot;; context: untyped = nil): untyped	
+compileTemplateFile	nimja/parser.html#compileTemplateFile.m,staticstring,staticbool,staticstring,untyped	parser: compileTemplateFile(path: static string; iter: static bool = false;\n                    varname: static string = &quot;result&quot;; context: untyped = nil): untyped	
+tmpls	nimja/parser.html#tmpls.m,staticstring,untyped	parser: tmpls(str: static string; context: untyped): string	
+tmplf	nimja/parser.html#tmplf.m,staticstring,untyped	parser: tmplf(str: static string; context: untyped): string	

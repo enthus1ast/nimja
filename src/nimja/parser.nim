@@ -716,6 +716,22 @@ macro compileTemplateStr*(str: typed, iter: static bool = false,
   ##
   ## `varname` specifies the variable that is appended to.
   ##
+  ##
+  ## A context can be supplied to the `compileTemplateString` (also `compileTemplateFile`), to override variable names:
+  ##
+  ## .. code-block:: nim
+  ##   block:
+  ##     type
+  ##       Rax = object
+  ##         aa: string
+  ##         bb: float
+  ##     var rax = Rax(aa: "aaaa", bb: 13.37)
+  ##     var foo = 123
+  ##     proc render(): string =
+  ##       compileTemplateString("{{node.bb}}{{baa}}", {node: rax, baa: foo})
+  ##
+
+  # Please note, currently the context **cannot be** procs/funcs etc.
   nwtVarname = varname
   nwtIter = iter
   tmplsMacroImpl()
@@ -744,6 +760,19 @@ macro compileTemplateFile*(path: static string, iter: static bool = false,
   ##
   ## `varname` specifies the variable that is appended to.
   ##
+  ## A context can be supplied to the `compileTemplateFile` (also `compileTemplateString`), to override variable names:
+  ##
+  ## .. code-block:: nim
+  ##   block:
+  ##     type
+  ##       Rax = object
+  ##         aa: string
+  ##         bb: float
+  ##     var rax = Rax(aa: "aaaa", bb: 13.37)
+  ##     var foo = 123
+  ##     proc render(): string =
+  ##       compileTemplateFile(getScriptDir() / "myTemplate.nimja", {node: rax, baa: foo})
+  ##
   nwtVarname = varname
   nwtIter = iter
   let str = loadCacheFile(path)
@@ -771,7 +800,7 @@ macro tmpls*(str: static string, context: untyped): string =
   ##      bb: float
   ##  var rax = Rax(aa: "aaaa", bb: 13.37)
   ##  var foo = 123
-  ##  echo tmpls("""{% if node.aa == "aaaa" %}{{node.bb}}{% endif %}{{baa}}""", node = rax, baa = foo)
+  ##  echo tmpls("""{% if node.aa == "aaaa" %}{{node.bb}}{% endif %}{{baa}}""", {node: rax, baa: foo})
   ##
   tmplsMacroImpl()
   result.add quote do:
@@ -797,7 +826,7 @@ macro tmplf*(str: static string, context: untyped): string =
   ##      aa: string
   ##      bb: float
   ##  var rax = Rax(aa: "aaaa", bb: 13.37)
-  ##  echo tmplf("""/some/template.nimja""", node = rax)
+  ##  echo tmplf("""/some/template.nimja""", {node: rax})
   ##
   tmplsMacroImpl()
   result.add quote do:
