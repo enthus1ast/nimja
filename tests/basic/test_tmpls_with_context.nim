@@ -4,6 +4,10 @@ discard """
 import ../../src/nimja
 
 block:
+  # test tmpls without context
+  doAssert "foo" == tmpls("foo")
+
+block:
   type
     Rax = object
       aa: string

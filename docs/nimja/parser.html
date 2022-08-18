@@ -123,12 +123,12 @@ window.addEventListener('DOMContentLoaded', main);
   </ul>
   <ul class="simple nested-toc-section">tmplf
       <li><a class="reference" href="#tmplf.m%2Cstaticstring%2Cuntyped"
-    title="tmplf(str: static string; context: untyped): string">tmplf(str: static string; context: untyped): string</a></li>
+    title="tmplf(str: static string; context: untyped = nil): string">tmplf(str: static string; context: untyped = nil): string</a></li>
 
   </ul>
   <ul class="simple nested-toc-section">tmpls
       <li><a class="reference" href="#tmpls.m%2Cstaticstring%2Cuntyped"
-    title="tmpls(str: static string; context: untyped): string">tmpls(str: static string; context: untyped): string</a></li>
+    title="tmpls(str: static string; context: untyped = nil): string">tmpls(str: static string; context: untyped = nil): string</a></li>
 
   </ul>
 
@@ -214,7 +214,7 @@ Compiles a Nimja template from a string.<pre class="listing"><span class="Keywor
 </dd>
 </div>
 <div id="tmplf.m,staticstring,untyped">
-<dt><pre><span class="Keyword">macro</span> <a href="#tmplf.m%2Cstaticstring%2Cuntyped"><span class="Identifier">tmplf</span></a><span class="Other">(</span><span class="Identifier">str</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">context</span><span class="Other">:</span> <span class="Identifier">untyped</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span></pre></dt>
+<dt><pre><span class="Keyword">macro</span> <a href="#tmplf.m%2Cstaticstring%2Cuntyped"><span class="Identifier">tmplf</span></a><span class="Other">(</span><span class="Identifier">str</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">context</span><span class="Other">:</span> <span class="Identifier">untyped</span> <span class="Other">=</span> <span class="Keyword">nil</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span></pre></dt>
 <dd>
 
 Compiles a Nimja template file and returns directly. Can be used inline, without a wrapper proc.<pre class="listing"><span class="Identifier">echo</span> <span class="Identifier">tmplf</span><span class="Punctuation">(</span><span class="LongStringLit">&quot;&quot;&quot;/some/template.nimja&quot;&quot;&quot;</span><span class="Punctuation">)</span></pre><p>A context can be supplied to the template, to override the variable names:</p>
@@ -228,7 +228,7 @@ Compiles a Nimja template file and returns directly. Can be used inline, without
 </dd>
 </div>
 <div id="tmpls.m,staticstring,untyped">
-<dt><pre><span class="Keyword">macro</span> <a href="#tmpls.m%2Cstaticstring%2Cuntyped"><span class="Identifier">tmpls</span></a><span class="Other">(</span><span class="Identifier">str</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">context</span><span class="Other">:</span> <span class="Identifier">untyped</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span></pre></dt>
+<dt><pre><span class="Keyword">macro</span> <a href="#tmpls.m%2Cstaticstring%2Cuntyped"><span class="Identifier">tmpls</span></a><span class="Other">(</span><span class="Identifier">str</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">context</span><span class="Other">:</span> <span class="Identifier">untyped</span> <span class="Other">=</span> <span class="Keyword">nil</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span></pre></dt>
 <dd>
 
 Compiles a Nimja template string and returns directly. Can be used inline, without a wrapper proc.<pre class="listing"><span class="Identifier">echo</span> <span class="Identifier">tmpls</span><span class="Punctuation">(</span><span class="LongStringLit">&quot;&quot;&quot;{% if true %}Is true!{% endif %}&quot;&quot;&quot;</span><span class="Punctuation">)</span></pre><p>A context can be supplied to the template, to override the variable names:</p>
@@ -257,7 +257,7 @@ Compiles a Nimja template string and returns directly. Can be used inline, witho
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2022-08-18 09:18:33 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2022-08-18 13:22:16 UTC</small>
       </div>
     </div>
   </div>

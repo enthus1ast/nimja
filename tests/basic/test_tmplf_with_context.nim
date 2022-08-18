@@ -5,6 +5,10 @@ import ../../src/nimja
 import os
 
 block:
+  # test tmplf without context
+  doAssert "foo" == tmplf(getScriptDir() / "foo.nimja")
+
+block:
   type
     Rax = object
       aa: string

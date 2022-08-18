@@ -784,7 +784,7 @@ template tmplsImpl(str: static string): string =
   compileTemplateStr(str, varname = astToStr nimjaTmplsVar)
   nimjaTmplsVar
 
-macro tmpls*(str: static string, context: untyped): string =
+macro tmpls*(str: static string, context: untyped = nil): string =
   ## Compiles a Nimja template string and returns directly.
   ## Can be used inline, without a wrapper proc.
   ##
@@ -811,7 +811,7 @@ template tmplfImpl(path: static string): string =
   compileTemplateFile(path, varname = astToStr nimjaTmplfVar)
   nimjaTmplfVar
 
-macro tmplf*(str: static string, context: untyped): string =
+macro tmplf*(str: static string, context: untyped = nil): string =
   ## Compiles a Nimja template file and returns directly.
   ## Can be used inline, without a wrapper proc.
   ##
