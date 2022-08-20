@@ -1,3 +1,11 @@
+# TODO:
+# - NProc
+# - importnimja works only the first time.
+#   - -d:nwtCacheOff   !!
+# - block does not work
+
+
+
 #### For dynamic the caches must work differently
 #### and reparse if changed (file)
 
@@ -166,6 +174,22 @@ proc astWhileDyn(token: NwtNode): PNode =
     )
   )
 
+proc astProcDyn(token: NwtNode, procStr = "proc"): PNode =
+  ## How to set the body of a pnode??
+  discard
+  # result = newProcNode(nkProcDef, TLineInfo(), astAstDyn(token.procBody), )
+  let easyProc =  procStr & " " & token.procHeader & " discard"
+  result = parseString(easyProc, cache, conf) # dummy to build valid procBody
+  echo "astProcDyn ####################"
+  echo result
+  echo "####################"
+  # echo repr result.body
+  echo "^^^^^^^^^^^^^^^^^^"
+  # pnodeGenRepr result
+  # result.sons[0][6] = newPStmtList(
+  #   astAstDyn(token.procBody) # fill the proc body with content
+  # )
+
 proc astAstOneDyn(token: NwtNode): PNode =
   case token.kind
   of NVariable: return astVarDyn(token)
@@ -176,6 +200,7 @@ proc astAstOneDyn(token: NwtNode): PNode =
   of NWhile: return astWhileDyn(token)
   # of NExtends: discard # return parseStmt("discard")
   # of NBlock: discard # return parseStmt("discard")
+  of NProc: return astProcDyn(token, procStr = "proc")
   else: raise newException(ValueError, "cannot convert to ast:" & $token.kind)
 
 ###
@@ -324,11 +349,13 @@ var ii = 123
   #   )
   # , a)
 
-  var varname = newSym(skLet, "aaa")
+  # var varname = newSym(skLet, "aaa")
   # graph.vm.setGlobalValue(newSym(skVar, "aaa", newIntNode(foo))
 
 
   let nwtNodes = compile(str)
+  when defined(dumpNwtAst): echo nwtNodes
+  when defined(dumpNwtAstPretty): echo nwtNodes.pretty
   var fun = newPStmtList()
   for node in nwtNodes:
     fun.add astAstOneDyn(node)

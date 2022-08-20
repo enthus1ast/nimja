@@ -1,0 +1,11 @@
+{# {% extends "master.nimja" %} #}
+{# {% block name %}
+  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+{% endblock %} #}
+
+{% proc foo(): string = -%}
+  fromproc
+{%- endproc %}
+{%foo()%}
+
+hihi
