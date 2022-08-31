@@ -6,4 +6,6 @@ import unittest
 
 suite "unicode":
   check "öäü" == tmpls("öäü")
-  check "⛰	⛱	⛲	⛳	⛴	⛵	⛶	⛷	⛸	⛹	⛺	⛻	⛼	⛽	⛾	⛿" == tmpls("⛰	⛱	⛲	⛳	⛴	⛵	⛶	⛷	⛸	⛹	⛺	⛻	⛼	⛽	⛾	⛿")
+  check "Українська" == tmpls("Українська")
+  check "模政柳済奈遠第関著" == tmpls("模政柳済奈遠第関著")
+  check "⛰⛱⛲⛳⛴⛵⛶⛷⛸⛹⛺⛻⛼⛽⛾⛿" == tmpls("⛰⛱⛲⛳⛴⛵⛶⛷⛸⛹⛺⛻⛼⛽⛾⛿")
