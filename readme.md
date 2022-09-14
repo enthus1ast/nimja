@@ -17,7 +17,7 @@ FEATURES
 - compiled
 - statically typed
 - extends (a master template)
-- control structures (if elif else / for / while)
+- control structures (if elif else / case / for / while)
 - import other templates
 - most nim code is valid in the templates
 - very fast:
@@ -320,6 +320,26 @@ It has the same semantic than if
 {% endif %}
 ```
 
+case / of / else
+-----------------
+(Since Nimja 0.7.2)
+
+`case` has the same semantic as the [nim case statement](https://nim-lang.org/docs/tut1.html#control-flow-statements-case-statement).
+Use `case` for example if you want to make sure that all cases are handled.
+
+
+```twig
+{%- case str -%}
+{%- of "foo" -%}
+  foo
+{%- of "baa" -%}
+  baa
+{%- of "baz" -%}
+  baz
+{%- else -%}
+  nothing
+{%- endcase -%}
+```
 
 tmpls / tmplf
 =============
@@ -1029,6 +1049,7 @@ nim c -d:dumpNwtMacro -r yourfile.nim # <-- dump generated Nim macros
 Changelog
 =========
 
+- 0.7.2 Added `case` `of` and `endcase`
 - 0.7.0 Added context to `tmpls` and `tmplf`
 - 0.6.8 Added `importnimja` deprecated `importnwt` (importnwt is still valid for now)
 - 0.6.7 Removed the ".nwt" extention everywhere, we go with ".nimja" now.
