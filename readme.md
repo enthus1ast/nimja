@@ -338,7 +338,7 @@ It has the same semantic than if
 
 case / of / else
 -----------------
-(Since Nimja 0.7.2)
+(Since Nimja 0.8.1)
 
 `case` has the same semantic as the [nim case statement](https://nim-lang.org/docs/tut1.html#control-flow-statements-case-statement).
 Use `case` for example if you want to make sure that all cases are handled.
