@@ -5,46 +5,6 @@ import ../../src/nimja
 import unittest
 import os
 
-# import macros
-# dumpAstGen:
-#   case "FOO" & "BAA"
-#   of "foo":
-#     discard
-#   of "baa":
-#     discard
-#   else:
-#     discard
-
-# # nnkStmtList.newTree(
-# #   nnkCaseStmt.newTree(
-# #     newIdentNode("str"),
-# #     nnkOfBranch.newTree(
-# #       newLit("foo"),
-# #       nnkStmtList.newTree(
-# #         nnkDiscardStmt.newTree(
-# #           newEmptyNode()
-# #         )
-# #       )
-# #     ),
-# #     nnkOfBranch.newTree(
-# #       newLit("baa"),
-# #       nnkStmtList.newTree(
-# #         nnkDiscardStmt.newTree(
-# #           newEmptyNode()
-# #         )
-# #       )
-# #     ),
-# #     nnkElse.newTree(
-# #       nnkStmtList.newTree(
-# #         nnkDiscardStmt.newTree(
-# #           newEmptyNode()
-# #         )
-# #       )
-# #     )
-# #   )
-# # )
-
-
 suite "case":
   test "basic test":
     var str = "foo"
