@@ -1,0 +1,10 @@
+{%- case str -%}
+{%- of "foo" -%}
+  foo
+{%- of "baa" -%}
+  baa
+{%- of "baz" -%}
+  baz
+{%- else -%}
+  nothing
+{%- endcase -%}
