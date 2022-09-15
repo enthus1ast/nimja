@@ -17,7 +17,7 @@ FEATURES
 - compiled
 - statically typed
 - extends (a master template)
-- control structures (if elif else / for / while)
+- control structures (if elif else / case / for / while)
 - import other templates
 - most nim code is valid in the templates
 - very fast:
@@ -336,6 +336,27 @@ It has the same semantic than if
 {% endif %}
 ```
 
+case / of / else
+-----------------
+(Since Nimja 0.8.1)
+
+`case` has the same semantic as the [nim case statement](https://nim-lang.org/docs/tut1.html#control-flow-statements-case-statement).
+Use `case` for example if you want to make sure that all cases are handled.
+If not all cases are covered, an error is generated.
+
+
+```twig
+{%- case str -%}
+{%- of "foo" -%}
+  foo
+{%- of "baa" -%}
+  baa
+{%- of "baz" -%}
+  baz
+{%- else -%}
+  nothing
+{%- endcase -%}
+```
 
 tmpls / tmplf
 =============
@@ -1045,6 +1066,7 @@ nim c -d:dumpNwtMacro -r yourfile.nim # <-- dump generated Nim macros
 Changelog
 =========
 
+- 0.8.1 Added `case` `of` and `endcase`
 - 0.8.0
   - Breaking change!
   - Changed context to template syntax context = {foo: baa}

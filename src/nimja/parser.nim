@@ -10,7 +10,7 @@ type
   NwtNodeKind = enum
     NStr, NIf, NElif, NElse, NWhile, NFor,
     NVariable, NEval, NImport, NBlock,
-    NExtends, NProc, NFunc, NWhen
+    NExtends, NProc, NFunc, NWhen, NCase, NCaseOf, NCaseElse
   NwtNode = object
     case kind: NwtNodeKind
     of NStr:
@@ -43,6 +43,15 @@ type
     of NProc:
       procHeader: string
       procBody: seq[NwtNode]
+    of NCase:
+      caseStmt: string
+      nnCaseOf: seq[NwtNode]
+      nnCaseElse: seq[NwtNode]
+    of NCaseOf:
+      caseOfStmt: string
+      caseOfBody: seq[NwtNode]
+    of NCaseElse:
+      caseElseBody: seq[NwtNode]
     else: discard
 
 # First step nodes
@@ -50,7 +59,8 @@ type
   FsNodeKind = enum
     FsIf, FsStr, FsEval, FsElse, FsElif, FsEndif, FsFor,
     FsEndfor, FsVariable, FsWhile, FsEndWhile, FsImport,
-    FsBlock, FsEndBlock, FsExtends, FsProc, FsEndProc, FsFunc, FsEndFunc, FsEnd, FsWhen, FsEndWhen
+    FsBlock, FsEndBlock, FsExtends, FsProc, FsEndProc, FsFunc, FsEndFunc, FsEnd, FsWhen, FsEndWhen,
+    FsCase, FsOf, FsEndCase
   FSNode = object
     kind: FsNodeKind
     value: string
@@ -138,6 +148,9 @@ proc parseFirstStep(tokens: seq[Token]): seq[FSNode] =
       of "end": result.add FSNode(kind: FsEnd, value: suf, stripPre: stripPre, stripPost: stripPost)
       of "when": result.add FSNode(kind: FsWhen, value: suf, stripPre: stripPre, stripPost: stripPost)
       of "endwhen": result.add FSNode(kind: FsEndWhen, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "case": result.add FSNode(kind: FsCase, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "of": result.add FSNode(kind: FsOf, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "endcase": result.add FSNode(kind: FsEndCase, value: suf, stripPre: stripPre, stripPost: stripPost)
       else:
         result.add FSNode(kind: FsEval, value: cleanedToken.value, stripPre: stripPre, stripPost: stripPost)
     of NwtString: result.add FSNode(kind: FsStr, value: token.value)
@@ -152,6 +165,27 @@ proc consumeBlock(fsTokens: seq[FSNode], pos: var int, endTags: set[FsNodeKind])
       break
     else:
       result.add parseSecondStepOne(fsTokens, pos)
+
+proc parseSsCase(fsTokens: seq[FsNode], pos: var int): NwtNode =
+  while pos < fsTokens.len:
+    let elem = fsTokens[pos]
+    case elem.kind
+    of FsCase:
+      pos.inc
+      result = NwtNode(kind: NwtNodeKind.NCase)
+      result.caseStmt = elem.value
+    of FsOf:
+      pos.inc
+      result.nnCaseOf.add NwtNode(kind: NCaseOf, caseOfStmt: elem.value)
+      result.nnCaseOf[^1].caseOfBody.add consumeBlock(fsTokens, pos, {FsOf, FsElse, FsEndCase})
+    of FsElse:
+      pos.inc
+      result.nnCaseElse.add consumeBlock(fsTokens, pos, {FsEndCase})
+    of FsEndCase:
+      pos.inc
+      break
+    else:
+      raise newException(ValueError, "should not happen: " & $elem)
 
 proc parseSsIf(fsTokens: seq[FsNode], pos: var int): NwtNode =
   while pos < fsTokens.len:
@@ -257,6 +291,8 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     of FsWhile: return parseSsWhile(fsTokens, pos)
     of FsFor: return parseSsFor(fsTokens, pos)
     of FsBlock: return parseSsBlock(fsTokens, pos)
+
+    of FsCase: return parseSsCase(fsTokens, pos)
 
     # Proc / Func / Macro are very similar
     of FsProc: return parseSsProc(fsTokens, pos, NProc)
@@ -394,8 +430,28 @@ proc astIf(token: NwtNode): NimNode =
       )
 
 
+proc astCase(token: NwtNode): NimNode =
+  result = nnkCaseStmt.newTree()
+
+  result.add parseStmt(token.caseStmt)
+
+  for caseOfToken in token.nnCaseOf:
+    result.add nnkOfBranch.newTree(
+      parseStmt(caseOfToken.caseOfStmt),
+      nnkStmtList.newTree(
+        astAst(caseOfToken.caseOfBody)
+      )
+    )
+
+  if token.nnCaseElse.len > 0:
+    result.add nnkElse.newTree(
+      nnkStmtList.newTree(
+        astAst(token.nnCaseElse)
+      )
+    )
+
+
 proc astProc(token: NwtNode, procStr = "proc"): NimNode =
-  discard
   let easyProc =  procStr & " " & token.procHeader & " discard"
   result = parseStmt(easyProc) # dummy to build valid procBody
   result[0].body = nnkStmtList.newTree(
@@ -418,6 +474,7 @@ proc astAstOne(token: NwtNode): NimNode =
   of NBlock: return parseStmt("discard")
   of NProc: return astProc(token, procStr = "proc")
   of NFunc: return astProc(token, procStr = "func")
+  of NCase: return astCase(token)
   else: raise newException(ValueError, "cannot convert to ast:" & $token.kind)
 
 proc astAst(tokens: seq[NwtNode]): seq[NimNode] =
