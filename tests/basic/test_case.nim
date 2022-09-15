@@ -21,3 +21,12 @@ suite "case":
 
   test "complex test":
     check "AB" == tmpls("""{%- case "a" & "b" -%}{%- of "ab" -%}AB{%endcase%}""")
+
+  test "complex test 2":
+    type Foo = enum
+      aaa, bbb, ccc, ddd
+    var foo: Foo = aaa
+    check "AAA" == tmplf(getScriptDir() / "case2.nimja", {ee: foo})
+    check "BBB" == tmplf(getScriptDir() / "case2.nimja", {ee: Foo.bbb})
+    check "CCC" == tmplf(getScriptDir() / "case2.nimja", {ee: ccc})
+    check "nothing" == tmplf(getScriptDir() / "case2.nimja", {ee: ddd})

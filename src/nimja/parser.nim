@@ -169,7 +169,6 @@ proc consumeBlock(fsTokens: seq[FSNode], pos: var int, endTags: set[FsNodeKind])
 proc parseSsCase(fsTokens: seq[FsNode], pos: var int): NwtNode =
   while pos < fsTokens.len:
     let elem = fsTokens[pos]
-    echo elem, pos
     case elem.kind
     of FsCase:
       pos.inc

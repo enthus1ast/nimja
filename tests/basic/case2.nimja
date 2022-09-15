@@ -1,0 +1,12 @@
+{%- case ee -%}
+{%- of Foo.aaa -%}
+  AAA
+{%- of bbb -%}
+  {%- if true -%}
+    BBB
+  {%- endif -%}
+{%- of ccc -%}
+  CCC
+{%- else -%}
+  nothing
+{%- endcase -%}
