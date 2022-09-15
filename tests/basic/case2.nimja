@@ -8,5 +8,10 @@
 {%- of ccc -%}
   CCC
 {%- else -%}
-  nothing
+  {%- case isNothing -%}
+  {%- of true -%}
+    nothing
+  {%- of false -%}
+    something
+  {%- endcase -%}
 {%- endcase -%}

@@ -26,7 +26,15 @@ suite "case":
     type Foo = enum
       aaa, bbb, ccc, ddd
     var foo: Foo = aaa
+    var isNothing: bool
     check "AAA" == tmplf(getScriptDir() / "case2.nimja", {ee: foo})
     check "BBB" == tmplf(getScriptDir() / "case2.nimja", {ee: Foo.bbb})
     check "CCC" == tmplf(getScriptDir() / "case2.nimja", {ee: ccc})
+
+    isNothing = true
     check "nothing" == tmplf(getScriptDir() / "case2.nimja", {ee: ddd})
+
+    isNothing = false
+    check "something" == tmplf(getScriptDir() / "case2.nimja", {ee: ddd})
+
+

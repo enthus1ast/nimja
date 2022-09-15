@@ -1,0 +1,6 @@
+{%- case ee -%}
+{%- of Foo.aaa -%}
+  AAA
+{%- of bbb -%}
+  BBB
+{%- endcase -%}
