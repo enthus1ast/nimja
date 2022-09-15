@@ -342,6 +342,7 @@ case / of / else
 
 `case` has the same semantic as the [nim case statement](https://nim-lang.org/docs/tut1.html#control-flow-statements-case-statement).
 Use `case` for example if you want to make sure that all cases are handled.
+If not all cases are covered, an error is generated.
 
 
 ```twig
