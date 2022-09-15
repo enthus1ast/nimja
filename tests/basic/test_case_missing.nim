@@ -8,4 +8,4 @@ include ../../src/nimja/parser
 type Foo = enum
   aaa, bbb, ccc, ddd
 var foo: Foo = aaa
-discard tmplf(getScriptDir() / "case3.nimja", {ee: ddd})
+discard tmplf(getScriptDir() / "case" / "case3.nimja", {ee: ddd})
