@@ -10,7 +10,8 @@ type
   NwtNodeKind = enum
     NStr, NIf, NElif, NElse, NWhile, NFor,
     NVariable, NEval, NImport, NBlock,
-    NExtends, NProc, NFunc, NWhen, NCase, NCaseOf, NCaseElse
+    NExtends, NProc, NFunc, NWhen,
+    NCase, NCaseOf, NCaseElse, NScope, NScopeEnd
   NwtNode = object
     case kind: NwtNodeKind
     of NStr:
@@ -52,6 +53,9 @@ type
       caseOfBody: seq[NwtNode]
     of NCaseElse:
       caseElseBody: seq[NwtNode]
+    of NScope:
+      scopeName: string
+      scopeBody: seq[NwtNode]
     else: discard
 
 # First step nodes
@@ -59,8 +63,9 @@ type
   FsNodeKind = enum
     FsIf, FsStr, FsEval, FsElse, FsElif, FsEndif, FsFor,
     FsEndfor, FsVariable, FsWhile, FsEndWhile, FsImport,
-    FsBlock, FsEndBlock, FsExtends, FsProc, FsEndProc, FsFunc, FsEndFunc, FsEnd, FsWhen, FsEndWhen,
-    FsCase, FsOf, FsEndCase
+    FsBlock, FsEndBlock, FsExtends, FsProc, FsEndProc,
+    FsFunc, FsEndFunc, FsEnd, FsWhen, FsEndWhen,
+    FsCase, FsOf, FsEndCase, FsScope, FsEndScope
   FSNode = object
     kind: FsNodeKind
     value: string
@@ -151,6 +156,8 @@ proc parseFirstStep(tokens: seq[Token]): seq[FSNode] =
       of "case": result.add FSNode(kind: FsCase, value: suf, stripPre: stripPre, stripPost: stripPost)
       of "of": result.add FSNode(kind: FsOf, value: suf, stripPre: stripPre, stripPost: stripPost)
       of "endcase": result.add FSNode(kind: FsEndCase, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "scope": result.add FSNode(kind: FsScope, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "endscope": result.add FSNode(kind: FsEndScope, value: suf, stripPre: stripPre, stripPost: stripPost)
       else:
         result.add FSNode(kind: FsEval, value: cleanedToken.value, stripPre: stripPre, stripPost: stripPost)
     of NwtString: result.add FSNode(kind: FsStr, value: token.value)
