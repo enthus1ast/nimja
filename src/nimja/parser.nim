@@ -294,7 +294,7 @@ converter singleNwtNodeToSeq(nwtNode: NwtNode): seq[NwtNode] =
 
 proc importNimja(nodes: var seq[NwtNode], path: string) =
   const basePath = getProjectPath()
-  var str = read( basePath  / path.strip(true, true, {'"'}) )
+  var str = read( basePath / path.strip(true, true, {'"'}) )
   nodes = compile(str)
 
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
@@ -486,7 +486,7 @@ proc astScope(token: NwtNode): NimNode =
   blockStmt.add newStmtList()
   blockStmt[1].add astAst(token.scopeBody)
   result.add blockStmt
- 
+
 proc astAstOne(token: NwtNode): NimNode =
   case token.kind
   of NVariable:
