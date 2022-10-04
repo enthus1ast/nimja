@@ -540,6 +540,35 @@ I AM CONTENT
 </html>
 ```
 
+scope
+--------
+
+A `scope` has the same semantic as a nim block.
+Variables declared inside a scope are not visible
+on the outside. You can use this for code hygiene.
+
+```twig
+{% scope %}
+  {% let httpMethod = "POST" %}
+  {{ httpMethod }}
+{% endscope %}
+{# httpMethod is not accesible any more, you can define it again. #}
+{% let httpMethod = "FOO" %}
+{{ httpMethod }}
+```
+
+You can break out of a named scope prematurely
+
+```
+{%- scope foo -%}
+  foo
+  {%- break foo -%}
+  baa
+{%- endscope -%}
+```
+
+in this case only "foo" is printed.
+
 `self` variable
 ===============
 
@@ -1075,6 +1104,7 @@ nim c -d:dumpNwtMacro -r yourfile.nim # <-- dump generated Nim macros
 Changelog
 =========
 
+- 0.8.3 Added `scope` and `endscope`
 - 0.8.2 Readme fixes and tests for `break` and `continue` for the for loop
 - 0.8.1 Added `case` `of` and `endcase`
 - 0.8.0
