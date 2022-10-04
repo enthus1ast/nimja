@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.8.1"
+version       = "0.8.2"
 
 author        = "David Krause"
 description   = "typed and compiled template engine inspired by jinja2, twig and onionhammer/nim-templates for Nim."

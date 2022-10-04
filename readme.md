@@ -1075,6 +1075,7 @@ nim c -d:dumpNwtMacro -r yourfile.nim # <-- dump generated Nim macros
 Changelog
 =========
 
+- 0.8.2 Readme fixes and tests for `break` and `continue` for the for loop
 - 0.8.1 Added `case` `of` and `endcase`
 - 0.8.0
   - Breaking change!
