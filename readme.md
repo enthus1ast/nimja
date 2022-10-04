@@ -268,6 +268,12 @@ iteratior section.
 assign calls to a variable. The default is `result`.
 If you want it to use another variable set it in `varname`
 
+also look at:
+- [tmplf](#tmpls--tmplf) (inline version of this)
+- [tmpls](#tmpls--tmplf)
+- [compileTemplateStr](#compiletemplatestr)
+
+
 compileTemplateStr
 -------------------
 
@@ -305,7 +311,10 @@ block:
 
 Please note, currently the context **cannot be** procs/funcs etc.
 
-
+also look at:
+- [tmpls](#tmpls--tmplf) (inline version of this)
+- [tmplf](#tmpls--tmplf)
+- [compileTemplateFile](#compiletemplatefile)
 
 if / elif / else
 -----------------
@@ -333,7 +342,7 @@ It has the same semantic than if
   true
 {% else %}
   something else
-{% endif %}
+{% endwhen %}
 ```
 
 case / of / else
@@ -359,7 +368,7 @@ If not all cases are covered, an error is generated.
 ```
 
 tmpls / tmplf
-=============
+-------------
 
 `compileTemplateStr` and `compileTemplateFile` both need a surrounding proc.
 `tmpls` (template str) and `tmplf` (template file) are a shorthand for these
