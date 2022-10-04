@@ -279,6 +279,16 @@ proc parseSsExtends(fsTokens: seq[FsNode], pos: var int): NwtNode =
   pos.inc # skip FsExtends
   return NwtNode(kind: NExtends, extendsPath: extendsPath)
 
+proc parseSsScope(fsTokens: seq[FsNode], pos: var int): NwtNode =
+  var elem: FsNode = fsTokens[pos]
+  pos.inc # skip FsScope
+  let parts = elem.value.split(" ")
+  result = NwtNode(kind: NScope)
+  if parts.len >= 1:
+    result.scopeName = parts[0].strip()
+  result.scopeBody = consumeBlock(fsTokens, pos, {FsEnd, FsEndScope})
+  pos.inc # skip FsEndScope
+
 converter singleNwtNodeToSeq(nwtNode: NwtNode): seq[NwtNode] =
   return @[nwtNode]
 
@@ -300,6 +310,7 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     of FsBlock: return parseSsBlock(fsTokens, pos)
 
     of FsCase: return parseSsCase(fsTokens, pos)
+    of FsScope: return parseSsScope(fsTokens, pos)
 
     # Proc / Func / Macro are very similar
     of FsProc: return parseSsProc(fsTokens, pos, NProc)
@@ -465,6 +476,17 @@ proc astProc(token: NwtNode, procStr = "proc"): NimNode =
     astAst(token.procBody) # fill the proc body with content
   )
 
+proc astScope(token: NwtNode): NimNode =
+  result = newStmtList()
+  var blockStmt = newNimNode(kind = nnkBlockStmt)
+  if token.scopeName.len == 0:
+    blockStmt.add newEmptyNode()
+  else:
+    blockStmt.add newIdentNode(token.scopeName)
+  blockStmt.add newStmtList()
+  blockStmt[1].add astAst(token.scopeBody)
+  result.add blockStmt
+ 
 proc astAstOne(token: NwtNode): NimNode =
   case token.kind
   of NVariable:
@@ -482,6 +504,7 @@ proc astAstOne(token: NwtNode): NimNode =
   of NProc: return astProc(token, procStr = "proc")
   of NFunc: return astProc(token, procStr = "func")
   of NCase: return astCase(token)
+  of NScope: return astScope(token)
   else: raise newException(ValueError, "cannot convert to ast:" & $token.kind)
 
 proc astAst(tokens: seq[NwtNode]): seq[NimNode] =
