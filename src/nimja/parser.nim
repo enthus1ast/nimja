@@ -275,7 +275,7 @@ proc parseSsExtends(fsTokens: seq[FsNode], pos: var int): NwtNode =
 converter singleNwtNodeToSeq(nwtNode: NwtNode): seq[NwtNode] =
   return @[nwtNode]
 
-proc includeNwt(nodes: var seq[NwtNode], path: string) =
+proc importNimja(nodes: var seq[NwtNode], path: string) =
   const basePath = getProjectPath()
   var str = read( basePath  / path.strip(true, true, {'"'}) )
   nodes = compile(str)
@@ -313,7 +313,7 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
       return parseSsExtends(fsTokens, pos)
     of FsImport:
       pos.inc
-      includeNwt(result, fsToken.value)
+      importNimja(result, fsToken.value)
     else: raise newException(ValueError, "[SS] NOT IMPL: " & $fsToken)
 
 
