@@ -10,7 +10,7 @@ type Path = string
 type
   NwtNodeKind = enum
     NStr, NIf, NElif, NElse, NWhile, NFor,
-    NVariable, NEval, NImport, NBlock,
+    NVariable, NEval, NBlock,
     NExtends, NProc, NFunc, NWhen,
     NCase, NCaseOf, NCaseElse, NScope, NScopeEnd
   NwtNode = object
@@ -35,8 +35,6 @@ type
       variableBody: string
     of NEval:
       evalBody: string
-    of NImport:
-      importBody: string
     of NBlock:
       blockName: string
       blockBody: seq[NwtNode]
@@ -295,7 +293,7 @@ converter singleNwtNodeToSeq(nwtNode: NwtNode): seq[NwtNode] =
 
 proc importNimja(nodes: var seq[NwtNode], path: string) =
   const basePath = getProjectPath()
-  var str = read( basePath  / path.strip(true, true, {'"'}) )
+  var str = read(basePath / path)
   nodes = compile(str)
 
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
@@ -332,7 +330,7 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
       return parseSsExtends(fsTokens, pos)
     of FsImport:
       pos.inc
-      importNimja(result, fsToken.value)
+      importNimja(result, fsToken.value.strip(true, true, {'"'}))
     else: raise newException(ValueError, "[SS] NOT IMPL: " & $fsToken)
 
 
