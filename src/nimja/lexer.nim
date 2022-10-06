@@ -45,15 +45,9 @@ proc lexerMsg(str: string, line: int) =
 func lexInnerStr(buf: string, pos: var int): string =
   result &= buf[pos] # the '"'
   pos.inc # skip '"'
-  var escape = false
   while pos < buf.len:
     let ch = buf[pos]
-    if escape:
-      result &= ch
-      escape = false
-    elif ch == '\\':
-      escape = true
-    elif ch == '"':
+    if ch == '"':
       result &= '"'
       break
     else:
@@ -65,15 +59,9 @@ func lexInnerStrTripple(buf: string, pos: var int): string =
   pos.inc # skip '"'
   pos.inc # skip '"'
   pos.inc # skip '"'
-  var escape = false
   while pos < buf.len:
     let ch = buf[pos]
-    if escape:
-      result &= ch
-      escape = false
-    elif ch == '\\':
-      escape = true
-    elif ch == '"' and nextIs('"') and nextIs('"', 2):
+    if ch == '"' and nextIs('"') and nextIs('"', 2):
       result &= '"'
       result &= '"'
       result &= '"'

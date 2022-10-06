@@ -1,0 +1,1 @@
+{% let imageRegex = re("\\.(jpg|jpeg|png|webp)") %}
