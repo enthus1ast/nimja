@@ -1,7 +1,8 @@
 discard """
   joinable: false
 """
-import nimja, os
+import ../../src/nimja
+import os
 import strutils
 
 block:

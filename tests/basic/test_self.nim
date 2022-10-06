@@ -1,7 +1,7 @@
 discard """
   joinable: false
 """
-import nimja
+import ../../src/nimja
 import os
 
 func simple(): string =
