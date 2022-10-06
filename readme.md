@@ -1103,6 +1103,7 @@ nim c -d:dumpNwtMacro -r yourfile.nim # <-- dump generated Nim macros
 
 Changelog
 =========
+- 0.8.5 Nimja exports os, for `/`
 - 0.8.4 Fixed string escaping.
 - 0.8.3 Added `scope` and `endscope`
 - 0.8.2 Readme fixes and tests for `break` and `continue` for the for loop
