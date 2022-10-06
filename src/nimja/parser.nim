@@ -1,6 +1,7 @@
 import strutils, macros, sequtils, parseutils, os, tables, sets, deques, std/enumerate
 import lexer, sharedhelper
 export getScriptDir
+export os
 
 # special case `self` variable, used to reference blocks
 const specialSelf {.strdefine.} = "self."
@@ -486,7 +487,7 @@ proc astScope(token: NwtNode): NimNode =
   blockStmt.add newStmtList()
   blockStmt[1].add astAst(token.scopeBody)
   result.add blockStmt
- 
+
 proc astAstOne(token: NwtNode): NimNode =
   case token.kind
   of NVariable:
