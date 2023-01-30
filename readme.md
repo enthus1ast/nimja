@@ -52,7 +52,7 @@ server.nim
 
 ```nim
 import asynchttpserver, asyncdispatch
-import ../src/parser
+import nimja/parser
 import os, random # os and random are later used in the templates, so imported here
 
 type
