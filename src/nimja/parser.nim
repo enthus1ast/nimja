@@ -292,7 +292,7 @@ converter singleNwtNodeToSeq(nwtNode: NwtNode): seq[NwtNode] =
   return @[nwtNode]
 
 proc importNimja(nodes: var seq[NwtNode], path: string) =
-  const basePath = getProjectPath()
+  const basePath = getScriptDir()
   var str = read(basePath / path)
   nodes = compile(str)
 
