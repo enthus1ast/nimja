@@ -1103,6 +1103,9 @@ nim c -d:dumpNwtMacro -r yourfile.nim # <-- dump generated Nim macros
 
 Changelog
 =========
+- 0.8.7
+  - Removed unused `NImport`
+- 0.8.6
 - 0.8.5 Nimja exports os, for `/`
 - 0.8.4 Fixed string escaping.
 - 0.8.3 Added `scope` and `endscope`
