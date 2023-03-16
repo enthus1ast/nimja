@@ -10,7 +10,7 @@ type Path = string
 type
   NwtNodeKind = enum
     NStr, NIf, NElif, NElse, NWhile, NFor,
-    NVariable, NEval, NImport, NBlock,
+    NVariable, NEval, NBlock,
     NExtends, NProc, NFunc, NWhen,
     NCase, NCaseOf, NCaseElse, NScope, NScopeEnd
   NwtNode = object
@@ -35,8 +35,6 @@ type
       variableBody: string
     of NEval:
       evalBody: string
-    of NImport:
-      importBody: string
     of NBlock:
       blockName: string
       blockBody: seq[NwtNode]
@@ -295,7 +293,7 @@ converter singleNwtNodeToSeq(nwtNode: NwtNode): seq[NwtNode] =
 
 proc importNimja(nodes: var seq[NwtNode], path: string) =
   const basePath = getScriptDir()
-  var str = read( basePath  / path.strip(true, true, {'"'}) )
+  var str = read(basePath / path)
   nodes = compile(str)
 
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
@@ -332,7 +330,7 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
       return parseSsExtends(fsTokens, pos)
     of FsImport:
       pos.inc
-      importNimja(result, fsToken.value)
+      importNimja(result, fsToken.value.strip(true, true, {'"'}))
     else: raise newException(ValueError, "[SS] NOT IMPL: " & $fsToken)
 
 
@@ -612,6 +610,7 @@ proc errorOnUnevenBlocks(fsns: seq[FSNode]) =
   var ifs = 0
   var fors = 0
   var whiles = 0
+  var whens = 0
   for fsnode in fsns.findAll({FsIf, FsEndif, FsFor, FsEndfor, FsWhile, FsEndWhile}):
     case fsnode.kind
     of FsIf: ifs.inc
@@ -620,6 +619,8 @@ proc errorOnUnevenBlocks(fsns: seq[FSNode]) =
     of FsEndfor: fors.dec
     of FsWhile: whiles.inc
     of FsEndWhile: whiles.dec
+    of FsWhen: whens.inc
+    of FsEndWhen: whens.dec
     else: discard # Cannot happen
   if ifs != 0:
     raise newException(ValueError, "uneven if's: " & $fsns)
@@ -627,6 +628,8 @@ proc errorOnUnevenBlocks(fsns: seq[FSNode]) =
     raise newException(ValueError, "uneven for's: " & $fsns)
   if whiles != 0:
     raise newException(ValueError, "uneven while's: " & $fsns)
+  if whens != 0:
+    raise newException(ValueError, "uneven whens's: " & $fsns)
 
 template firstStepErrorChecks(fsns: seq[FSNode]) =
   ## TODO combine all these?
