@@ -610,6 +610,7 @@ proc errorOnUnevenBlocks(fsns: seq[FSNode]) =
   var ifs = 0
   var fors = 0
   var whiles = 0
+  var whens = 0
   for fsnode in fsns.findAll({FsIf, FsEndif, FsFor, FsEndfor, FsWhile, FsEndWhile}):
     case fsnode.kind
     of FsIf: ifs.inc
@@ -618,6 +619,8 @@ proc errorOnUnevenBlocks(fsns: seq[FSNode]) =
     of FsEndfor: fors.dec
     of FsWhile: whiles.inc
     of FsEndWhile: whiles.dec
+    of FsWhen: whens.inc
+    of FsEndWhen: whens.dec
     else: discard # Cannot happen
   if ifs != 0:
     raise newException(ValueError, "uneven if's: " & $fsns)
@@ -625,6 +628,8 @@ proc errorOnUnevenBlocks(fsns: seq[FSNode]) =
     raise newException(ValueError, "uneven for's: " & $fsns)
   if whiles != 0:
     raise newException(ValueError, "uneven while's: " & $fsns)
+  if whens != 0:
+    raise newException(ValueError, "uneven whens's: " & $fsns)
 
 template firstStepErrorChecks(fsns: seq[FSNode]) =
   ## TODO combine all these?
