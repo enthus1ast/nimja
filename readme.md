@@ -1103,8 +1103,14 @@ nim c -d:dumpNwtMacro -r yourfile.nim # <-- dump generated Nim macros
 
 Changelog
 =========
+
+## TODO
+- 0.8.?
+  - Added context to `importnimja`
+## DONE
 - 0.8.7
-  - Removed unused `NImport`
+  - Removed unused `NImport`.
+  - Error on uneven `when` blocks.
 - 0.8.6
 - 0.8.5 Nimja exports os, for `/`
 - 0.8.4 Fixed string escaping.
