@@ -39,6 +39,8 @@ DOCUMENTATION
 
 - this readme
 - [generated nim docs](https://enthus1ast.github.io/nimja/nimja.html)
+- [my blogpost about Nimja](https://blog.code0.xyz/posts/nimja/)
+
 
 
 MOTIVATING EXAMPLE
