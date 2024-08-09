@@ -1,0 +1,45 @@
+{#
+
+  This template is later expanded from the index.nimja template.
+  All blocks are filled by the blocks from index.nimja
+
+  Variables are also useable.
+ #}
+<html>
+<head>
+  <title>{{title}}</title>
+</head>
+<body>
+
+<style>
+body {
+  background-color: aqua;
+  color: red;
+}
+</style>
+
+{# The master can declare a variable that is later visible in the child template #}
+{% var aVarFromMaster = "aVarFromMaster" %}
+
+{# We import templates to keep the master small #}
+{% importnimja "partials/_menu.nimja" %}
+
+<h1>{{title}}</h1>
+
+{# This block is filled from the child templates #}
+{%block content%}{%endblock%}
+
+
+{#
+  If the block contains content and is NOT overwritten later.
+  The content from the master is rendered
+  (does not work in the alpha version..)
+#}
+{% block onlyMasterBlock %}Only Master Block (does it work yet?){% endblock %}
+
+<footer>
+  {% block footer %}{% endblock %}
+</footer>
+
+</body>
+</html>

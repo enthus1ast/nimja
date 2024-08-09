@@ -1,2 +1,5 @@
 import nimja/parser
-export compileTemplateStr, compileTemplateFile, getScriptDir
+import nimja/nimjautils
+export compileTemplateStr, compileTemplateFile, getScriptDir, tmpls, tmplf
+export nimjautils
+export os # for `/`

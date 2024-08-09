@@ -1,0 +1,8 @@
+<nav>
+  <hr>
+  <a href="/">home</a> |
+  <a href="/error">error</a> |
+  <a href="/about">about</a> |
+  <a href="/oop">oop</a> |
+  <hr>
+</nav>

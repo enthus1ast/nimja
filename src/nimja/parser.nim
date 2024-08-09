@@ -1,19 +1,23 @@
-import strutils, macros, sequtils, parseutils, os
-import nwtTokenizer
-import tables
+import strutils, macros, sequtils, parseutils, os, tables, sets, deques, std/enumerate
+import lexer, sharedhelper
+export getScriptDir
+export os
+
+# special case `self` variable, used to reference blocks
+const specialSelf {.strdefine.} = "self."
 
 type Path = string
 type
   NwtNodeKind = enum
-    NStr, NComment, NIf, NElif, NElse, NWhile, NFor,
-    NVariable, NEval, NImport, NBlock, NExtends
+    NStr, NIf, NElif, NElse, NWhile, NFor,
+    NVariable, NEval, NBlock,
+    NExtends, NProc, NFunc, NWhen,
+    NCase, NCaseOf, NCaseElse, NScope, NScopeEnd
   NwtNode = object
     case kind: NwtNodeKind
     of NStr:
       strBody: string
-    of NComment:
-      commentBody: string
-    of NIf:
+    of NIf, NWhen:
       ifStmt: string
       nnThen: seq[NwtNode]
       nnElif: seq[NwtNode]
@@ -31,46 +35,77 @@ type
       variableBody: string
     of NEval:
       evalBody: string
-    of NImport:
-      importBody: string
     of NBlock:
       blockName: string
       blockBody: seq[NwtNode]
     of NExtends:
       extendsPath: string
+    of NProc:
+      procHeader: string
+      procBody: seq[NwtNode]
+    of NCase:
+      caseStmt: string
+      nnCaseOf: seq[NwtNode]
+      nnCaseElse: seq[NwtNode]
+    of NCaseOf:
+      caseOfStmt: string
+      caseOfBody: seq[NwtNode]
+    of NCaseElse:
+      caseElseBody: seq[NwtNode]
+    of NScope:
+      scopeName: string
+      scopeBody: seq[NwtNode]
     else: discard
-
-type IfState {.pure.} = enum
-  InThen, InElif, InElse
 
 # First step nodes
 type
   FsNodeKind = enum
     FsIf, FsStr, FsEval, FsElse, FsElif, FsEndif, FsFor,
-    FsEndfor, FsVariable, FsWhile, FsEndWhile, FsImport, FsBlock, FsEndBlock, FsExtends
+    FsEndfor, FsVariable, FsWhile, FsEndWhile, FsImport,
+    FsBlock, FsEndBlock, FsExtends, FsProc, FsEndProc,
+    FsFunc, FsEndFunc, FsEnd, FsWhen, FsEndWhen,
+    FsCase, FsOf, FsEndCase, FsScope, FsEndScope
   FSNode = object
     kind: FsNodeKind
     value: string
+    stripPre: bool
+    stripPost: bool
 
 var cacheNwtNode {.compileTime.}: Table[string, seq[NwtNode]] ## a cache for rendered NwtNodes
 var cacheNwtNodeFile {.compileTime.}: Table[Path, string] ## a cache for content of a path
+var nwtIter {.compileTime.} = false
+var nwtVarname {.compileTime.}: string
+var blocks {.compileTime.} : Table[string, seq[NwtNode]]
+var guessedStringLen {.compileTime.} = 0
 
 when defined(dumpNwtAstPretty):
   import json
   proc pretty*(nwtNodes: seq[NwtNode]): string {.compileTime.} =
     (%* nwtNodes).pretty()
 
-template getScriptDir*(): string =
-  ## Helper for staticRead.
-  ##
-  ## returns the absolute path to your project, on compile time.
-  getProjectPath()
-
-# Forward decleration
+# Forward declaration
 proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc astAst(tokens: seq[NwtNode]): seq[NimNode]
+proc compile(str: string): seq[NwtNode]
+proc astAstOne(token: NwtNode): NimNode
 
+func mustStrip(token: Token): tuple[token: Token, stripPre, stripPost: bool] =
+  ## identifies if whitespaceControl chars are in the string,
+  ## clear the string of these, but fill `stripPre` and `stripPost` accordingly
+  if token.kind == NwtString: return (token, false, false) # if a string we do not touch it
+  result.token = token
+  result.stripPre = false
+  result.stripPost = false
+  if result.token.value.len != 0:
+    if result.token.value[0] == '-':
+      result.stripPre = true
+      result.token.value = result.token.value[1 .. ^1] # remove the first
+    if result.token.value[^1] == '-':
+      result.stripPost = true
+      result.token.value = result.token.value[0 .. ^2] # remove the last
+  # if "-" was removed, lex() has not stripped it. Strip it here
+  result.token.value = result.token.value.strip(true, true)
 
 func splitStmt(str: string): tuple[pref: string, suf: string] {.inline.} =
   ## the prefix is normalized (transformed to lowercase)
@@ -80,153 +115,266 @@ func splitStmt(str: string): tuple[pref: string, suf: string] {.inline.} =
   result.pref = toLowerAscii(pref)
   result.suf = str[pos..^1]
 
+iterator findAll(fsns: seq[FsNode], kind: FsNodeKind | set[FsNodeKind]): FsNode =
+  # Finds all FsNodes with given kind
+  for fsn in fsns:
+    when kind is FsNodeKind:
+      if fsn.kind == kind: yield fsn
+    else:
+      if kind.contains(fsn.kind): yield fsn
+
 proc parseFirstStep(tokens: seq[Token]): seq[FSNode] =
   result = @[]
   for token in tokens:
-    if token.tokenType == NwtEval:
-      let (pref, suf) = splitStmt(token.value)
+    let (cleanedToken, stripPre, stripPost) = mustStrip(token)
+    case token.kind
+    of NwtEval:
+      let (pref, suf) = splitStmt(cleanedToken.value)
       case pref
-      of "if": result.add FSNode(kind: FsIf, value: suf)
-      of "elif": result.add FSNode(kind: FsElif, value: suf)
-      of "else": result.add FSNode(kind: FsElse, value: suf)
-      of "endif": result.add FSNode(kind: FsEndif, value: suf)
-      of "for": result.add FSNode(kind: FsFor, value: suf)
-      of "endfor": result.add FSNode(kind: FsEndfor, value: suf)
-      of "while": result.add FSNode(kind: FsWhile, value: suf)
-      of "endwhile": result.add FSNode(kind: FsEndWhile, value: suf)
-      of "importnwt": result.add FSNode(kind: FsImport, value: suf)
-      of "block": result.add FSNode(kind: FsBlock, value: suf)
-      of "endblock": result.add FSNode(kind: FsEndBlock, value: suf)
-      of "extends": result.add FSNode(kind: FsExtends, value: suf)
+      of "if": result.add FSNode(kind: FsIf, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "elif": result.add FSNode(kind: FsElif, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "else": result.add FSNode(kind: FsElse, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "endif": result.add FSNode(kind: FsEndif, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "for": result.add FSNode(kind: FsFor, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "endfor": result.add FSNode(kind: FsEndfor, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "while": result.add FSNode(kind: FsWhile, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "endwhile": result.add FSNode(kind: FsEndWhile, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "importnwt", "importnimja": result.add FSNode(kind: FsImport, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "block": result.add FSNode(kind: FsBlock, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "endblock": result.add FSNode(kind: FsEndBlock, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "extends": result.add FSNode(kind: FsExtends, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "proc": result.add FSNode(kind: FsProc, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "endproc": result.add FSNode(kind: FsEndProc, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "macro": result.add FSNode(kind: FsProc, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "endmacro": result.add FSNode(kind: FsEndProc, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "func": result.add FSNode(kind: FsFunc, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "endfunc": result.add FSNode(kind: FsEndFunc, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "end": result.add FSNode(kind: FsEnd, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "when": result.add FSNode(kind: FsWhen, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "endwhen": result.add FSNode(kind: FsEndWhen, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "case": result.add FSNode(kind: FsCase, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "of": result.add FSNode(kind: FsOf, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "endcase": result.add FSNode(kind: FsEndCase, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "scope": result.add FSNode(kind: FsScope, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "endscope": result.add FSNode(kind: FsEndScope, value: suf, stripPre: stripPre, stripPost: stripPost)
       else:
-        result.add FSNode(kind: FsEval, value: token.value)
-    elif token.tokenType == NwtString:
-      result.add FSNode(kind: FsStr, value: token.value)
-    elif token.tokenType == NwtVariable:
-      result.add FSNode(kind: FsVariable, value: token.value)
-    elif token.tokenType == NwtComment:
-      discard # ignore comments
-    else:
-      echo "[FS] Not catched:", token
+        result.add FSNode(kind: FsEval, value: cleanedToken.value, stripPre: stripPre, stripPost: stripPost)
+    of NwtString: result.add FSNode(kind: FsStr, value: token.value)
+    of NwtVariable: result.add FSNode(kind: FsVariable, value: cleanedToken.value, stripPre: stripPre, stripPost: stripPost)
+    of NwtComment: discard # ignore comments
+    else: echo "[FS] Not catched:", token
 
-
-proc parseSsIf(fsTokens: seq[FsNode], pos: var int): NwtNode =
-  var elem: FsNode = fsTokens[pos] # first is the if that we got called about
-  result = NwtNode(kind: NwtNodeKind.NIf)
-  result.ifStmt = elem.value
-  pos.inc # skip the if
-  var ifstate = IfState.InThen
+proc consumeBlock(fsTokens: seq[FSNode], pos: var int, endTags: set[FsNodeKind]): seq[NwtNode] =
   while pos < fsTokens.len:
-    elem = fsTokens[pos]
-    case elem.kind
-    of FsIf:
-      case ifState
-      of IfState.InThen:
-        result.nnThen.add parseSecondStep(fsTokens, pos)
-      of IfState.InElse:
-        result.nnElse.add parseSecondStep(fsTokens, pos)
-      of IfState.InElif:
-        result.nnElif[^1].elifBody.add parseSecondStep(fsTokens, pos)
-    of FsElif:
-      ifstate = IfState.InElif
-      result.nnElif.add NwtNode(kind: NElif, elifStmt: elem.value)
-    of FsElse:
-      ifstate = IfState.InElse
-    of FsEndif:
+    let fsToken = fsTokens[pos]
+    if endTags.contains(fsToken.kind):
       break
     else:
-      case ifState
-      of IfState.InThen:
-        result.nnThen &= parseSecondStepOne(fsTokens, pos)
-      of IfState.InElse:
-        result.nnElse &= parseSecondStepOne(fsTokens, pos)
-      of IfState.InElif:
-        result.nnElif[^1].elifBody &= parseSecondStepOne(fsTokens, pos)
-    pos.inc
+      result.add parseSecondStepOne(fsTokens, pos)
 
+proc parseSsCase(fsTokens: seq[FsNode], pos: var int): NwtNode =
+  while pos < fsTokens.len:
+    let elem = fsTokens[pos]
+    case elem.kind
+    of FsCase:
+      pos.inc
+      result = NwtNode(kind: NwtNodeKind.NCase)
+      result.caseStmt = elem.value
+    of FsOf:
+      pos.inc
+      result.nnCaseOf.add NwtNode(kind: NCaseOf, caseOfStmt: elem.value)
+      result.nnCaseOf[^1].caseOfBody.add consumeBlock(fsTokens, pos, {FsOf, FsElse, FsEndCase})
+    of FsElse:
+      pos.inc
+      result.nnCaseElse.add consumeBlock(fsTokens, pos, {FsEndCase})
+    of FsEndCase:
+      pos.inc
+      break
+    else:
+      raise newException(ValueError, "should not happen: " & $elem)
+
+proc parseSsIf(fsTokens: seq[FsNode], pos: var int): NwtNode =
+  while pos < fsTokens.len:
+    let elem = fsTokens[pos]
+    case elem.kind
+    of FsIf:
+      pos.inc
+      result = NwtNode(kind: NwtNodeKind.NIf)
+      result.ifStmt = elem.value
+      result.nnThen.add consumeBlock(fsTokens, pos, {FsElif, FsElse, FsEndif})
+    of FsElif:
+      pos.inc
+      result.nnElif.add NwtNode(kind: NElif, elifStmt: elem.value)
+      result.nnElif[^1].elifBody.add consumeBlock(fsTokens, pos, {FsElif, FsElse, FsEndif} )
+    of FsElse:
+      pos.inc
+      result.nnElse.add consumeBlock(fsTokens, pos, {FsEndif})
+    of FsEndif:
+      pos.inc
+      break
+    else:
+      raise newException(ValueError, "should not happen: " & $elem)
+
+proc parseSsWhen(fsTokens: seq[FsNode], pos: var int): NwtNode =
+  while pos < fsTokens.len:
+    let elem = fsTokens[pos]
+    case elem.kind
+    of FsWhen:
+      pos.inc
+      result = NwtNode(kind: NwtNodeKind.NWhen)
+      result.ifStmt = elem.value
+      result.nnThen.add consumeBlock(fsTokens, pos, {FsElif, FsElse, FsEndWhen})
+    of FsElif:
+      pos.inc
+      result.nnElif.add NwtNode(kind: NElif, elifStmt: elem.value)
+      result.nnElif[^1].elifBody.add consumeBlock(fsTokens, pos, {FsElif, FsElse, FsEndWhen} )
+    of FsElse:
+      pos.inc
+      result.nnElse.add consumeBlock(fsTokens, pos, {FsEndWhen})
+    of FsEndWhen:
+      pos.inc
+      break
+    else:
+      raise newException(ValueError, "should not happen: " & $elem)
 
 proc parseSsWhile(fsTokens: seq[FsNode], pos: var int): NwtNode =
   var elem: FsNode = fsTokens[pos] # first is the while that we got called about
   result = NwtNode(kind: NwtNodeKind.NWhile)
   result.whileStmt = elem.value
-  while pos < fsTokens.len:
-    pos.inc # skip the while
-    elem = fsTokens[pos]
-    if elem.kind == FsEndWhile:
-      break
-    else:
-      result.whileBody &= parseSecondStepOne(fsTokens, pos)
+  pos.inc # skip FsWhile
+  result.whileBody = consumeBlock(fsTokens, pos, {FsEndWhile})
+  pos.inc # skip FsEndWhile
 
 proc parseSsFor(fsTokens: seq[FsNode], pos: var int): NwtNode =
   var elem: FsNode = fsTokens[pos] # first is the for that we got called about
   result = NwtNode(kind: NwtNodeKind.NFor)
   result.forStmt = elem.value
-  while pos < fsTokens.len:
-    pos.inc # skip the for
-    elem = fsTokens[pos]
-    if elem.kind == FsEndFor:
-      break
-    else:
-      result.forBody &= parseSecondStepOne(fsTokens, pos)
+  pos.inc #skip FsFor
+  result.forBody = consumeBlock(fsTokens, pos, {FsEndFor})
+  pos.inc # skip FsEndBlock
 
 proc parseSsBlock(fsTokens: seq[FsNode], pos: var int): NwtNode =
   var elem: FsNode = fsTokens[pos]
   let blockName = elem.value
   result = NwtNode(kind: NwtNodeKind.NBlock, blockName: blockName)
-  while pos < fsTokens.len:
-    pos.inc # skip the block
-    elem = fsTokens[pos]
-    if elem.kind == FsEndBlock:
-      break
-    else:
-      result.blockBody &= parseSecondStepOne(fsTokens, pos)
+  pos.inc # skip FsBlock
+  result.blockBody = consumeBlock(fsTokens, pos, {FsEndBlock})
+  pos.inc # skip FsEndBlock
+
+proc parseSsProc(fsTokens: seq[FsNode], pos: var int, kind: NwtNodeKind = NProc): NwtNode =
+  var elem: FsNode = fsTokens[pos]
+  result = NwtNode(kind: NwtNodeKind.NProc)
+  result.procHeader = elem.value
+  pos.inc # skip FsProc
+  if kind == NProc:
+    result.procBody = consumeBlock(fsTokens, pos, {FsEnd, FsEndProc})
+  elif kind == NFunc:
+    result.procBody = consumeBlock(fsTokens, pos, {FsEnd, FsEndFunc})
+  pos.inc # skip FsEnd
 
 proc parseSsExtends(fsTokens: seq[FsNode], pos: var int): NwtNode =
   var elem: FsNode = fsTokens[pos]
   let extendsPath = elem.value.strip(true, true, {'"'})
+  pos.inc # skip FsExtends
   return NwtNode(kind: NExtends, extendsPath: extendsPath)
+
+proc parseSsScope(fsTokens: seq[FsNode], pos: var int): NwtNode =
+  var elem: FsNode = fsTokens[pos]
+  pos.inc # skip FsScope
+  let parts = elem.value.split(" ")
+  result = NwtNode(kind: NScope)
+  if parts.len >= 1:
+    result.scopeName = parts[0].strip()
+  result.scopeBody = consumeBlock(fsTokens, pos, {FsEnd, FsEndScope})
+  pos.inc # skip FsEndScope
 
 converter singleNwtNodeToSeq(nwtNode: NwtNode): seq[NwtNode] =
   return @[nwtNode]
 
-proc includeNwt(nodes: var seq[NwtNode], path: string) {.compileTime.} =
-  const basePath = getProjectPath()
-  var str = staticRead( basePath  / path.strip(true, true, {'"'}) )
-  var lexerTokens = toSeq(nwtTokenize(str))
-  var firstStepTokens = parseFirstStep(lexerTokens)
-  var pos = 0
-  var secondsStepTokens = parseSecondStep(firstStepTokens, pos)
-  for secondStepToken in secondsStepTokens:
-    nodes.add secondStepToken
+proc importNimja(nodes: var seq[NwtNode], path: string) =
+  const basePath = getScriptDir()
+  var str = read(basePath / path)
+  nodes = compile(str)
 
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     let fsToken = fsTokens[pos]
 
     case fsToken.kind
     # Complex Types
-    of FSif: return parseSsIf(fsTokens, pos)
+    of FsIf: return parseSsIf(fsTokens, pos)
+    of FsWhen: return parseSsWhen(fsTokens, pos)
+
     of FsWhile: return parseSsWhile(fsTokens, pos)
     of FsFor: return parseSsFor(fsTokens, pos)
     of FsBlock: return parseSsBlock(fsTokens, pos)
 
+    of FsCase: return parseSsCase(fsTokens, pos)
+    of FsScope: return parseSsScope(fsTokens, pos)
+
+    # Proc / Func / Macro are very similar
+    of FsProc: return parseSsProc(fsTokens, pos, NProc)
+    of FsFunc: return parseSsProc(fsTokens, pos, NFunc)
+
     # Simple Types
-    of FsStr: return NwtNode(kind: NStr, strBody: fsToken.value)
-    of FsVariable: return NwtNode(kind: NVariable, variableBody: fsToken.value)
-    of FsEval: return NwtNode(kind: NEval, evalBody: fsToken.value)
-    of FsExtends: return parseSsExtends(fsTokens, pos)
-    of FsImport: includeNwt(result, fsToken.value)
-    else: echo "[SS] NOT IMPL: ", fsToken
+    of FsStr:
+      pos.inc
+      guessedStringLen.inc fsToken.value.len
+      return NwtNode(kind: NStr, strBody: fsToken.value)
+    of FsVariable:
+      pos.inc
+      return NwtNode(kind: NVariable, variableBody: fsToken.value)
+    of FsEval:
+      pos.inc
+      return NwtNode(kind: NEval, evalBody: fsToken.value)
+    of FsExtends:
+      return parseSsExtends(fsTokens, pos)
+    of FsImport:
+      pos.inc
+      importNimja(result, fsToken.value.strip(true, true, {'"'}))
+    else: raise newException(ValueError, "[SS] NOT IMPL: " & $fsToken)
+
 
 proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
   while pos < fsTokens.len:
     result &= parseSecondStepOne(fsTokens, pos)
-    pos.inc # skip the current elem
 
-func astVariable(token: NwtNode): NimNode =
+proc astVariable(token: NwtNode): NimNode =
+  var varb: NimNode
+  # The "self." block insertion
+  if token.variableBody.startsWith(specialSelf):
+    let blockname = token.variableBody[specialSelf.len .. ^1]
+    if blocks.hasKey(blockname):
+      result = newStmtList()
+      for token in blocks[blockname]:
+        result.add astAstOne(token)
+      return
+  try:
+    varb = parseStmt(token.variableBody)
+  except:
+    error "Cannot parse variable body: " & token.variableBody
   return nnkStmtList.newTree(
     nnkInfix.newTree(
       newIdentNode("&="),
-      newIdentNode("result"),
+      newIdentNode(nwtVarname),
+      newCall(
+        "$",
+        varb
+      )
+    )
+  )
+
+proc astStr(token: NwtNode): NimNode =
+  return nnkStmtList.newTree(
+    nnkInfix.newTree(
+      newIdentNode("&="),
+      newIdentNode(nwtVarname),
+      newStrLitNode(token.strBody)
+    )
+  )
+
+func astVariableIter(token: NwtNode): NimNode =
+  return nnkStmtList.newTree(
+    nnkYieldStmt.newTree(
       newCall(
         "$",
         parseStmt(token.variableBody)
@@ -234,20 +382,18 @@ func astVariable(token: NwtNode): NimNode =
     )
   )
 
-func astStr(token: NwtNode): NimNode =
+func astStrIter(token: NwtNode): NimNode =
   return nnkStmtList.newTree(
-    nnkInfix.newTree(
-      newIdentNode("&="),
-      newIdentNode("result"),
+    nnkYieldStmt.newTree(
       newStrLitNode(token.strBody)
     )
   )
 
 func astEval(token: NwtNode): NimNode =
-  return parseStmt(token.evalBody)
-
-func astComment(token: NwtNode): NimNode =
-  return newCommentStmtNode(token.commentBody)
+  try:
+    return parseStmt(token.evalBody)
+  except:
+    error "Cannot parse eval body: " & token.evalBody
 
 proc astFor(token: NwtNode): NimNode =
   let easyFor = "for " & token.forStmt & ": discard" # `discard` to make a parsable construct
@@ -266,7 +412,11 @@ proc astWhile(token: NwtNode): NimNode =
 
 
 proc astIf(token: NwtNode): NimNode =
-  result = nnkIfStmt.newTree()
+  ## generates code for `if` or `when`
+  if token.kind == NIf:
+    result = nnkIfStmt.newTree()
+  elif token.kind == NWhen:
+    result = nnkWhenStmt.newTree()
 
   # Add the then node
   result.add:
@@ -297,17 +447,63 @@ proc astIf(token: NwtNode): NimNode =
       )
 
 
+proc astCase(token: NwtNode): NimNode =
+  result = nnkCaseStmt.newTree()
+
+  result.add parseStmt(token.caseStmt)
+
+  for caseOfToken in token.nnCaseOf:
+    result.add nnkOfBranch.newTree(
+      parseStmt(caseOfToken.caseOfStmt),
+      nnkStmtList.newTree(
+        astAst(caseOfToken.caseOfBody)
+      )
+    )
+
+  if token.nnCaseElse.len > 0:
+    result.add nnkElse.newTree(
+      nnkStmtList.newTree(
+        astAst(token.nnCaseElse)
+      )
+    )
+
+
+proc astProc(token: NwtNode, procStr = "proc"): NimNode =
+  let easyProc =  procStr & " " & token.procHeader & " discard"
+  result = parseStmt(easyProc) # dummy to build valid procBody
+  result[0].body = nnkStmtList.newTree(
+    astAst(token.procBody) # fill the proc body with content
+  )
+
+proc astScope(token: NwtNode): NimNode =
+  result = newStmtList()
+  var blockStmt = newNimNode(kind = nnkBlockStmt)
+  if token.scopeName.len == 0:
+    blockStmt.add newEmptyNode()
+  else:
+    blockStmt.add newIdentNode(token.scopeName)
+  blockStmt.add newStmtList()
+  blockStmt[1].add astAst(token.scopeBody)
+  result.add blockStmt
+
 proc astAstOne(token: NwtNode): NimNode =
   case token.kind
-  of NVariable: return astVariable(token)
-  of NStr: return astStr(token)
+  of NVariable:
+    if nwtIter: return astVariableIter(token)
+    else: return astVariable(token)
+  of NStr:
+    if nwtIter: return astStrIter(token)
+    else: return astStr(token)
   of NEval: return astEval(token)
-  of NComment: return astComment(token)
-  of NIf: return astIf(token)
+  of NIf, NWhen: return astIf(token)
   of NFor: return astFor(token)
   of NWhile: return astWhile(token)
   of NExtends: return parseStmt("discard")
   of NBlock: return parseStmt("discard")
+  of NProc: return astProc(token, procStr = "proc")
+  of NFunc: return astProc(token, procStr = "func")
+  of NCase: return astCase(token)
+  of NScope: return astScope(token)
   else: raise newException(ValueError, "cannot convert to ast:" & $token.kind)
 
 proc astAst(tokens: seq[NwtNode]): seq[NimNode] =
@@ -320,9 +516,9 @@ proc validExtend(secondsStepTokens: seq[NwtNode]): int =
   ## Only Strings and comments are allowed to come before extend
   result = -1
   var validBeforeExtend = true
-  for idx, secondStepToken in secondsStepTokens.pairs:
+  for idx, secondStepToken in enumerate(secondsStepTokens):
     case secondStepToken.kind
-    of NComment, NStr: discard
+    of NStr: discard
     of NExtends:
       result = idx
       break
@@ -334,26 +530,132 @@ proc validExtend(secondsStepTokens: seq[NwtNode]): int =
       "Invalid token(s) before {%extend%}: " & $ secondsStepTokens[0 .. result]
     )
 
+func condenseStrings(nodes: seq[FsNode]): seq[FsNode] =
+  ## tries to combine multiple string assignments into one. Operates on `FsNodes` seq
+  when defined(noCondenseStrings): return nodes
+  var curStr = ""
+  for node in nodes:
+    case node.kind
+    of FsStr:
+      curStr &= node.value
+    else:
+      if curStr.len > 0:
+        result.add FsNode(kind: FsStr, value: curStr)
+      curStr = ""
+      result.add node
+  if curStr.len != 0:
+    result.add FsNode(kind: FsStr, value: curStr)
+
+func condenseStrings(nodes: seq[NwtNode]): seq[NwtNode] =
+  ## tries to combine multiple string assignments into one. Operates on `NwtNode` ast
+  when defined(noCondenseStrings): return nodes
+  # return nodes
+  var curStr = ""
+  for node in nodes:
+    case node.kind
+    of NStr:
+      curStr &= node.strBody
+    else:
+      if curStr.len > 0:
+        result.add NwtNode(kind: NStr, strBody: curStr)
+      curStr = ""
+      result.add node
+  if curStr.len != 0:
+    result.add NwtNode(kind: NStr, strBody: curStr)
+
+func whitespaceControl(nodes: seq[FsNode]): seq[FsNode] =
+  ## Implements the handling of "WhitespaceControl" chars.
+  ## eg.: {%- if true -%}
+  var nextStrip = false
+  for node in nodes:
+    var mnode = node
+    if nextStrip:
+      if node.kind == FsStr:
+        mnode.value = mnode.value.strip(true, false, {' ', '\n', '\c'})
+      nextStrip = false
+    if node.stripPre:
+      if result.len > 0: # if there is something
+        if result[^1].kind == FsStr:
+          result[^1].value = result[^1].value.strip(false, true, {' ', '\n', '\c'}) # remove trailing whitespace from last node
+    if node.stripPost:
+      nextStrip = true
+    if mnode.value.len == 0 and mnode.kind == FsStr:
+      # skip empty string nodes entirely, if they're empty after stripping.
+      continue
+    result.add mnode
+
+proc errorOnDuplicatedBlocks(fsns: seq[FSNode]) =
+  ## Find duplicated blocks
+  # TODO give context and line
+  var blocknames: HashSet[string]
+  for fsnode in fsns.findAll(FsBlock):
+    if blocknames.contains(fsnode.value):
+      raise newException(ValueError, "found duplicated block:" & fsnode.value & " :" & $ fsns)
+    else:
+      blocknames.incl fsnode.value
+
+proc errorOnDuplicatedExtends(fsns: seq[FSNode]) =
+  ## Find duplicated extends
+  # TODO give context and line
+  var foundExtends = false
+  for _ in fsns.findAll(FsExtends):
+    if foundExtends == true:
+      raise newException(ValueError, "found multiple extends: " & $fsns)
+    else:
+      foundExtends = true
+
+proc errorOnUnevenBlocks(fsns: seq[FSNode]) =
+  ## Find and errors uneven/lonely blocks
+  # TODO give context and line
+  var ifs = 0
+  var fors = 0
+  var whiles = 0
+  var whens = 0
+  for fsnode in fsns.findAll({FsIf, FsEndif, FsFor, FsEndfor, FsWhile, FsEndWhile}):
+    case fsnode.kind
+    of FsIf: ifs.inc
+    of FsEndif: ifs.dec
+    of FsFor: fors.inc
+    of FsEndfor: fors.dec
+    of FsWhile: whiles.inc
+    of FsEndWhile: whiles.dec
+    of FsWhen: whens.inc
+    of FsEndWhen: whens.dec
+    else: discard # Cannot happen
+  if ifs != 0:
+    raise newException(ValueError, "uneven if's: " & $fsns)
+  if fors != 0:
+    raise newException(ValueError, "uneven for's: " & $fsns)
+  if whiles != 0:
+    raise newException(ValueError, "uneven while's: " & $fsns)
+  if whens != 0:
+    raise newException(ValueError, "uneven whens's: " & $fsns)
+
+template firstStepErrorChecks(fsns: seq[FSNode]) =
+  ## TODO combine all these?
+  errorOnDuplicatedExtends(fsns)
+  errorOnDuplicatedBlocks(fsns)
+  errorOnUnevenBlocks(fsns)
 
 proc loadCache(str: string): seq[NwtNode] =
   ## For faster compilation
   ## ```-d:nwtCacheOff``` to disable caching
   ## Creates NwtNodes only the first time for a given string,
   ## the second time is returned from the cache
-  when defined(nwtCacheOff):
-    var lexerTokens = toSeq(nwtTokenize(str))
-    var firstStepTokens = parseFirstStep(lexerTokens)
-    var pos = 0
-    return parseSecondStep(firstStepTokens, pos)
+  if not defined(nwtCacheOff) and cacheNwtNode.contains(str):
+    return cacheNwtNode[str]
   else:
-    if cacheNwtNode.contains(str):
-      # echo "cache hit str"
-      return cacheNwtNode[str]
+    # No cache hit (or cache disabled)
+    var lexerTokens = toSeq(lex(str))
+    var fsns = parseFirstStep(lexerTokens)
+    fsns.firstStepErrorChecks()
+    fsns = fsns.condenseStrings() # we condense on the FSNodes that are cached
+    fsns = fsns.whitespaceControl()
+    var pos = 0
+    when defined(nwtCacheOff):
+      return parseSecondStep(fsns, pos)
     else:
-      var lexerTokens = toSeq(nwtTokenize(str))
-      var firstStepTokens = parseFirstStep(lexerTokens)
-      var pos = 0
-      cacheNwtNode[str] = parseSecondStep(firstStepTokens, pos)
+      cacheNwtNode[str] = parseSecondStep(fsns, pos)
       return cacheNwtNode[str]
 
 proc loadCacheFile(path: Path): string =
@@ -363,77 +665,128 @@ proc loadCacheFile(path: Path): string =
   ## The second time the same file should be read
   ## it is returned from the cache
   when defined(nwtCacheOff):
-    return staticRead(path)
+    return read(path)
   else:
     if cacheNwtNodeFile.contains(path):
-      # echo "cache hit file"
       return cacheNwtNodeFile[path]
     else:
-      cacheNwtNodeFile[path] = staticRead(path)
+      cacheNwtNodeFile[path] = read(path)
       return cacheNwtNodeFile[path]
 
-iterator condenseStrings(nodes: seq[NwtNode]): NwtNode =
-  when defined(noCondenseStrings):
-    discard # TODO how to make an interator a no operation
-    for node in nodes: yield node
-  else:
-    var curStr = ""
-    for node in nodes:
-      case node.kind
-      of NStr:
-        curStr &= node.strBody
-      of NComment:
-        continue
-      else:
-        yield NwtNode(kind: NStr, strBody: curStr)
-        curStr = ""
-        yield node
-    if curStr.len != 0:
-      yield NwtNode(kind: NStr, strBody: curStr)
-
-proc compile(str: string): seq[NwtNode] =
-  ## Transforms a template string into a seq of NwtNodes
-  # TODO make to ITERATOR
+proc extend(str: string, templateCache: var Deque[seq[NwtNode]]) =
   var secondsStepTokens = loadCache(str)
-  when defined(dumpNwtAst): echo secondsStepTokens
   let foundExtendAt = validExtend(secondsStepTokens)
   if foundExtendAt > -1:
-    # echo "===== THIS TEMPLATE EXTENDS ====="
-    # Load master template
-    let masterStr = loadCacheFile( getScriptDir() / secondsStepTokens[foundExtendAt].extendsPath )
-    var masterSecondsStepTokens = loadCache(masterStr)
-    # Load THIS template (above)
-    var toRender: seq[NwtNode] = @[]
-    for masterSecondsStepToken in masterSecondsStepTokens:
-      if masterSecondsStepToken.kind == NBlock:
-        ## search the other template and put the stuff in toRender
-        var found = false
-        for secondsStepToken in secondsStepTokens[foundExtendAt+1 .. ^1]: # skip everything before the extend
-          if secondsStepToken.kind == NExtends: raise newException(ValueError, "only one extend is allowed!")
-          if secondsStepToken.kind == NBlock and secondsStepToken.blockName == masterSecondsStepToken.blockName:
-            found = true
-            for blockToken in secondsStepToken.blockBody:
-              toRender.add blockToken
-        if found == false:
-          # not overwritten; render the block
-          for blockToken in masterSecondsStepToken.blockBody:
-            toRender.add blockToken
-      else:
-        toRender.add masterSecondsStepToken
-    return toSeq(toRender.condenseStrings()) # TODO make to ITERATOR
+    templateCache.addFirst secondsStepTokens
+    let ext = loadCacheFile(getScriptDir() / secondsStepTokens[foundExtendAt].extendsPath)
+    extend(ext, templateCache)
   else:
-    var toRender: seq[NwtNode] = @[]
-    for token in secondsStepTokens:
-      if token.kind == NBlock:
-        for blockToken in token.blockBody:
-          toRender.add blockToken
-      else:
-        toRender.add token
-    return toSeq(toRender.condenseStrings()) # TODO make to ITERATOR
+    templateCache.addFirst secondsStepTokens
+
+iterator findAll(nwtns: seq[NwtNode], kind: NwtNodeKind): NwtNode =
+  for nwtn in nwtns:
+    if nwtn.kind == kind: yield nwtn
+
+proc recursiveFindAllBlocks(nwtns: seq[NwtNode]): seq[NwtNode] =
+  for nwtn in nwtns.findAll(NBlock):
+    result.add nwtn
+    result.add recursiveFindAllBlocks(nwtn.blockBody)
+
+proc fillBlocks(nodes: seq[NwtNode]): seq[NwtNode] =
+  for node in nodes:
+    if node.kind == NBlock:
+      for bnode in blocks[node.blockName]:
+        if bnode.kind == NBlock:
+          result.add fillBlocks(bnode)
+        else:
+          result.add bnode
+    else:
+      result.add node
+
+proc compile(str: string): seq[NwtNode] =
+  var templateCache = initDeque[seq[NwtNode]]()
+  extend(str, templateCache)
+  for idx, tmp in enumerate(templateCache):
+    for nwtn in tmp.recursiveFindAllBlocks():
+      blocks[nwtn.blockName] = nwtn.blockBody
+  var base = templateCache[0]
+  return fillBlocks(base).condenseStrings() # ast condense after blocks are filled
 
 
-macro compileTemplateStr*(str: typed): untyped =
-  ## Compiles a nimja template from a string.
+proc generatePreallocatedStringDef(len: int): NimNode =
+  # dumpAstGen:
+  #   when result is string:
+  #     result = newStringOfCap(10)
+  return nnkStmtList.newTree(
+    nnkWhenStmt.newTree(
+      nnkElifBranch.newTree(
+        nnkInfix.newTree(
+          newIdentNode("is"),
+          newIdentNode(nwtVarname),
+          newIdentNode("string")
+        ),
+        nnkStmtList.newTree(
+          nnkAsgn.newTree(
+            newIdentNode(nwtVarname),
+            nnkCall.newTree(
+              newIdentNode("newStringOfCap"),
+              newLit(len)
+            )
+          )
+        )
+      )
+    )
+  )
+
+
+template doCompile(str: untyped, res = newStmtList()): untyped =
+  guessedStringLen = 0
+  let nwtNodes = compile(str)
+  when defined(dumpNwtAst): echo nwtNodes
+  when defined(dumpNwtAstPretty): echo nwtNodes.pretty
+  result = res
+
+  if not nwtIter:
+    if (not defined(noPreallocatedString)):
+      result.add generatePreallocatedStringDef(guessedStringLen)
+
+  for nwtNode in nwtNodes:
+    result.add astAstOne(nwtNode)
+  when defined(dumpNwtMacro): echo toStrLit(result)
+
+template tmplsMacroImpl() =
+  # we use templates as a "variable alias"
+  # eg: template foo(): untyped = baa
+  # StmtList
+  #   TemplateDef
+  #     Ident "xx"
+  #     Empty
+  #     Empty
+  #     FormalParams
+  #       Ident "untyped"
+  #     Empty
+  #     Empty
+  #     StmtList
+  #       Ident "rax"
+  result = newStmtList()
+  for node in context:
+    var alias = newTree(nnkTemplateDef)
+    alias.add node[0]
+    alias.add newNimNode(nnkEmpty)
+    alias.add newNimNode(nnkEmpty)
+    var formalParams = newNimNode(nnkFormalParams)
+    formalParams.add newIdentNode("untyped")
+    alias.add formalParams
+    alias.add newNimNode(nnkEmpty)
+    alias.add newNimNode(nnkEmpty)
+    var body = newStmtList()
+    body.add node[1]
+    alias.add body
+    result.add alias
+
+macro compileTemplateStr*(str: typed, iter: static bool = false,
+    varname: static string = "result", context: untyped = nil): untyped =
+  ## Compiles a Nimja template from a string.
   ##
   ## .. code-block:: Nim
   ##  proc yourFunc(yourParams: bool): string =
@@ -441,28 +794,131 @@ macro compileTemplateStr*(str: typed): untyped =
   ##
   ##  echo yourFunc(true)
   ##
-  let nwtNodes = compile(str.strVal)
-  when defined(dumpNwtAst): echo nwtNodes
-  when defined(dumpNwtAstPretty): echo nwtNodes.pretty
-  result = newStmtList()
-  for nwtNode in nwtNodes:
-    result.add astAstOne(nwtNode)
-  when defined(dumpNwtMacro): echo toStrLit(result)
+  ## If `iter = true` then the macro can be used in an iterator body
+  ## this could be used for streaming templates, or to save memory when a big template
+  ## is rendered and the http server can send data in chunks.
+  ##
+  ## .. code-block:: nim
+  ##  iterator yourIter(yourParams: bool): string =
+  ##    compileTemplateString("{%for idx in 0 .. 100%}{{idx}}{%endfor%}", iter = true)
+  ##
+  ##  for elem in yourIter(true):
+  ##    echo elem
+  ##
+  ## `varname` specifies the variable that is appended to.
+  ##
+  ##
+  ## A context can be supplied to the `compileTemplateString` (also `compileTemplateFile`), to override variable names:
+  ##
+  ## .. code-block:: nim
+  ##   block:
+  ##     type
+  ##       Rax = object
+  ##         aa: string
+  ##         bb: float
+  ##     var rax = Rax(aa: "aaaa", bb: 13.37)
+  ##     var foo = 123
+  ##     proc render(): string =
+  ##       compileTemplateString("{{node.bb}}{{baa}}", {node: rax, baa: foo})
+  ##
 
-macro compileTemplateFile*(path: static string): untyped =
-  ## Compiles a nimja template from a file.
+  # Please note, currently the context **cannot be** procs/funcs etc.
+  nwtVarname = varname
+  nwtIter = iter
+  tmplsMacroImpl()
+  doCompile(str.strVal, result)
+
+macro compileTemplateFile*(path: static string, iter: static bool = false,
+    varname: static string = "result", context: untyped = nil): untyped =
+  ## Compiles a Nimja template from a file.
   ##
   ## .. code-block:: nim
   ##  proc yourFunc(yourParams: bool): string =
-  ##    compileTemplateFile(getScriptDir() / "relative/path.nwt")
+  ##    compileTemplateFile(getScriptDir() / "relative/path.nimja)
   ##
   ##  echo yourFunc(true)
   ##
+  ## If `iter = true` then the macro can be used in an iterator body
+  ## this could be used for streaming templates, or to save memory when a big template
+  ## is rendered and the http server can send data in chunks.
+  ##
+  ## .. code-block:: nim
+  ##  iterator yourIter(yourParams: bool): string =
+  ##    compileTemplateFile(getScriptDir() / "relative/path.nimja, iter = true)
+  ##
+  ##  for elem in yourIter(true):
+  ##    echo elem
+  ##
+  ## `varname` specifies the variable that is appended to.
+  ##
+  ## A context can be supplied to the `compileTemplateFile` (also `compileTemplateString`), to override variable names:
+  ##
+  ## .. code-block:: nim
+  ##   block:
+  ##     type
+  ##       Rax = object
+  ##         aa: string
+  ##         bb: float
+  ##     var rax = Rax(aa: "aaaa", bb: 13.37)
+  ##     var foo = 123
+  ##     proc render(): string =
+  ##       compileTemplateFile(getScriptDir() / "myTemplate.nimja", {node: rax, baa: foo})
+  ##
+  nwtVarname = varname
+  nwtIter = iter
   let str = loadCacheFile(path)
-  let nwtNodes = compile(str)
-  when defined(dumpNwtAst): echo nwtNodes
-  when defined(dumpNwtAstPretty): echo nwtNodes.pretty
-  result = newStmtList()
-  for nwtNode in nwtNodes:
-    result.add astAstOne(nwtNode)
-  when defined(dumpNwtMacro): echo toStrLit(result)
+  tmplsMacroImpl()
+  doCompile(str, result)
+
+template tmplsImpl(str: static string): string =
+  var nimjaTmplsVar: string
+  compileTemplateStr(str, varname = astToStr nimjaTmplsVar)
+  nimjaTmplsVar
+
+macro tmpls*(str: static string, context: untyped = nil): string =
+  ## Compiles a Nimja template string and returns directly.
+  ## Can be used inline, without a wrapper proc.
+  ##
+  ## .. code-block:: nim
+  ##  echo tmpls("""{% if true %}Is true!{% endif %}""")
+  ##
+  ## A context can be supplied to the template, to override the variable names:
+  ##
+  ## .. code-block:: nim
+  ##  type
+  ##    Rax = object
+  ##      aa: string
+  ##      bb: float
+  ##  var rax = Rax(aa: "aaaa", bb: 13.37)
+  ##  var foo = 123
+  ##  echo tmpls("""{% if node.aa == "aaaa" %}{{node.bb}}{% endif %}{{baa}}""", {node: rax, baa: foo})
+  ##
+  tmplsMacroImpl()
+  result.add quote do:
+    tmplsImpl(`str`)
+
+template tmplfImpl(path: static string): string =
+  var nimjaTmplfVar: string
+  compileTemplateFile(path, varname = astToStr nimjaTmplfVar)
+  nimjaTmplfVar
+
+macro tmplf*(str: static string, context: untyped = nil): string =
+  ## Compiles a Nimja template file and returns directly.
+  ## Can be used inline, without a wrapper proc.
+  ##
+  ## .. code-block:: nim
+  ##  echo tmplf("""/some/template.nimja""")
+  ##
+  ## A context can be supplied to the template, to override the variable names:
+  ##
+  ## .. code-block:: nim
+  ##  type
+  ##    Rax = object
+  ##      aa: string
+  ##      bb: float
+  ##  var rax = Rax(aa: "aaaa", bb: 13.37)
+  ##  echo tmplf("""/some/template.nimja""", {node: rax})
+  ##
+  tmplsMacroImpl()
+  result.add quote do:
+    tmplfImpl(`str`)

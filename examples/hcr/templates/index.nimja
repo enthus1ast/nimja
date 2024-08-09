@@ -1,0 +1,14 @@
+{% extends "templates/partials/_master.nimja" %}
+{% block content %}
+
+<h1>Hello, world! {{foos}}</h1>
+{% for idx in 0..10 %}
+  index
+{%- endfor %}
+
+{% for idx in 0..100 %}
+  <a href="/id/{{idx}}">{{idx}}</a>
+{%- endfor %}
+
+{% endblock %}
+

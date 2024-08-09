@@ -1,8 +1,0 @@
-<footer>
-  made with
-  <a href="https://github.com/enthus1ast/nimja">nimja</a>
-  and
-  <a href="https://github.com/planety/prologue">prologue</a>
-  <br>
-  the menu again: {% importnwt "partials/_menu.nwt" %}
-</footer>

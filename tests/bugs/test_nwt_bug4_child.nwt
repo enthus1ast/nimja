@@ -1,9 +1,0 @@
-{% extends "test_nwt_bug4_parent.nwt" %}
-{% block head %}
-head!
-{{key1}} {{key2}}
-{% endblock %}
-{% block content %}
-content!
-{{key1}} {{key2}}
-{% endblock %}

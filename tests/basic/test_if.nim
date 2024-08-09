@@ -3,6 +3,7 @@ discard """
 """
 import ../../src/nimja
 import unittest
+import strutils
 
 suite "if":
   test "simple if":
@@ -45,6 +46,22 @@ suite "if":
     block:
       proc test(): string = compileTemplateStr("{%if true %}A{%if true %}B{%endif%}C{%if false %}D{%endif%}{%endif%}")
       check test() == "ABC"
+
+
+    block:
+      proc test(): string = compileTemplateStr("""
+        {%if true %}
+          A
+          {%if false %}
+            B
+          {%endif%}
+          C
+          {%if true %}
+            D
+          {%endif%}
+        {%endif%}"""
+      )
+      check test().replace(" ", "").replace("\n","") == "ACD"
 
   # For one who has no bigger experience for "compiler/interpreter" crafting.
   # If/else is a challenge.

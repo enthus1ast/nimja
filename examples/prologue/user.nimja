@@ -1,0 +1,5 @@
+{% extends "partials/_master.nimja" %}
+{% block content %}
+  <h2>{{user.lastname}}, {{user.name}}</h2>
+  {% importnimja "partials/_user.nimja" %}
+{% endblock %}

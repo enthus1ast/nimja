@@ -1,0 +1,2 @@
+{% extends "self_multiblock_master.nimja" %}
+{% block title %}title{% endblock %}

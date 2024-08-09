@@ -1,0 +1,9 @@
+{% extends "templates/partials/_master.nimja" %}
+{% block content %}
+{%for aa in a%}
+  {{aa}} <br>
+  <hr>
+{%endfor%}
+
+{% endblock %}
+

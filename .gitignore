@@ -1,5 +1,7 @@
 *.exe
-nimcache/**
+*.dll
+.vscode/*
+**/nimcache/**
 cache/**
 outputGotten.txt
 *~

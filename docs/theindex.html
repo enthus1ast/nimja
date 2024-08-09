@@ -34,7 +34,6 @@ function main() {
     }
   }
 
-  const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
   function switchTheme(e) {
       if (e.target.checked) {
           document.documentElement.setAttribute('data-theme', 'dark');
@@ -45,91 +44,159 @@ function main() {
       }
   }
 
-  toggleSwitch.addEventListener('change', switchTheme, false);
+  const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+  if (toggleSwitch !== null) {
+    toggleSwitch.addEventListener('change', switchTheme, false);
+  }
 
-  const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+  var currentTheme = localStorage.getItem('theme');
+  if (!currentTheme && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    currentTheme = 'dark';
+  }
   if (currentTheme) {
     document.documentElement.setAttribute('data-theme', currentTheme);
 
-    if (currentTheme === 'dark') {
+    if (currentTheme === 'dark' && toggleSwitch !== null) {
       toggleSwitch.checked = true;
     }
   }
 }
+
+window.addEventListener('DOMContentLoaded', main);
 </script>
 
 </head>
-<body onload="main()">
+<body>
 <div class="document" id="documentId">
   <div class="container">
     <h1 class="title">Index</h1>
-    Modules: <a href="nimja/nwtTokenizer.html">nimja/nwtTokenizer</a>, <a href="nimja/parser.html">nimja/parser</a>.<br/><p /><h2>API symbols</h2>
-<dl><dt><a name="Block" href="#Block"><span>Block:</span></a></dt><dd><ul class="simple">
+    Modules: <a href="nimja/lexer.html">nimja/lexer</a>, <a href="nimja/nimjautils.html">nimja/nimjautils</a>, <a href="nimja/parser.html">nimja/parser</a>, <a href="nimja/sharedhelper.html">nimja/sharedhelper</a>.<br/><p /><h2>API symbols</h2>
+<dl><dt><a name="%60%3F%60" href="#%60%3F%60"><span>`?`:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="nwtTokenizer: Block" href="nimja/nwtTokenizer.html#Block">nwtTokenizer: Block</a></li>
+          data-doc-search-tag="nimjautils: `?`(con, body: untyped): untyped" href="nimja/nimjautils.html#%3F.t%2Cuntyped%2Cuntyped">nimjautils: `?`(con, body: untyped): untyped</a></li>
+          </ul></dd>
+<dt><a name="%60%7C%60" href="#%60%7C%60"><span>`|`:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nimjautils: `|`(aa, bb: untyped): string" href="nimja/nimjautils.html#%7C.m%2Cuntyped%2Cuntyped">nimjautils: `|`(aa, bb: untyped): string</a></li>
+          </ul></dd>
+<dt><a name="%60~%60" href="#%60~%60"><span>`~`:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nimjautils: `~`(aa, bb: untyped): string" href="nimja/nimjautils.html#~.t%2Cuntyped%2Cuntyped">nimjautils: `~`(aa, bb: untyped): string</a></li>
+          </ul></dd>
+<dt><a name="allowedCharsInSlug" href="#allowedCharsInSlug"><span>allowedCharsInSlug:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nimjautils: allowedCharsInSlug" href="nimja/nimjautils.html#allowedCharsInSlug">nimjautils: allowedCharsInSlug</a></li>
           </ul></dd>
 <dt><a name="compileTemplateFile" href="#compileTemplateFile"><span>compileTemplateFile:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="parser: compileTemplateFile(path: static string): untyped" href="nimja/parser.html#compileTemplateFile.m%2Cstaticstring">parser: compileTemplateFile(path: static string): untyped</a></li>
+          data-doc-search-tag="parser: compileTemplateFile(path: static string; iter: static bool = false;
+                    varname: static string = &quot;result&quot;; context: untyped = nil): untyped" href="nimja/parser.html#compileTemplateFile.m%2Cstaticstring%2Cstaticbool%2Cstaticstring%2Cuntyped">parser: compileTemplateFile(path: static string; iter: static bool = false;
+                    varname: static string = &quot;result&quot;; context: untyped = nil): untyped</a></li>
           </ul></dd>
 <dt><a name="compileTemplateStr" href="#compileTemplateStr"><span>compileTemplateStr:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="parser: compileTemplateStr(str: typed): untyped" href="nimja/parser.html#compileTemplateStr.m%2Ctyped">parser: compileTemplateStr(str: typed): untyped</a></li>
+          data-doc-search-tag="parser: compileTemplateStr(str: typed; iter: static bool = false;
+                   varname: static string = &quot;result&quot;; context: untyped = nil): untyped" href="nimja/parser.html#compileTemplateStr.m%2Ctyped%2Cstaticbool%2Cstaticstring%2Cuntyped">parser: compileTemplateStr(str: typed; iter: static bool = false;
+                   varname: static string = &quot;result&quot;; context: untyped = nil): untyped</a></li>
           </ul></dd>
-<dt><a name="extractTemplateName" href="#extractTemplateName"><span>extractTemplateName:</span></a></dt><dd><ul class="simple">
+<dt><a name="cycle" href="#cycle"><span>cycle:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="nwtTokenizer: extractTemplateName(raw: string): string" href="nimja/nwtTokenizer.html#extractTemplateName%2Cstring">nwtTokenizer: extractTemplateName(raw: string): string</a></li>
+          data-doc-search-tag="nimjautils: cycle[T](loop: Loop; elems: openArray[T]): T" href="nimja/nimjautils.html#cycle%2CLoop%2CopenArray%5BT%5D">nimjautils: cycle[T](loop: Loop; elems: openArray[T]): T</a></li>
           </ul></dd>
 <dt><a name="getScriptDir" href="#getScriptDir"><span>getScriptDir:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="parser: getScriptDir(): string" href="nimja/parser.html#getScriptDir.t">parser: getScriptDir(): string</a></li>
+          data-doc-search-tag="sharedhelper: getScriptDir(): string" href="nimja/sharedhelper.html#getScriptDir.t">sharedhelper: getScriptDir(): string</a></li>
           </ul></dd>
-<dt><a name="newToken" href="#newToken"><span>newToken:</span></a></dt><dd><ul class="simple">
+<dt><a name="includeRaw" href="#includeRaw"><span>includeRaw:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="nwtTokenizer: newToken(tokenType: NwtToken; value: string): Token" href="nimja/nwtTokenizer.html#newToken%2CNwtToken%2Cstring">nwtTokenizer: newToken(tokenType: NwtToken; value: string): Token</a></li>
+          data-doc-search-tag="nimjautils: includeRaw(path: string): string" href="nimja/nimjautils.html#includeRaw%2Cstring">nimjautils: includeRaw(path: string): string</a></li>
+          </ul></dd>
+<dt><a name="includeRawStatic" href="#includeRawStatic"><span>includeRawStatic:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nimjautils: includeRawStatic(path: static string): string" href="nimja/nimjautils.html#includeRawStatic%2Cstaticstring">nimjautils: includeRawStatic(path: static string): string</a></li>
+          </ul></dd>
+<dt><a name="includeStaticAsDataurl" href="#includeStaticAsDataurl"><span>includeStaticAsDataurl:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nimjautils: includeStaticAsDataurl(path: static string; mimeOverride: static string = &quot;&quot;): string" href="nimja/nimjautils.html#includeStaticAsDataurl%2Cstaticstring%2Cstaticstring">nimjautils: includeStaticAsDataurl(path: static string; mimeOverride: static string = &quot;&quot;): string</a></li>
+          </ul></dd>
+<dt><a name="lex" href="#lex"><span>lex:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="lexer: lex(buf: string): Token" href="nimja/lexer.html#lex.i%2Cstring">lexer: lex(buf: string): Token</a></li>
+          </ul></dd>
+<dt><a name="Loop" href="#Loop"><span>Loop:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nimjautils: Loop" href="nimja/nimjautils.html#Loop">nimjautils: Loop</a></li>
+          </ul></dd>
+<dt><a name="loop" href="#loop"><span>loop:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nimjautils: loop[T](a: openArray[T]): tuple[loop: Loop[T], val: T]" href="nimja/nimjautils.html#loop.i%2CopenArray%5BT%5D">nimjautils: loop[T](a: openArray[T]): tuple[loop: Loop[T], val: T]</a></li>
+          </ul></dd>
+<dt><a name="Loopable" href="#Loopable"><span>Loopable:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nimjautils: Loopable" href="nimja/nimjautils.html#Loopable">nimjautils: Loopable</a></li>
+          </ul></dd>
+<dt><a name="nl2br" href="#nl2br"><span>nl2br:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nimjautils: nl2br(str: string; keepNl = true): string" href="nimja/nimjautils.html#nl2br%2Cstring">nimjautils: nl2br(str: string; keepNl = true): string</a></li>
           </ul></dd>
 <dt><a name="NwtComment" href="#NwtComment"><span>NwtComment:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="NwtToken.NwtComment" href="nimja/nwtTokenizer.html#NwtComment">NwtToken.NwtComment</a></li>
+          data-doc-search-tag="NwtTokenKind.NwtComment" href="nimja/lexer.html#NwtComment">NwtTokenKind.NwtComment</a></li>
           </ul></dd>
 <dt><a name="NwtEval" href="#NwtEval"><span>NwtEval:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="NwtToken.NwtEval" href="nimja/nwtTokenizer.html#NwtEval">NwtToken.NwtEval</a></li>
+          data-doc-search-tag="NwtTokenKind.NwtEval" href="nimja/lexer.html#NwtEval">NwtTokenKind.NwtEval</a></li>
+          </ul></dd>
+<dt><a name="NwtNone" href="#NwtNone"><span>NwtNone:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="NwtTokenKind.NwtNone" href="nimja/lexer.html#NwtNone">NwtTokenKind.NwtNone</a></li>
           </ul></dd>
 <dt><a name="NwtString" href="#NwtString"><span>NwtString:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="NwtToken.NwtString" href="nimja/nwtTokenizer.html#NwtString">NwtToken.NwtString</a></li>
+          data-doc-search-tag="NwtTokenKind.NwtString" href="nimja/lexer.html#NwtString">NwtTokenKind.NwtString</a></li>
           </ul></dd>
-<dt><a name="NwtToken" href="#NwtToken"><span>NwtToken:</span></a></dt><dd><ul class="simple">
+<dt><a name="NwtTokenKind" href="#NwtTokenKind"><span>NwtTokenKind:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="nwtTokenizer: NwtToken" href="nimja/nwtTokenizer.html#NwtToken">nwtTokenizer: NwtToken</a></li>
-          </ul></dd>
-<dt><a name="nwtTokenize" href="#nwtTokenize"><span>nwtTokenize:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="nwtTokenizer: nwtTokenize(s: string): Token" href="nimja/nwtTokenizer.html#nwtTokenize.i%2Cstring">nwtTokenizer: nwtTokenize(s: string): Token</a></li>
+          data-doc-search-tag="lexer: NwtTokenKind" href="nimja/lexer.html#NwtTokenKind">lexer: NwtTokenKind</a></li>
           </ul></dd>
 <dt><a name="NwtVariable" href="#NwtVariable"><span>NwtVariable:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="NwtToken.NwtVariable" href="nimja/nwtTokenizer.html#NwtVariable">NwtToken.NwtVariable</a></li>
+          data-doc-search-tag="NwtTokenKind.NwtVariable" href="nimja/lexer.html#NwtVariable">NwtTokenKind.NwtVariable</a></li>
           </ul></dd>
-<dt><a name="TemplateSyntaxError" href="#TemplateSyntaxError"><span>TemplateSyntaxError:</span></a></dt><dd><ul class="simple">
+<dt><a name="read" href="#read"><span>read:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="nwtTokenizer: TemplateSyntaxError" href="nimja/nwtTokenizer.html#TemplateSyntaxError">nwtTokenizer: TemplateSyntaxError</a></li>
+          data-doc-search-tag="sharedhelper: read(path: untyped): untyped" href="nimja/sharedhelper.html#read.t%2Cuntyped">sharedhelper: read(path: untyped): untyped</a></li>
+          </ul></dd>
+<dt><a name="slugify" href="#slugify"><span>slugify:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nimjautils: slugify(str: string; sperator = &quot;-&quot;; allowedChars = allowedCharsInSlug): string" href="nimja/nimjautils.html#slugify%2Cstring%2Cstring">nimjautils: slugify(str: string; sperator = &quot;-&quot;; allowedChars = allowedCharsInSlug): string</a></li>
+          </ul></dd>
+<dt><a name="spaceless" href="#spaceless"><span>spaceless:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="nimjautils: spaceless(str: string): string" href="nimja/nimjautils.html#spaceless%2Cstring">nimjautils: spaceless(str: string): string</a></li>
+          </ul></dd>
+<dt><a name="tmplf" href="#tmplf"><span>tmplf:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="parser: tmplf(str: static string; context: untyped = nil): string" href="nimja/parser.html#tmplf.m%2Cstaticstring%2Cuntyped">parser: tmplf(str: static string; context: untyped = nil): string</a></li>
+          </ul></dd>
+<dt><a name="tmpls" href="#tmpls"><span>tmpls:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="parser: tmpls(str: static string; context: untyped = nil): string" href="nimja/parser.html#tmpls.m%2Cstaticstring%2Cuntyped">parser: tmpls(str: static string; context: untyped = nil): string</a></li>
           </ul></dd>
 <dt><a name="Token" href="#Token"><span>Token:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="nwtTokenizer: Token" href="nimja/nwtTokenizer.html#Token">nwtTokenizer: Token</a></li>
+          data-doc-search-tag="lexer: Token" href="nimja/lexer.html#Token">lexer: Token</a></li>
           </ul></dd>
-<dt><a name="UnknownTemplate" href="#UnknownTemplate"><span>UnknownTemplate:</span></a></dt><dd><ul class="simple">
+<dt><a name="truncate" href="#truncate"><span>truncate:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="nwtTokenizer: UnknownTemplate" href="nimja/nwtTokenizer.html#UnknownTemplate">nwtTokenizer: UnknownTemplate</a></li>
+          data-doc-search-tag="nimjautils: truncate(str: string; num: Natural; preserveWords = true; suf = &quot;...&quot;): string" href="nimja/nimjautils.html#truncate%2Cstring%2CNatural%2Cstring">nimjautils: truncate(str: string; num: Natural; preserveWords = true; suf = &quot;...&quot;): string</a></li>
           </ul></dd>
 </dl>
     <div class="row">
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br/>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2021-08-17 21:13:33 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2022-09-14 19:09:04 UTC</small>
       </div>
     </div>
   </div>
