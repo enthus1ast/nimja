@@ -7,10 +7,10 @@ import unittest
 block:
   ## Test compileTemplateFile
   proc index(title: auto, body: auto): string =
-    compileTemplateFile("../templates/blockIndex.nimja")
+    compileTemplateFile("../templates/blockIndex.nimja", baseDir = getScriptDir())
 
   proc master(): string =
-    compileTemplateFile("../templates/blockMaster.nimja")
+    compileTemplateFile("../templates/blockMaster.nimja", baseDir = getScriptDir())
 
   check index("title", "FOO") == "<html><title>title</title><body>FOO</body></html>"
   check index("", "") == "<html><title></title><body></body></html>"

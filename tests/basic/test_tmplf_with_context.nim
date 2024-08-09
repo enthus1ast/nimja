@@ -6,7 +6,7 @@ import os
 
 block:
   # test tmplf without context
-  doAssert "foo" == tmplf(getScriptDir() / "foo.nimja")
+  doAssert "foo" == tmplf("foo.nimja", baseDir = getScriptDir())
 
 block:
   type
@@ -17,7 +17,7 @@ block:
   var ii = 123
   doAssert "idx: 123, aa: aaaa, nodes: aaaa, 13.37" ==
     tmplf(
-      getScriptDir() / "tmplf_with_context.nimja",
+      "tmplf_with_context.nimja", getScriptDir(),
       {
         idx: ii,
         aa: rax.aa,
@@ -32,4 +32,4 @@ block:
        bb: float
    var rax = Rax(aa: "aaaa", bb: 13.37)
    var foo = 123
-   doAssert "13.37123" == tmpls("""{% if node.aa == "aaaa" %}{{node.bb}}{% endif %}{{baa}}""", {node: rax, baa: foo})
+   doAssert "13.37123" == tmpls("""{% if node.aa == "aaaa" %}{{node.bb}}{% endif %}{{baa}}""", getScriptDir(), {node: rax, baa: foo})

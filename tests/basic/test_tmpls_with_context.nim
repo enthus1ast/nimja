@@ -53,7 +53,7 @@ block:
   proc render(): string =
     compileTemplateStr("asdf {{node.bb}} {{ss}}", context = {node: rax, ss: rax.aa})
   doAssert "asdf 13.37 aaaa" == render()
-  doAssert "42.0" == tmpls("""{% if node.aa == "aaaa" %}{%node.bb = 42.0%}{% endif %}{{node.bb}}""", {node: rax, baa: foo})
+  doAssert "42.0" == tmpls("""{% if node.aa == "aaaa" %}{%node.bb = 42.0%}{% endif %}{{node.bb}}""", context = {node: rax, baa: foo})
   doAssert 42.0 == rax.bb
 
 block:

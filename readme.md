@@ -1107,9 +1107,20 @@ Changelog
 =========
 
 ## TODO
-- 0.8.?
+- 0.?.?
   - Added context to `importnimja`
 ## DONE
+- 0.9.0
+  - BREAKING CHANGE!
+  - in order to fix #15 & #89 and to enable nimja components imported from other modules,
+    all proc (`tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`) got an `baseDir` param:
+    ```
+        compileTemplateStr("""{{importnimja "some/template.nimja"}}""", baseDir = getScriptDir())
+        tmpls("""{{importnimja "some/template.nimja"}}""", baseDir = getScriptDir())
+        compileTemplateFile("some/template.nimja", baseDir = getScriptDir())
+        tmpls("some/template.nimja", baseDir = getScriptDir())
+    ```
+    The use of tmplf(getScriptDir() / "foo.nimja") is discourage. It could still work in some cirumstances though.
 - 0.8.7
   - Removed unused `NImport`.
   - Error on uneven `when` blocks.

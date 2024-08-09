@@ -11,6 +11,6 @@ doAssert simple() == "titletitle"
 
 
 func ex(): string =
-  compileTemplateFile(getScriptDir() / "self_multiblock.nimja")
+  compileTemplateFile("self_multiblock.nimja", baseDir = getScriptDir())
 
 doAssert ex() == "titletitle\13\10" # TODO why \13\10 ?
