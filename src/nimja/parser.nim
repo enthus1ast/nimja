@@ -869,10 +869,6 @@ macro compileTemplateFile*(path: static string, baseDir: static string = "", ite
   nwtVarname = varname
   nwtIter = iter
   nwtBaseDir = baseDir
-  echo "*****************************"
-  echo "nwtBaseDir: ", nwtBaseDir
-  # echo currentSourcePath()
-  echo "*****************************"
   let str = loadCacheFile(path)
   tmplsMacroImpl()
   doCompile(str, result)

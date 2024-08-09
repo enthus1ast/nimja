@@ -1120,7 +1120,7 @@ Changelog
         compileTemplateFile("some/template.nimja", baseDir = getScriptDir())
         tmpls("some/template.nimja", baseDir = getScriptDir())
     ```
-    The use of tmplf(getScriptDir() / "foo.nimja") is discourage. It could still work in some cirumstances though.
+    The use of `tmplf(getScriptDir() / "foo.nimja")` is discourage. It could still work in some cirumstances though.
 - 0.8.7
   - Removed unused `NImport`.
   - Error on uneven `when` blocks.
