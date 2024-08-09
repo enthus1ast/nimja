@@ -68,7 +68,7 @@ proc renderIndex(title: string, users: seq[User]): string =
   ## so it can access all variables like `title` and `users`
   ## the return variable could be `string` or `Rope` or
   ## anything which has a `&=`(obj: YourObj, str: string) proc.
-  compileTemplateFile(getScriptDir() / "index.nimja")
+  compileTemplateFile("index.nimja", baseDir = getScriptDir())
 
 proc main {.async.} =
   var server = newAsyncHttpServer()
@@ -258,7 +258,7 @@ you should use it like so:
 ```nim
 import os # for `/`
 proc myRenderProc(someParam: string): string =
-  compileTemplateFile(getScriptDir() / "myFile.html")
+  compileTemplateFile("myFile.html", baseDir = getScriptDir())
 
 echo myRenderProc("test123")
 ```
@@ -379,7 +379,7 @@ situations where you want to inline a render call.
 ```nim
 let leet = 1337
 echo tmpls("foo {{leet}}")
-echo tmplf(getScriptDir() / "templates" / "myfile.nimja")
+echo tmplf("templates" / "myfile.nimja", baseDir = getScriptDir())
 ```
 
 A context can be supplied to the template, to override variable names:
@@ -525,7 +525,7 @@ if the child.nimja is compiled then rendered like so:
 
 ```nim
 proc renderChild(): string =
-  compileTemplateFile(getScriptDir() / "child.nimja")
+  compileTemplateFile("child.nimja", baseDir = getScriptDir())
 
 echo renderChild()
 ```
@@ -780,7 +780,7 @@ Good for documentation etc..
 
 ```nim
 proc test(): string =
-  let path = (getScriptDir() / "tests/basic" / "includeRawT.txt")
+  let path = ("tests/basic" / "includeRawT.txt", baseDir = getScriptDir())
   compileTemplateStr("""pre{{ includeRaw(path) }}suf""")
 ```
 
@@ -1012,10 +1012,10 @@ import os # for `/`
 
 proc index*(): string {.exportc, dynlib.} =
   var foos =  1351 # change me i'm dynamic :)
-  compileTemplateFile(getScriptDir() / "templates/index.nimja")
+  compileTemplateFile("templates/index.nimja", baseDir = getScriptDir())
 
 proc detail*(id: string): string {.exportc, dynlib.} =
-  compileTemplateFile(getScriptDir() / "templates/detail.nimja")
+  compileTemplateFile("templates/detail.nimja", baseDir = getScriptDir())
 
 ```
 
@@ -1107,9 +1107,20 @@ Changelog
 =========
 
 ## TODO
-- 0.8.?
+- 0.?.?
   - Added context to `importnimja`
 ## DONE
+- 0.9.0
+  - BREAKING CHANGE!
+  - in order to fix #15 & #89 and to enable nimja components imported from other modules,
+    all proc (`tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`) got an `baseDir` param:
+    ```
+        compileTemplateStr("""{{importnimja "some/template.nimja"}}""", baseDir = getScriptDir())
+        tmpls("""{{importnimja "some/template.nimja"}}""", baseDir = getScriptDir())
+        compileTemplateFile("some/template.nimja", baseDir = getScriptDir())
+        tmpls("some/template.nimja", baseDir = getScriptDir())
+    ```
+    The use of `tmplf(getScriptDir() / "foo.nimja")` is discourage. It could still work in some cirumstances though.
 - 0.8.7
   - Removed unused `NImport`.
   - Error on uneven `when` blocks.

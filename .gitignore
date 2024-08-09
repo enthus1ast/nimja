@@ -16,3 +16,5 @@ tests/basic/test_if_complex
 tests/basic/test_insert
 tests/basic/test_simple
 tests/basic/test_while
+src/nimja/parser
+src/nimja/sharedhelper

@@ -34,7 +34,7 @@ suite "nimjautils":
 
   test "includeRaw":
     proc test(): string =
-      let path = (getScriptDir()  / "basic" / "includeRawT.txt")
+      let path = (getScriptDir() / "includeRawT.txt")
       compileTemplateStr("""pre{{ includeRaw(path) }}suf""")
     check test() == "pre123suf"
 

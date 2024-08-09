@@ -9,9 +9,10 @@ template read*(path: untyped): untyped =
     staticRead(path)
   else:
     readFile(path)
+  
 
 template getScriptDir*(): string =
   ## Helper for staticRead.
   ##
   ## returns the absolute path to your project, on compile time.
-  getProjectPath()
+  instantiationInfo(-1, true).filename.parentDir() 

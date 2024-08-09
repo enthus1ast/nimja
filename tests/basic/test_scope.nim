@@ -10,14 +10,14 @@ import strutils
 
 suite "scope":
   test "1":
-    check "POSTFOO" == tmpls """
+    check "POSTFOO" == tmpls("""
       {%- scope -%}
         {% let httpMethod = "POST" %}
         {{- httpMethod -}}
       {%- endscope -%}
       {%- let httpMethod = "FOO" -%}
       {{- httpMethod -}}
-    """
+    """)
   test "2 named":
     # we break out of a scope prematurely
     check "foo" == tmpls """
@@ -39,10 +39,10 @@ suite "scope":
       {%- endscope -%}
     """
   test "4 scope with import":
-    check "foo" == tmpls """
+    check "foo" == tmpls("""
       {%- scope foo -%}
         {%- importnimja "foo.nimja" -%}
       {%- endscope -%}
-    """
-      
+    """, getScriptDir()) # <---- this is required here!!
+     
   
