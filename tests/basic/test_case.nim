@@ -8,10 +8,10 @@ import os
 suite "case":
   test "basic test":
     var str = "foo"
-    check "foo" == tmplf(getScriptDir() / "case" / "case.nimja")
+    check "foo" == tmplf("case" / "case.nimja", baseDir = getScriptDir())
 
     str = "baa"
-    check "baa" == tmplf(getScriptDir() / "case" / "case.nimja")
+    check "baa" == tmplf(getScriptDir() / "case" / "case.nimja") # getScriptDir works in THAT case!
 
     str = "baz"
     check "baz" == tmplf(getScriptDir() / "case" / "case.nimja")
@@ -27,14 +27,14 @@ suite "case":
       aaa, bbb, ccc, ddd
     var foo: Foo = aaa
     var isNothing: bool
-    check "AAA" == tmplf(getScriptDir() / "case" / "case2.nimja", {ee: foo})
-    check "BBB" == tmplf(getScriptDir() / "case" / "case2.nimja", {ee: Foo.bbb})
-    check "CCC" == tmplf(getScriptDir() / "case" / "case2.nimja", {ee: ccc})
+    check "AAA" == tmplf("case" / "case2.nimja", getScriptDir(), {ee: foo})
+    check "BBB" == tmplf("case" / "case2.nimja", getScriptDir(), {ee: Foo.bbb})
+    check "CCC" == tmplf("case" / "case2.nimja", getScriptDir(), {ee: ccc})
 
     isNothing = true
-    check "nothing" == tmplf(getScriptDir() / "case" / "case2.nimja", {ee: ddd})
+    check "nothing" == tmplf("case" / "case2.nimja", getScriptDir(), {ee: ddd})
 
     isNothing = false
-    check "something" == tmplf(getScriptDir() / "case" / "case2.nimja", {ee: ddd})
+    check "something" == tmplf("case" / "case2.nimja", getScriptDir(), {ee: ddd})
 
 

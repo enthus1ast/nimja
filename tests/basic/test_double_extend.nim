@@ -6,12 +6,36 @@ discard """
 include ../../src/nimja/parser
 # import unittest
 
+# echo "#############################"
+# echo "getScriptDir:                       :",  getScriptDir()
+# echo "getScriptDirProc:                   :",  getScriptDirProc()
+# echo "getScriptDirMacro:                  :",  getScriptDirMacro()
+# echo "getScriptDirII:                     :",  getScriptDirII()
+# echo "getScriptDirIItemplate              :",  getScriptDirIItemplate()
+# echo "getScriptDirIItemplate2             :",  getScriptDirIItemplate2()
+# echo "currentSourcePath().parentDir() user:", currentSourcePath().parentDir()
+# template ii(): string =
+#   instantiationInfo(-1, true).filename.parentDir()
+# echo "instantiationInfo(-1, true).filename:", ii
+# echo "#############################"
+
 # proc inner(): string =
-#   compileTemplateFile(getScriptDir() / "doubleExtends" / "inner.nimja")
+#   # compileTemplateFile("doubleExtends" / "inner.nimja", baseDir = getScriptDir())
+#   # compileTemplateFile("doubleExtends" / "inner.nimja", baseDir = "") #, baseDir = currentSourcePath().parentDir())
+#   compileTemplateFile(getScriptDir() / "doubleExtends" / "inner.nimja", baseDir = "") #, baseDir = currentSourcePath().parentDir())
 # echo inner()
 
+
 proc outer(): string =
-  compileTemplateFile(getScriptDir() / "doubleExtends" / "outer.nimja")
+  echo "#############################"
+  echo currentSourcePath()
+  echo currentSourcePath().parentDir()
+  echo "#############################"
+  const baseDir = currentSourcePath().parentDir()
+  # compileTemplateFile("doubleExtends" / "outer.nimja", baseDir = baseDir)
+  # echo "GSCD: ", getScriptDir()
+  compileTemplateFile("doubleExtends" / "outer.nimja", baseDir = getScriptDir())
+  # compileTemplateFile("doubleExtends" / "outer.nimja")
 assert outer() == "baseouterouterbase"
 
 # proc base(): string =

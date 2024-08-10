@@ -8,7 +8,7 @@ suite "proc_import":
 
   test "basic":
     proc test(): string =
-      compileTemplateStr("""{% importnimja "procs.nimja" %}{{foo()}}""")
+      compileTemplateStr("""{% importnimja "procs.nimja" %}{{foo()}}""", baseDir = getScriptDir())
     check test() == "foo"
 
   test "import on child (in block)":
@@ -19,5 +19,5 @@ suite "proc_import":
           {%- importnimja "procs.nimja" -%}
           {{- foo() -}}
         {%- endblock -%}
-      """)
+      """, baseDir = getScriptDir())
     check test() == "foo"
