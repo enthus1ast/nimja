@@ -1,4 +1,5 @@
-compileTemplateStr	nimja/parser.html#compileTemplateStr.m,typed,staticbool,staticstring,untyped	parser: compileTemplateStr(str: typed; iter: static bool = false;\n                   varname: static string = &quot;result&quot;; context: untyped = nil): untyped	
-compileTemplateFile	nimja/parser.html#compileTemplateFile.m,staticstring,staticbool,staticstring,untyped	parser: compileTemplateFile(path: static string; iter: static bool = false;\n                    varname: static string = &quot;result&quot;; context: untyped = nil): untyped	
-tmpls	nimja/parser.html#tmpls.m,staticstring,untyped	parser: tmpls(str: static string; context: untyped = nil): string	
-tmplf	nimja/parser.html#tmplf.m,staticstring,untyped	parser: tmplf(str: static string; context: untyped = nil): string	
+nimTitle	parser	nimja/parser.html	module nimja/parser		0
+nim	compileTemplateStr	nimja/parser.html#compileTemplateStr.m,typed,staticstring,staticbool,staticstring,untyped	macro compileTemplateStr(str: typed; baseDir: static string = "";\n                   iter: static bool = false; varname: static string = "result";\n                   context: untyped = nil): untyped		787
+nim	compileTemplateFile	nimja/parser.html#compileTemplateFile.m,staticstring,staticstring,staticbool,staticstring,untyped	macro compileTemplateFile(path: static string; baseDir: static string = "";\n                    iter: static bool = false;\n                    varname: static string = "result"; context: untyped = nil): untyped		833
+nim	tmpls	nimja/parser.html#tmpls.m,staticstring,staticstring,untyped	macro tmpls(str: static string; baseDir: static string = ""; context: untyped = nil): string		881
+nim	tmplf	nimja/parser.html#tmplf.m,staticstring,staticstring,untyped	macro tmplf(str: static string; baseDir: static string = ""; context: untyped = nil): string		908
