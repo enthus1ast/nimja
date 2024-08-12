@@ -1,0 +1,2 @@
+{%- importnimja procmodule/importInChild/macros.nimja -%}
+{%- block cont -%}{%- endblock cont -%}

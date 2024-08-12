@@ -1,0 +1,5 @@
+{% extends procmodule/importInChild/master_template.nimja %}
+{%- importnimja procmodule/importInChild/macros.nimja -%}
+{%- block cont -%}
+{{- foo() -}}
+{%- endblock cont -%}
