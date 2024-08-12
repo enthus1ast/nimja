@@ -284,7 +284,7 @@ compileTemplateStr
 
 ```nim
 proc myRenderProc(someParam: string): string =
-  compileTemplateStr("some nimja code {{someParam}}")
+  compileTemplateStr("some nimja code {{someParam}}", baseDir = getScriptDir())
 
 echo myRenderProc("test123")
 ```
@@ -296,6 +296,8 @@ iteratior section.
 `compileTemplateString` (also `compileTemplateFile`) generates the body of a proc/iterator so it generates
 assign calls to a variable. The default is `result`.
 If you want it to use another variable set it in `varname`
+
+`baseDir` is needed when you want to import/extend templates!
 
 A context can be supplied to the `compileTemplateString` (also `compileTemplateFile`), to override variable names:
 
@@ -474,6 +476,9 @@ template and therefore can be included.
 
 This way you create reusable template blocks to use all over your webpage.
 
+(Since Nimja 0.9.0) If you import other templates, make sure to use the `baseDir` param with 
+`tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`.
+
 partials/_user.nimja:
 ```twig
 <div class="col-3">
@@ -501,6 +506,8 @@ a child template can extend a master template.
 So that placeholder blocks in the master are filled
 with content from the child.
 
+(Since Nimja 0.9.0) If you extend other templates, make sure to use the `baseDir` param with 
+`tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`.
 
 partials/_master.nimja
 ```twig
@@ -1113,14 +1120,16 @@ Changelog
 - 0.9.0
   - BREAKING CHANGE!
   - in order to fix #15 & #89 and to enable nimja components imported from other modules,
-    all proc (`tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`) got an `baseDir` param:
+    all proc (`tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`) got a `baseDir` param:
     ```
         compileTemplateStr("""{{importnimja "some/template.nimja"}}""", baseDir = getScriptDir())
         tmpls("""{{importnimja "some/template.nimja"}}""", baseDir = getScriptDir())
         compileTemplateFile("some/template.nimja", baseDir = getScriptDir())
         tmpls("some/template.nimja", baseDir = getScriptDir())
     ```
-    The use of `tmplf(getScriptDir() / "foo.nimja")` is discourage. It could still work in some cirumstances though.
+    The use of `tmplf(getScriptDir() / "foo.nimja")` is discourage, use  `tmplf("foo.nimja", baseDir = getScriptDir())` instead. 
+    The old way could still work in some cirumstances though. 
+    But its neccesary if you plan to import your nimja template code into other code.
 - 0.8.7
   - Removed unused `NImport`.
   - Error on uneven `when` blocks.
