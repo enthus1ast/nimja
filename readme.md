@@ -284,7 +284,7 @@ compileTemplateStr
 
 ```nim
 proc myRenderProc(someParam: string): string =
-  compileTemplateStr("some nimja code {{someParam}}")
+  compileTemplateStr("some nimja code {{someParam}}", baseDir = getScriptDir())
 
 echo myRenderProc("test123")
 ```
@@ -296,6 +296,8 @@ iteratior section.
 `compileTemplateString` (also `compileTemplateFile`) generates the body of a proc/iterator so it generates
 assign calls to a variable. The default is `result`.
 If you want it to use another variable set it in `varname`
+
+`baseDir` is needed when you want to import/extend templates!
 
 A context can be supplied to the `compileTemplateString` (also `compileTemplateFile`), to override variable names:
 
