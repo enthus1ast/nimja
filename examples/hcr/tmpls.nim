@@ -8,17 +8,17 @@ import times
 import os
 import shared # for the TestObj
 
-proc index*(): string {.exportc, dynlib.} =
+proc myindex*(): string {.exportc, dynlib.} =
   var foos =  1351
-  compileTemplateFile(getScriptDir() / "templates/index.nimja")
+  compileTemplateFile("templates/index.nimja", baseDir = getScriptDir())
 
 proc detail*(id: string): string {.exportc, dynlib.} =
-  compileTemplateFile(getScriptDir() / "templates/detail.nimja")
+  compileTemplateFile("templates/detail.nimja", baseDir = getScriptDir())
 
 proc error*(a: seq[string]): string {.exportc, dynlib.} =
   var a = a
   a.add("foo")
-  compileTemplateFile(getScriptDir() / "templates/error.nimja")
+  compileTemplateFile("templates/error.nimja", baseDir = getScriptDir())
 
 proc about*(a: int, b: string): string {.exportc, dynlib.} =
   compileTemplateStr("""
@@ -29,7 +29,7 @@ proc about*(a: int, b: string): string {.exportc, dynlib.} =
   : {{b}}<br>
   {% endblock %}
 
-  """)
+  """, baseDir = getScriptDir())
 
 proc oop*(to: TestObj): string {.exportc, dynlib.} =
   compileTemplateStr("""
@@ -38,6 +38,5 @@ proc oop*(to: TestObj): string {.exportc, dynlib.} =
   <h1>TestObj</h1>
     {{to.foo}}
   {% endblock %}
-
-  """)
+  """, baseDir = getScriptDir())
 

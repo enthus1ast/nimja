@@ -10,15 +10,15 @@ type
     ProcIS = proc (ii: int, ss: string): string {.gcsafe, stdcall.}
 
 # We watch the templates folder for change (and also tmpls.nim implicitly)
-var cw = newChangeWatcher(@[getAppDir() / "templates/"])
+let cw = newChangeWatcher(@[getAppDir() / "templates/"])
+cw.ccparams = "  "
 asyncCheck cw.recompile() # if a change is detected we recompile tmpls.nim
 
-var to = TestObj()
-to.foo = "foo!"
+const to = TestObj(foo: "foo!")
 
 routes:
   get "/":
-    resp dyn(ProcNoParam, "index")
+    resp dyn(ProcNoParam, "myindex")
 
   get "/id/@id":
     resp dyn(ProcId, "detail", @"id")
