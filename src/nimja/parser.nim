@@ -826,7 +826,6 @@ macro compileTemplateStr*(str: typed, baseDir: static string = "", iter: static 
   nwtVarname = varname
   nwtIter = iter
   nwtBaseDir = baseDir
-  echo "inCompileTemplateStr: ", nwtBaseDir
   tmplsMacroImpl()
   doCompile(str.strVal, result)
 

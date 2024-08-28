@@ -1,15 +1,16 @@
-Loop	nimja/nimjautils.html#Loop	nimjautils: Loop	
-Loopable	nimja/nimjautils.html#Loopable	nimjautils: Loopable	
-allowedCharsInSlug	nimja/nimjautils.html#allowedCharsInSlug	nimjautils: allowedCharsInSlug	
-cycle	nimja/nimjautils.html#cycle,Loop,openArray[T]	nimjautils: cycle[T](loop: Loop; elems: openArray[T]): T	
-loop	nimja/nimjautils.html#loop.i,openArray[T]	nimjautils: loop[T](a: openArray[T]): tuple[loop: Loop[T], val: T]	
-`~`	nimja/nimjautils.html#~.t,untyped,untyped	nimjautils: `~`(aa, bb: untyped): string	
-includeRaw	nimja/nimjautils.html#includeRaw,string	nimjautils: includeRaw(path: string): string	
-includeRawStatic	nimja/nimjautils.html#includeRawStatic,staticstring	nimjautils: includeRawStatic(path: static string): string	
-includeStaticAsDataurl	nimja/nimjautils.html#includeStaticAsDataurl,staticstring,staticstring	nimjautils: includeStaticAsDataurl(path: static string; mimeOverride: static string = &quot;&quot;): string	
-truncate	nimja/nimjautils.html#truncate,string,Natural,string	nimjautils: truncate(str: string; num: Natural; preserveWords = true; suf = &quot;...&quot;): string	
-nl2br	nimja/nimjautils.html#nl2br,string	nimjautils: nl2br(str: string; keepNl = true): string	
-spaceless	nimja/nimjautils.html#spaceless,string	nimjautils: spaceless(str: string): string	
-slugify	nimja/nimjautils.html#slugify,string,string	nimjautils: slugify(str: string; sperator = &quot;-&quot;; allowedChars = allowedCharsInSlug): string	
-`?`	nimja/nimjautils.html#?.t,untyped,untyped	nimjautils: `?`(con, body: untyped): untyped	
-`|`	nimja/nimjautils.html#|.m,untyped,untyped	nimjautils: `|`(aa, bb: untyped): string	
+nimTitle	nimjautils	nimja/nimjautils.html	module nimja/nimjautils		0
+nim	Loop	nimja/nimjautils.html#Loop	object Loop		11
+nim	Loopable	nimja/nimjautils.html#Loopable	type Loopable		21
+nim	allowedCharsInSlug	nimja/nimjautils.html#allowedCharsInSlug	const allowedCharsInSlug		26
+nim	cycle	nimja/nimjautils.html#cycle,Loop,openArray[T]	proc cycle[T](loop: Loop; elems: openArray[T]): T		28
+nim	loop	nimja/nimjautils.html#loop.i,openArray[T]	iterator loop[T](a: openArray[T]): tuple[loop: Loop[T], val: T]		39
+nim	`~`	nimja/nimjautils.html#~.t,untyped,untyped	template `~`(aa, bb: untyped): string		78
+nim	includeRaw	nimja/nimjautils.html#includeRaw,string	proc includeRaw(path: string): string		86
+nim	includeRawStatic	nimja/nimjautils.html#includeRawStatic,staticstring	proc includeRawStatic(path: static string): string		93
+nim	includeStaticAsDataurl	nimja/nimjautils.html#includeStaticAsDataurl,staticstring,staticstring	proc includeStaticAsDataurl(path: static string; mimeOverride: static string = ""): string		101
+nim	truncate	nimja/nimjautils.html#truncate,string,Natural,string	proc truncate(str: string; num: Natural; preserveWords = true; suf = "..."): string		113
+nim	nl2br	nimja/nimjautils.html#nl2br,string	proc nl2br(str: string; keepNl = true): string		132
+nim	spaceless	nimja/nimjautils.html#spaceless,string	proc spaceless(str: string): string		143
+nim	slugify	nimja/nimjautils.html#slugify,string,string	proc slugify(str: string; sperator = "-"; allowedChars = allowedCharsInSlug): string		162
+nim	`?`	nimja/nimjautils.html#?.t,untyped,untyped	template `?`(con, body: untyped): untyped		174
+nim	`|`	nimja/nimjautils.html#|.m,untyped,untyped	macro `|`(aa, bb: untyped): string		185

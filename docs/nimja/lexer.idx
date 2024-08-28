@@ -1,8 +1,9 @@
-NwtNone	nimja/lexer.html#NwtNone	NwtTokenKind.NwtNone	
-NwtString	nimja/lexer.html#NwtString	NwtTokenKind.NwtString	
-NwtComment	nimja/lexer.html#NwtComment	NwtTokenKind.NwtComment	
-NwtEval	nimja/lexer.html#NwtEval	NwtTokenKind.NwtEval	
-NwtVariable	nimja/lexer.html#NwtVariable	NwtTokenKind.NwtVariable	
-NwtTokenKind	nimja/lexer.html#NwtTokenKind	lexer: NwtTokenKind	
-Token	nimja/lexer.html#Token	lexer: Token	
-lex	nimja/lexer.html#lex.i,string	lexer: lex(buf: string): Token	
+nimTitle	lexer	nimja/lexer.html	module nimja/lexer		0
+nim	NwtNone	nimja/lexer.html#NwtNone	NwtTokenKind.NwtNone		4
+nim	NwtString	nimja/lexer.html#NwtString	NwtTokenKind.NwtString		4
+nim	NwtComment	nimja/lexer.html#NwtComment	NwtTokenKind.NwtComment		4
+nim	NwtEval	nimja/lexer.html#NwtEval	NwtTokenKind.NwtEval		4
+nim	NwtVariable	nimja/lexer.html#NwtVariable	NwtTokenKind.NwtVariable		4
+nim	NwtTokenKind	nimja/lexer.html#NwtTokenKind	enum NwtTokenKind		4
+nim	Token	nimja/lexer.html#Token	object Token		10
+nim	lex	nimja/lexer.html#lex.i,string	iterator lex(buf: string): Token		136

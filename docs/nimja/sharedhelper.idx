@@ -1,2 +1,3 @@
-read	nimja/sharedhelper.html#read.t,untyped	sharedhelper: read(path: untyped): untyped	
-getScriptDir	nimja/sharedhelper.html#getScriptDir.t	sharedhelper: getScriptDir(): string	
+nimTitle	sharedhelper	nimja/sharedhelper.html	module nimja/sharedhelper		0
+nim	read	nimja/sharedhelper.html#read.t,untyped	template read(path: untyped): untyped		3
+nim	getScriptDir	nimja/sharedhelper.html#getScriptDir.t	template getScriptDir(): string		14
