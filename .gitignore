@@ -49,3 +49,11 @@ tests/basic/theModule/theModule
 tests/bugs/test_nwt_bug4_debug
 examples/prologue/serverPrologue
 examples/prologue/serverJester
+examples/dynlib/libtemplates.so
+examples/dynlib/runner
+examples/hcr/hcrex
+examples/hcr/libtmpls.so
+examples/hcr/tmpls
+src/nimja/hcrutils
+examples/fromReadme/server
+tests/basic/test_variable_escape
