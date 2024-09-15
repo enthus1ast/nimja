@@ -88,7 +88,7 @@ when defined(dumpNwtAstPretty):
 proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc astAst(tokens: seq[NwtNode]): seq[NimNode]
-proc compile(str: string): seq[NwtNode]
+proc compile(str: string, blockToRender: string = ""): seq[NwtNode]
 proc astAstOne(token: NwtNode): NimNode
 
 func mustStrip(token: Token): tuple[token: Token, stripPre, stripPost: bool] =
@@ -294,7 +294,7 @@ converter singleNwtNodeToSeq(nwtNode: NwtNode): seq[NwtNode] =
 
 proc importNimja(nodes: var seq[NwtNode], path: string) =
   var str = read(nwtBaseDir / path)
-  nodes = compile(str)
+  nodes = compile(str, blockToRender = "") # TODO
 
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     let fsToken = fsTokens[pos]
@@ -703,14 +703,26 @@ proc fillBlocks(nodes: seq[NwtNode]): seq[NwtNode] =
     else:
       result.add node
 
-proc compile(str: string): seq[NwtNode] =
+proc compile(str: string, blockToRender: string = ""): seq[NwtNode] =
   var templateCache = initDeque[seq[NwtNode]]()
   extend(str, templateCache)
   for idx, tmp in enumerate(templateCache):
     for nwtn in tmp.recursiveFindAllBlocks():
+      # echo nwtn.blockName ## HERE ## TODO remove
       blocks[nwtn.blockName] = nwtn.blockBody
-  var base = templateCache[0]
-  return fillBlocks(base).condenseStrings() # ast condense after blocks are filled
+  if blockToRender == "":
+    var base = templateCache[0]
+    # return fillBlocks(base).condenseStrings() # ast condense after blocks are filled # TODO remove
+    result = fillBlocks(base).condenseStrings() # ast condense after blocks are filled
+  else:
+    if blocks.contains(blockToRender):
+      result = blocks[blockToRender].condenseStrings()
+    else:
+      # {.error: "Block '" & blockToRender & "' is not known."}
+      echo "Block '" & blockToRender & "' is not known." # TODO how communicate the error?
+      # return # TODO should we return here or quit?
+      quit()
+  # echo result
 
 
 proc generatePreallocatedStringDef(len: int): NimNode =
@@ -739,9 +751,9 @@ proc generatePreallocatedStringDef(len: int): NimNode =
   )
 
 
-template doCompile(str: untyped, res = newStmtList()): untyped =
+template doCompile(str: untyped, blockToRender: string = "", res = newStmtList()): untyped =
   guessedStringLen = 0
-  let nwtNodes = compile(str)
+  let nwtNodes = compile(str, blockToRender)
   when defined(dumpNwtAst): echo nwtNodes
   when defined(dumpNwtAstPretty): echo nwtNodes.pretty
   result = res
@@ -785,7 +797,7 @@ template tmplsMacroImpl() =
     result.add alias
 
 macro compileTemplateStr*(str: typed, baseDir: static string = "", iter: static bool = false,
-    varname: static string = "result", context: untyped = nil): untyped =
+    varname: static string = "result", blockToRender: static string = "", context: untyped = nil): untyped =
   ## Compiles a Nimja template from a string.
   ##
   ## .. code-block:: Nim
@@ -827,10 +839,10 @@ macro compileTemplateStr*(str: typed, baseDir: static string = "", iter: static 
   nwtIter = iter
   nwtBaseDir = baseDir
   tmplsMacroImpl()
-  doCompile(str.strVal, result)
+  doCompile(str.strVal, blockToRender, result)
 
 macro compileTemplateFile*(path: static string, baseDir: static string = "", iter: static bool = false,
-    varname: static string = "result",  context: untyped = nil): untyped =
+    varname: static string = "result", blockToRender: static string = "",  context: untyped = nil): untyped =
   ## Compiles a Nimja template from a file.
   ##
   ## .. code-block:: nim
@@ -870,7 +882,7 @@ macro compileTemplateFile*(path: static string, baseDir: static string = "", ite
   nwtBaseDir = baseDir
   let str = loadCacheFile(path)
   tmplsMacroImpl()
-  doCompile(str, result)
+  doCompile(str, blockToRender, result)
 
 template tmplsImpl(str: static string, baseDir: static string): string =
   var nimjaTmplsVar: string
