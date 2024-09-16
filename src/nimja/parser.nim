@@ -88,7 +88,7 @@ when defined(dumpNwtAstPretty):
 proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc astAst(tokens: seq[NwtNode]): seq[NimNode]
-proc compile(str: string): seq[NwtNode]
+proc compile(str: string, blockToRender: string = ""): seq[NwtNode]
 proc astAstOne(token: NwtNode): NimNode
 
 func mustStrip(token: Token): tuple[token: Token, stripPre, stripPost: bool] =
@@ -292,9 +292,9 @@ proc parseSsScope(fsTokens: seq[FsNode], pos: var int): NwtNode =
 converter singleNwtNodeToSeq(nwtNode: NwtNode): seq[NwtNode] =
   return @[nwtNode]
 
-proc importNimja(nodes: var seq[NwtNode], path: string) =
+proc importNimja(nodes: var seq[NwtNode], path: string, blockToRender = "") =
   var str = read(nwtBaseDir / path)
-  nodes = compile(str)
+  nodes = compile(str, blockToRender)
 
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     let fsToken = fsTokens[pos]
@@ -330,7 +330,22 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
       return parseSsExtends(fsTokens, pos)
     of FsImport:
       pos.inc
-      importNimja(result, fsToken.value.strip(true, true, {'"'}))
+      let parts = fsToken.value.split(" ")
+      let (file, blockToRender) =
+        if parts.len == 2:
+          (
+            parts[0].strip(true, true, {'"'}),
+            parts[1].strip(true, true, {'"'})
+          )
+        else:
+          (
+            fsToken.value.strip(true, true, {'"'}),
+            ""
+          )
+      echo file
+      echo blockToRender
+      # importNimja(result, fsToken.value.strip(true, true, {'"'}))
+      importNimja(result, file, blockToRender = blockToRender)
     else: raise newException(ValueError, "[SS] NOT IMPL: " & $fsToken)
 
 
@@ -703,15 +718,24 @@ proc fillBlocks(nodes: seq[NwtNode]): seq[NwtNode] =
     else:
       result.add node
 
-proc compile(str: string): seq[NwtNode] =
+proc compile(str: string, blockToRender: string = ""): seq[NwtNode] =
   var templateCache = initDeque[seq[NwtNode]]()
   extend(str, templateCache)
   for idx, tmp in enumerate(templateCache):
     for nwtn in tmp.recursiveFindAllBlocks():
+      # echo nwtn.blockName ## HERE ## TODO remove
       blocks[nwtn.blockName] = nwtn.blockBody
-  var base = templateCache[0]
-  return fillBlocks(base).condenseStrings() # ast condense after blocks are filled
-
+  if blockToRender == "":
+    var base = templateCache[0]
+    result = fillBlocks(base).condenseStrings() # ast condense after blocks are filled
+  else:
+    if blocks.contains(blockToRender):
+      result = fillBlocks(blocks[blockToRender]).condenseStrings()
+    else:
+      echo "Block '" & blockToRender & "' is not known." # TODO how communicate the error?
+      # return # TODO should we return here or quit?
+      quit()
+  # echo result
 
 proc generatePreallocatedStringDef(len: int): NimNode =
   # dumpAstGen:
@@ -739,9 +763,9 @@ proc generatePreallocatedStringDef(len: int): NimNode =
   )
 
 
-template doCompile(str: untyped, res = newStmtList()): untyped =
+template doCompile(str: untyped, blockToRender: string = "", res = newStmtList()): untyped =
   guessedStringLen = 0
-  let nwtNodes = compile(str)
+  let nwtNodes = compile(str, blockToRender)
   when defined(dumpNwtAst): echo nwtNodes
   when defined(dumpNwtAstPretty): echo nwtNodes.pretty
   result = res
@@ -784,13 +808,14 @@ template tmplsMacroImpl() =
     alias.add body
     result.add alias
 
-macro compileTemplateStr*(str: typed, baseDir: static string = "", iter: static bool = false,
-    varname: static string = "result", context: untyped = nil): untyped =
+macro compileTemplateStr*(str: typed, baseDir: static string = "", 
+    blockToRender: static string = "", iter: static bool = false,
+    varname: static string = "result",  context: untyped = nil): untyped =
   ## Compiles a Nimja template from a string.
   ##
   ## .. code-block:: Nim
   ##  proc yourFunc(yourParams: bool): string =
-  ##    compileTemplateString("{%if yourParams%}TRUE{%endif%}")
+  ##    compileTemplateStr("{%if yourParams%}TRUE{%endif%}")
   ##
   ##  echo yourFunc(true)
   ##
@@ -800,7 +825,7 @@ macro compileTemplateStr*(str: typed, baseDir: static string = "", iter: static 
   ##
   ## .. code-block:: nim
   ##  iterator yourIter(yourParams: bool): string =
-  ##    compileTemplateString("{%for idx in 0 .. 100%}{{idx}}{%endfor%}", iter = true)
+  ##    compileTemplateStr("{%for idx in 0 .. 100%}{{idx}}{%endfor%}", iter = true)
   ##
   ##  for elem in yourIter(true):
   ##    echo elem
@@ -808,7 +833,7 @@ macro compileTemplateStr*(str: typed, baseDir: static string = "", iter: static 
   ## `varname` specifies the variable that is appended to.
   ##
   ##
-  ## A context can be supplied to the `compileTemplateString` (also `compileTemplateFile`), to override variable names:
+  ## A context can be supplied to the `compileTemplateStr` (also `compileTemplateFile`), to override variable names:
   ##
   ## .. code-block:: nim
   ##   block:
@@ -819,7 +844,7 @@ macro compileTemplateStr*(str: typed, baseDir: static string = "", iter: static 
   ##     var rax = Rax(aa: "aaaa", bb: 13.37)
   ##     var foo = 123
   ##     proc render(): string =
-  ##       compileTemplateString("{{node.bb}}{{baa}}", {node: rax, baa: foo})
+  ##       compileTemplateStr("{{node.bb}}{{baa}}", {node: rax, baa: foo})
   ##
 
   # Please note, currently the context **cannot be** procs/funcs etc.
@@ -827,10 +852,11 @@ macro compileTemplateStr*(str: typed, baseDir: static string = "", iter: static 
   nwtIter = iter
   nwtBaseDir = baseDir
   tmplsMacroImpl()
-  doCompile(str.strVal, result)
+  doCompile(str.strVal, blockToRender, result)
 
-macro compileTemplateFile*(path: static string, baseDir: static string = "", iter: static bool = false,
-    varname: static string = "result",  context: untyped = nil): untyped =
+macro compileTemplateFile*(path: static string, baseDir: static string = "", 
+    blockToRender: static string = "", iter: static bool = false,
+    varname: static string = "result", context: untyped = nil): untyped =
   ## Compiles a Nimja template from a file.
   ##
   ## .. code-block:: nim
@@ -852,7 +878,7 @@ macro compileTemplateFile*(path: static string, baseDir: static string = "", ite
   ##
   ## `varname` specifies the variable that is appended to.
   ##
-  ## A context can be supplied to the `compileTemplateFile` (also `compileTemplateString`), to override variable names:
+  ## A context can be supplied to the `compileTemplateFile` (also `compileTemplateStr`), to override variable names:
   ##
   ## .. code-block:: nim
   ##   block:
@@ -870,14 +896,15 @@ macro compileTemplateFile*(path: static string, baseDir: static string = "", ite
   nwtBaseDir = baseDir
   let str = loadCacheFile(path)
   tmplsMacroImpl()
-  doCompile(str, result)
+  doCompile(str, blockToRender, result)
 
-template tmplsImpl(str: static string, baseDir: static string): string =
+template tmplsImpl(str: static string, baseDir: static string, blockToRender: static string): string =
   var nimjaTmplsVar: string
-  compileTemplateStr(str, baseDir, varname = astToStr nimjaTmplsVar)
+  compileTemplateStr(str, baseDir, blockToRender, varname = astToStr nimjaTmplsVar)
   nimjaTmplsVar
 
-macro tmpls*(str: static string, baseDir: static string = "", context: untyped = nil): string =
+macro tmpls*(str: static string, baseDir: static string = "", 
+    blockToRender: static string = "", context: untyped = nil): string =
   ## Compiles a Nimja template string and returns directly.
   ## Can be used inline, without a wrapper proc.
   ##
@@ -897,14 +924,14 @@ macro tmpls*(str: static string, baseDir: static string = "", context: untyped =
   ##
   tmplsMacroImpl()
   result.add quote do:
-    tmplsImpl(`str`, `baseDir`)
+    tmplsImpl(`str`, `baseDir`, `blockToRender`)
 
-template tmplfImpl(path: static string, baseDir: static string = "",): string =
+template tmplfImpl(path: static string, baseDir: static string = "", blockToRender: static string = ""): string =
   var nimjaTmplfVar: string
-  compileTemplateFile(path, baseDir, varname = astToStr nimjaTmplfVar)
+  compileTemplateFile(path, baseDir, blockToRender, varname = astToStr nimjaTmplfVar)
   nimjaTmplfVar
 
-macro tmplf*(str: static string, baseDir: static string = "", context: untyped = nil): string =
+macro tmplf*(str: static string, baseDir: static string = "", blockToRender: static string = "", context: untyped = nil): string =
   ## Compiles a Nimja template file and returns directly.
   ## Can be used inline, without a wrapper proc.
   ##
@@ -923,4 +950,4 @@ macro tmplf*(str: static string, baseDir: static string = "", context: untyped =
   ##
   tmplsMacroImpl()
   result.add quote do:
-    tmplfImpl(`str`, `baseDir`)
+    tmplfImpl(`str`, `baseDir`, `blockToRender`)

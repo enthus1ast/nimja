@@ -159,13 +159,13 @@ func spaceless*(str: string): string =
       else: result.add ch
     pos.inc
 
-proc slugify*(str: string, sperator = "-", allowedChars = allowedCharsInSlug): string =
+proc slugify*(str: string, seperator = "-", allowedChars = allowedCharsInSlug): string =
   ## converts any string to an url friendly one.
   ## Removes any special chars and replaces non ASCII runes to their ASCII representation.
   var cleaned = str.unidecode().strip(true, true).toLower()
   for ch in cleaned:
     if ch in Whitespace:
-      result.add sperator
+      result.add seperator 
     elif ch in allowedChars:
       result.add ch
     else:

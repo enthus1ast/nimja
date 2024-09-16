@@ -134,6 +134,7 @@ proc lexStr(buf: string, pos: var int, line: var int): LexReturn =
 
 
 iterator lex*(buf: string): Token =
+  ## Lexes the string in `buf` yields `Token`
   var line = 0
   var pos = 0
   var lexReturn: LexReturn

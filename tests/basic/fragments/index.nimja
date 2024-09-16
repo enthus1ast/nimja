@@ -1,0 +1,5 @@
+{% extends fragments/base.nimja %}
+{% block title %}title from index{% endblock %}
+{% block content %}content from index{% endblock %}
+
+

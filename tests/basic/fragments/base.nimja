@@ -1,0 +1,4 @@
+header
+{% block title %}title to replace{% endblock %}
+{% block content %}content to replace{% endblock %}
+footer
