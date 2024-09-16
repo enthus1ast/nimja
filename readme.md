@@ -479,6 +479,9 @@ This way you create reusable template blocks to use all over your webpage.
 (Since Nimja 0.9.0) If you import other templates, make sure to use the `baseDir` param with 
 `tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`.
 
+(Since Nimja 0.9.1) You can also use the [template fragment](#template fragment) feature.
+
+
 partials/_user.nimja:
 ```twig
 <div class="col-3">
@@ -720,6 +723,102 @@ To fix this you can annotate them with "-":
 ###############
 ```
 
+Template Fragments
+==================
+
+(Since Nimja 0.9.1)
+
+All the render procs (`tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`).
+Have a parameter `blockToRender`.
+
+If set only this block of a larger template is rendered.
+
+Imagine this example where we use htmx:
+
+page.nimja
+```
+<html>
+    <header>
+        <script src="https://unpkg.com/htmx.org@2.0.2"></script>
+    </header>
+    <body>
+        {% block content %}
+            <h1>Hello</h1>
+            {% block button %}
+              <div id="buttons">
+                <button hx-post="/clicked/up" hx-target="#buttons" hx-swap="outerHTML" {% if button == 10%}disabled{% endif %} >
+                  UP Click Me {{button}}
+                </button>
+                {%- if button == 10%}you klicked enough!!{% endif -%}
+              </div>
+            {% endblock %}
+        {% endblock %}
+    </body>
+</html>
+```
+
+
+When you render the whole page, everything is rendered.
+Good for the first visit of the site.
+
+`tmplf("page.nimja", baseDir = getScriptDir())`
+
+When you later want to update the button with htmx, you need only the "block button"
+
+`tmplf("page.nimja", blockToRender = "button" baseDir = getScriptDir())`
+
+then only this part is rendered:
+
+```
+{% block button %}
+  <div id="buttons">
+    <button hx-post="/clicked/up" hx-target="#buttons" hx-swap="outerHTML" {% if button == 10%}disabled{% endif %} >
+      UP Click Me {{button}}
+    </button>
+    {%- if button == 10%}you klicked enough!!{% endif -%}
+  </div>
+{% endblock %} 
+```
+
+You can also use this to get rid of some of your partials templates.
+For example, with this you can combine partials and extended templates:
+
+user.nimja
+```
+{% extends partials/_base.nimja %}
+{% block content %}
+    Information about the user.
+
+    {% block user %}
+        <div id="user">
+            {{user.firstName}}
+            {{user.lastName}}
+        </div>
+    {% endblock %}
+
+    also visit <a href="/users/">other user</a>!
+{% endblock %}
+
+```
+
+So a "users detail page" would render the whole thing.
+
+```
+tmplf("user.nimja", baseDir = getScriptDir())
+```
+
+But if you want to display a user somewhere else, you can just render the `user` block:
+
+userlist.nimja
+```
+<ul>
+    {% for user in db.getUsers %}
+        <li>
+            {% importnimja "user.nimja" "user" %}
+        </li>
+    {% endfor %}
+</ul>
+```
 
 Nimjautils
 ==========
@@ -1117,6 +1216,10 @@ Changelog
 - 0.?.?
   - Added context to `importnimja`
 ## DONE
+- 0.9.1
+    - Template fragments (good for htmx); Render specific blocks from a template
+        all procs (`tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`)
+        got a "blockToRender" parameter, when set, only the given block is rendered.
 - 0.9.0
   - BREAKING CHANGE!
   - in order to fix #15 & #89 and to enable nimja components imported from other modules,

@@ -55,19 +55,21 @@
     <summary><a class="reference reference-toplevel" href="#17" id="67">Macros</a></summary>
     <ul class="simple simple-toc-section">
       <ul class="simple nested-toc-section">compileTemplateFile
-  <li><a class="reference" href="#compileTemplateFile.m%2Cstaticstring%2Cstaticstring%2Cstaticbool%2Cstaticstring%2Cuntyped" title="compileTemplateFile(path: static string; baseDir: static string = &quot;&quot;;
+  <li><a class="reference" href="#compileTemplateFile.m%2Cstaticstring%2Cstaticstring%2Cstaticbool%2Cstaticstring%2Cstaticstring%2Cuntyped" title="compileTemplateFile(path: static string; baseDir: static string = &quot;&quot;;
                     iter: static bool = false;
-                    varname: static string = &quot;result&quot;; context: untyped = nil): untyped">compileTemplateFile(path: static string; baseDir: static string = &quot;&quot;;
+                    varname: static string = &quot;result&quot;;
+                    blockToRender: static string = &quot;&quot;; context: untyped = nil): untyped">compileTemplateFile(path: static string; baseDir: static string = &quot;&quot;;
                     iter: static bool = false;
-                    varname: static string = &quot;result&quot;; context: untyped = nil): untyped</a></li>
+                    varname: static string = &quot;result&quot;;
+                    blockToRender: static string = &quot;&quot;; context: untyped = nil): untyped</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">compileTemplateStr
-  <li><a class="reference" href="#compileTemplateStr.m%2Ctyped%2Cstaticstring%2Cstaticbool%2Cstaticstring%2Cuntyped" title="compileTemplateStr(str: typed; baseDir: static string = &quot;&quot;;
+  <li><a class="reference" href="#compileTemplateStr.m%2Ctyped%2Cstaticstring%2Cstaticbool%2Cstaticstring%2Cstaticstring%2Cuntyped" title="compileTemplateStr(str: typed; baseDir: static string = &quot;&quot;;
                    iter: static bool = false; varname: static string = &quot;result&quot;;
-                   context: untyped = nil): untyped">compileTemplateStr(str: typed; baseDir: static string = &quot;&quot;;
+                   blockToRender: static string = &quot;&quot;; context: untyped = nil): untyped">compileTemplateStr(str: typed; baseDir: static string = &quot;&quot;;
                    iter: static bool = false; varname: static string = &quot;result&quot;;
-                   context: untyped = nil): untyped</a></li>
+                   blockToRender: static string = &quot;&quot;; context: untyped = nil): untyped</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">tmplf
@@ -75,7 +77,9 @@
 
 </ul>
 <ul class="simple nested-toc-section">tmpls
-  <li><a class="reference" href="#tmpls.m%2Cstaticstring%2Cstaticstring%2Cuntyped" title="tmpls(str: static string; baseDir: static string = &quot;&quot;; context: untyped = nil): string">tmpls(str: static string; baseDir: static string = &quot;&quot;; context: untyped = nil): string</a></li>
+  <li><a class="reference" href="#tmpls.m%2Cstaticstring%2Cstaticstring%2Cstaticstring%2Cuntyped" title="tmpls(str: static string; baseDir: static string = &quot;&quot;;
+      blockToRender: static string = &quot;&quot;; context: untyped = nil): string">tmpls(str: static string; baseDir: static string = &quot;&quot;;
+      blockToRender: static string = &quot;&quot;; context: untyped = nil): string</a></li>
 
 </ul>
 
@@ -104,10 +108,11 @@
   <h1><a class="toc-backref" href="#17">Macros</a></h1>
   <dl class="item">
     <div id="compileTemplateFile-macros-all">
-  <div id="compileTemplateFile.m,staticstring,staticstring,staticbool,staticstring,untyped">
-  <dt><pre><span class="Keyword">macro</span> <a href="#compileTemplateFile.m%2Cstaticstring%2Cstaticstring%2Cstaticbool%2Cstaticstring%2Cuntyped"><span class="Identifier">compileTemplateFile</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">baseDir</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">string</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">;</span>
+  <div id="compileTemplateFile.m,staticstring,staticstring,staticbool,staticstring,staticstring,untyped">
+  <dt><pre><span class="Keyword">macro</span> <a href="#compileTemplateFile.m%2Cstaticstring%2Cstaticstring%2Cstaticbool%2Cstaticstring%2Cstaticstring%2Cuntyped"><span class="Identifier">compileTemplateFile</span></a><span class="Other">(</span><span class="Identifier">path</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">baseDir</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">string</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">;</span>
                           <span class="Identifier">iter</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">bool</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">;</span>
                           <span class="Identifier">varname</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">string</span> <span class="Other">=</span> <span class="StringLit">&quot;result&quot;</span><span class="Other">;</span>
+                          <span class="Identifier">blockToRender</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">string</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">;</span>
                           <span class="Identifier">context</span><span class="Other">:</span> <span class="Identifier">untyped</span> <span class="Other">=</span> <span class="Keyword">nil</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">untyped</span></pre></dt>
   <dd>
     
@@ -136,10 +141,11 @@
 
 </div>
 <div id="compileTemplateStr-macros-all">
-  <div id="compileTemplateStr.m,typed,staticstring,staticbool,staticstring,untyped">
-  <dt><pre><span class="Keyword">macro</span> <a href="#compileTemplateStr.m%2Ctyped%2Cstaticstring%2Cstaticbool%2Cstaticstring%2Cuntyped"><span class="Identifier">compileTemplateStr</span></a><span class="Other">(</span><span class="Identifier">str</span><span class="Other">:</span> <span class="Identifier">typed</span><span class="Other">;</span> <span class="Identifier">baseDir</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">string</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">;</span>
+  <div id="compileTemplateStr.m,typed,staticstring,staticbool,staticstring,staticstring,untyped">
+  <dt><pre><span class="Keyword">macro</span> <a href="#compileTemplateStr.m%2Ctyped%2Cstaticstring%2Cstaticbool%2Cstaticstring%2Cstaticstring%2Cuntyped"><span class="Identifier">compileTemplateStr</span></a><span class="Other">(</span><span class="Identifier">str</span><span class="Other">:</span> <span class="Identifier">typed</span><span class="Other">;</span> <span class="Identifier">baseDir</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">string</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">;</span>
                          <span class="Identifier">iter</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">bool</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">;</span>
                          <span class="Identifier">varname</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">string</span> <span class="Other">=</span> <span class="StringLit">&quot;result&quot;</span><span class="Other">;</span>
+                         <span class="Identifier">blockToRender</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">string</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">;</span>
                          <span class="Identifier">context</span><span class="Other">:</span> <span class="Identifier">untyped</span> <span class="Other">=</span> <span class="Keyword">nil</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">untyped</span></pre></dt>
   <dd>
     
@@ -186,9 +192,9 @@
 
 </div>
 <div id="tmpls-macros-all">
-  <div id="tmpls.m,staticstring,staticstring,untyped">
-  <dt><pre><span class="Keyword">macro</span> <a href="#tmpls.m%2Cstaticstring%2Cstaticstring%2Cuntyped"><span class="Identifier">tmpls</span></a><span class="Other">(</span><span class="Identifier">str</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">baseDir</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">string</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">;</span>
-            <span class="Identifier">context</span><span class="Other">:</span> <span class="Identifier">untyped</span> <span class="Other">=</span> <span class="Keyword">nil</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span></pre></dt>
+  <div id="tmpls.m,staticstring,staticstring,staticstring,untyped">
+  <dt><pre><span class="Keyword">macro</span> <a href="#tmpls.m%2Cstaticstring%2Cstaticstring%2Cstaticstring%2Cuntyped"><span class="Identifier">tmpls</span></a><span class="Other">(</span><span class="Identifier">str</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">baseDir</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">string</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">;</span>
+            <span class="Identifier">blockToRender</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">string</span> <span class="Other">=</span> <span class="StringLit">&quot;&quot;</span><span class="Other">;</span> <span class="Identifier">context</span><span class="Other">:</span> <span class="Identifier">untyped</span> <span class="Other">=</span> <span class="Keyword">nil</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span></pre></dt>
   <dd>
     
     Compiles a Nimja template string and returns directly. Can be used inline, without a wrapper proc.<pre class="listing"><span class="Identifier">echo</span> <span class="Identifier">tmpls</span><span class="Punctuation">(</span><span class="LongStringLit">&quot;&quot;&quot;{% if true %}Is true!{% endif %}&quot;&quot;&quot;</span><span class="Punctuation">)</span></pre><p>A context can be supplied to the template, to override the variable names:</p>
@@ -220,7 +226,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2024-08-12 07:43:26 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2024-09-16 11:01:55 UTC</small>
       </div>
     </div>
   </div>

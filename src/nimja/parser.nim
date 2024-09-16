@@ -292,9 +292,9 @@ proc parseSsScope(fsTokens: seq[FsNode], pos: var int): NwtNode =
 converter singleNwtNodeToSeq(nwtNode: NwtNode): seq[NwtNode] =
   return @[nwtNode]
 
-proc importNimja(nodes: var seq[NwtNode], path: string) =
+proc importNimja(nodes: var seq[NwtNode], path: string, blockToRender = "") =
   var str = read(nwtBaseDir / path)
-  nodes = compile(str, blockToRender = "") # TODO
+  nodes = compile(str, blockToRender)
 
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     let fsToken = fsTokens[pos]
@@ -330,7 +330,22 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
       return parseSsExtends(fsTokens, pos)
     of FsImport:
       pos.inc
-      importNimja(result, fsToken.value.strip(true, true, {'"'}))
+      let parts = fsToken.value.split(" ")
+      let (file, blockToRender) =
+        if parts.len == 2:
+          (
+            parts[0].strip(true, true, {'"'}),
+            parts[1].strip(true, true, {'"'})
+          )
+        else:
+          (
+            fsToken.value.strip(true, true, {'"'}),
+            ""
+          )
+      echo file
+      echo blockToRender
+      # importNimja(result, fsToken.value.strip(true, true, {'"'}))
+      importNimja(result, file, blockToRender = blockToRender)
     else: raise newException(ValueError, "[SS] NOT IMPL: " & $fsToken)
 
 
@@ -716,9 +731,8 @@ proc compile(str: string, blockToRender: string = ""): seq[NwtNode] =
     result = fillBlocks(base).condenseStrings() # ast condense after blocks are filled
   else:
     if blocks.contains(blockToRender):
-      result = blocks[blockToRender].condenseStrings()
+      result = fillBlocks(blocks[blockToRender]).condenseStrings()
     else:
-      # {.error: "Block '" & blockToRender & "' is not known."}
       echo "Block '" & blockToRender & "' is not known." # TODO how communicate the error?
       # return # TODO should we return here or quit?
       quit()
@@ -884,12 +898,13 @@ macro compileTemplateFile*(path: static string, baseDir: static string = "", ite
   tmplsMacroImpl()
   doCompile(str, blockToRender, result)
 
-template tmplsImpl(str: static string, baseDir: static string): string =
+template tmplsImpl(str: static string, baseDir: static string, blockToRender: static string = ""): string =
   var nimjaTmplsVar: string
-  compileTemplateStr(str, baseDir, varname = astToStr nimjaTmplsVar)
+  compileTemplateStr(str, baseDir, varname = astToStr nimjaTmplsVar, blockToRender = blockToRender)
   nimjaTmplsVar
 
-macro tmpls*(str: static string, baseDir: static string = "", context: untyped = nil): string =
+macro tmpls*(str: static string, baseDir: static string = "", 
+    blockToRender: static string = "", context: untyped = nil): string =
   ## Compiles a Nimja template string and returns directly.
   ## Can be used inline, without a wrapper proc.
   ##
@@ -909,7 +924,7 @@ macro tmpls*(str: static string, baseDir: static string = "", context: untyped =
   ##
   tmplsMacroImpl()
   result.add quote do:
-    tmplsImpl(`str`, `baseDir`)
+    tmplsImpl(`str`, `baseDir`, `blockToRender`)
 
 template tmplfImpl(path: static string, baseDir: static string = "",): string =
   var nimjaTmplfVar: string
