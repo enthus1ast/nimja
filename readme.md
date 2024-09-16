@@ -481,6 +481,11 @@ This way you create reusable template blocks to use all over your webpage.
 
 (Since Nimja 0.10.0) You can also use the [template fragment](#template-fragments) feature.
 
+The syntax to load one specific block via importnimja is:
+
+```
+{% importnimja "path/to/file.nima" "theBlockToRender" %}
+```
 
 partials/_user.nimja:
 ```twig
@@ -784,7 +789,7 @@ tmplf("page.nimja", baseDir = getScriptDir())
 When you later want to update the button with htmx, you need only the "block button"
 
 ```nim
-tmplf("page.nimja", blockToRender = "button" baseDir = getScriptDir())
+tmplf("page.nimja", blockToRender = "button", baseDir = getScriptDir())
 ```
 
 then only this part is rendered:
