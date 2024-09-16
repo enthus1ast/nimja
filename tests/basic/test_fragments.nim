@@ -14,9 +14,9 @@ suite "fragments":
         {% block second %}second block{% endblock %}
         BUG
       """, blockToRender = blockToRender)
-
     check "first block" == foo("first")
     check "second block" == foo("second")
+
 
   test "compileTemplateStr with inner block":
     proc foo(blockToRender: static string): string =
@@ -28,6 +28,7 @@ suite "fragments":
     check "first inner block" == foo("first")
     check " inner " == foo("inner")
 
+
   test "compileTemplateStr simple with self":
     proc foo(blockToRender: static string): string =
       compileTemplateStr("""
@@ -37,7 +38,6 @@ suite "fragments":
         {% block inner %} inner {% endblock %}
         BUG
       """, blockToRender = blockToRender)
-
     check "first inner block" == foo("first")
     check "second inner block" == foo("second")
 
@@ -51,7 +51,6 @@ suite "fragments":
         {% block inner %} {{ii}} {% endblock %}
         BUG
       """, blockToRender = blockToRender)
-
     check "first 1337 block" == foo(1337, "first")
     check "second 1337 block" == foo(1337, "second")
 
@@ -59,11 +58,10 @@ suite "fragments":
   test "compileTemplateFile simple":
     proc foo(fileToRender: static string, blockToRender: static string): string =
       compileTemplateFile(fileToRender, blockToRender = blockToRender, baseDir = getScriptDir())
-    check "title from index" == foo("fragments/index.nimja", "title") ## TODO test this error message!
-    check "content from index" == foo("fragments/index.nimja", "content") ## TODO test this error message!
-
-    check "title to replace" == foo("fragments/base.nimja", "title") ## TODO test this error message!
-    check "content to replace" == foo("fragments/base.nimja", "content") ## TODO test this error message!
+    check "title from index" == foo("fragments/index.nimja", "title") 
+    check "content from index" == foo("fragments/index.nimja", "content") 
+    check "title to replace" == foo("fragments/base.nimja", "title") 
+    check "content to replace" == foo("fragments/base.nimja", "content") 
 
 
   test "importnimja simple":
@@ -73,26 +71,26 @@ suite "fragments":
       result = result.strip()
     check "title from index" == foo("fragments/index.nimja", "title")
     check "content from index" == foo("fragments/index.nimja", "content")
-
     check "title to replace" == foo("fragments/base.nimja", "title")
     check "content to replace" == foo("fragments/base.nimja", "content")
 
 
-  # test "tmpls":
-  #   check "title" == tmpls("bug{%block title%}title{%endblock%}bug", baseDir = getScriptDir(), blockToRender = "title")
-  #   echo tmpls("bug{%block title%}title{%endblock%}bug", 
-  #   check "titleinner" == tmpls("bug{%block title%}title{%block inner%}inner{%endblock%}{%endblock%}bug", 
-  #     baseDir = getScriptDir(), blockToRender = "title")
-  #   check "inner" == tmpls("bug{%block title%}title{%block inner%}inner{%endblock%}{%endblock%}bug", 
-  #     baseDir = getScriptDir(), blockToRender = "inner")
+  test "tmpls":
+    check "title" == tmpls("bug{%block title%}title{%endblock%}bug", 
+      baseDir = getScriptDir(), blockToRender = "title")
 
-    # check "title from index" == tmpls("{% importnimja fragments/index.nimja}", baseDir = getScriptDir() , blockToRender = "title")
-    # check "content from index" == foo("fragments/index.nimja", "content")
-    #
-    # check "title to replace" == foo("fragments/base.nimja", "title")
-    # check "content to replace" == foo("fragments/base.nimja", "content")
+    check "titleinner" == tmpls("bug{%block title%}title{%block inner%}inner{%endblock%}{%endblock%}bug", 
+      baseDir = getScriptDir(), blockToRender = "title")
 
-  # test "tmplf":
-  #   discard
+    check "inner" == tmpls("bug{%block title%}title{%block inner%}inner{%endblock%}{%endblock%}bug", 
+      baseDir = getScriptDir(), blockToRender = "inner")
+
+  test "tmplf":
+    check "title from index" == tmplf("fragments/index.nimja", blockToRender = "title", baseDir = getScriptDir()) 
+    check "content from index" == tmplf("fragments/index.nimja", blockToRender = "content", baseDir = getScriptDir()) 
+    check "title to replace" == tmplf("fragments/base.nimja", blockToRender = "title", baseDir = getScriptDir()) 
+    check "content to replace" == tmplf("fragments/base.nimja", blockToRender = "content", baseDir = getScriptDir())      
+    
+
 
 # suite "fragments stolen":

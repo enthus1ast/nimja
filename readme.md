@@ -806,7 +806,7 @@ So a "users detail page" would render the whole thing.
 ```
 tmplf("user.nimja", baseDir = getScriptDir())
 ```
-
+                               
 But if you want to display a user somewhere else, you can just render the `user` block:
 
 userlist.nimja
@@ -1216,10 +1216,9 @@ Changelog
 - 0.?.?
   - Added context to `importnimja`
 ## DONE
-- 0.9.1
-    - Template fragments (good for htmx); Render specific blocks from a template
-        all procs (`tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`)
-        got a "blockToRender" parameter, when set, only the given block is rendered.
+- 0.10.0
+  - Possible Breaking Change.
+  - Template fragments (good for htmx); Render specific blocks from a template all procs (`tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`) got a "blockToRender" parameter, when set, only the given block is rendered.
 - 0.9.0
   - BREAKING CHANGE!
   - in order to fix #15 & #89 and to enable nimja components imported from other modules,

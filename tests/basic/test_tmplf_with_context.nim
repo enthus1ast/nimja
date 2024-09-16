@@ -17,8 +17,8 @@ block:
   var ii = 123
   doAssert "idx: 123, aa: aaaa, nodes: aaaa, 13.37" ==
     tmplf(
-      "tmplf_with_context.nimja", getScriptDir(),
-      {
+      "tmplf_with_context.nimja", baseDir = getScriptDir(),
+      context = {
         idx: ii,
         aa: rax.aa,
         nodes: rax
@@ -32,4 +32,4 @@ block:
        bb: float
    var rax = Rax(aa: "aaaa", bb: 13.37)
    var foo = 123
-   doAssert "13.37123" == tmpls("""{% if node.aa == "aaaa" %}{{node.bb}}{% endif %}{{baa}}""", getScriptDir(), {node: rax, baa: foo})
+   doAssert "13.37123" == tmpls("""{% if node.aa == "aaaa" %}{{node.bb}}{% endif %}{{baa}}""", baseDir = getScriptDir(), context = {node: rax, baa: foo})
