@@ -509,6 +509,8 @@ a child template can extend a master template.
 So that placeholder blocks in the master are filled
 with content from the child.
 
+Basically the "child" chooses its "sourrounding" template.
+
 (Since Nimja 0.9.0) If you extend other templates, make sure to use the `baseDir` param with 
 `tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`.
 
