@@ -8,6 +8,7 @@ Nimja Template Engine
 
 typed and compiled template engine inspired by [jinja2](https://jinja.palletsprojects.com/), [twig](https://twig.symfony.com/) and [onionhammer/nim-templates](https://github.com/onionhammer/nim-templates) for Nim.
 
+[Support Nimja / Buy me a coffie 💌](https://donate.stripe.com/8wMdUqd7ieGdfYIbII)
 
 FEATURES
 ========
