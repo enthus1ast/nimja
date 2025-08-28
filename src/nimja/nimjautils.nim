@@ -201,7 +201,7 @@ proc safe*[T](x: T): HTMLSafeStr =
   ## Mark a string as already escaped and safe to be inserted into
   ## HTML. This filter is useful when `autoEscape = true`.
   ## .. code-block:: Nim
-  ##  {{ "something<b>bold</b>" | safe }}
+  ##  {{ "something&lt;b&gt;bold&lt;/b&gt;" | safe }}
   HTMLSafeStr($x)
 
 template e*[T](x: T): string =
