@@ -8,6 +8,7 @@ import os, mimetypes, uri, tables, macros, std/enumerate
 export uri
 
 type
+  HTMLSafeStr* = distinct string
   Loop*[T] = object
     index*: int ## which element (start from 1)
     index0*: int ## which elemen (start from 0)
@@ -171,6 +172,44 @@ proc slugify*(str: string, seperator = "-", allowedChars = allowedCharsInSlug): 
     else:
       discard
 
+proc htmlEscape*(s: string): string =
+  result = newStringOfCap(s.len + s.len shr 2)
+  for i in 0..len(s)-1:
+    case s[i]
+    of '&': add(result, "&amp;")
+    of '<': add(result, "&lt;")
+    of '>': add(result, "&gt;")
+    of '\"': add(result, "&quot;")
+    of '\'': add(result, "&#39;")
+    else: add(result, s[i])
+
+proc `$`*(str: HTMLSafeStr): string {.borrow.}
+proc add*(x: var string, str: HTMLSafeStr) {.borrow.}
+
+proc htmlEscape*[T](x: T): HTMLSafeStr =
+  ## Convert to string and escape HTML characters (to prevent XSS)
+  ## unless the string has already been escaped.
+  ## This filter is useful when `autoEscape = false` (the default).
+  ## .. code-block:: Nim
+  ##  {{ "something<b>bold</b>" | htmlEscape }}
+  when x is HTMLSafeStr:
+    x
+  else:
+    htmlEscape($x).HTMLSafeStr
+
+proc safe*[T](x: T): HTMLSafeStr =
+  ## Mark a string as already escaped and safe to be inserted into
+  ## HTML. This filter is useful when `autoEscape = true`.
+  ## .. code-block:: Nim
+  ##  {{ "something<b>bold</b>" | safe }}
+  HTMLSafeStr($x)
+
+template e*[T](x: T): string =
+  ## 'htmlEscape' alias.
+  ## .. code-block:: Nim
+  ##  {{ "something<b>bold</b>" | e }}
+  $htmlEscape(x)
+
 template `?`*(con, body: untyped): untyped =
   ## shorthand `if` eg. for toggling html classes.
   ##
@@ -182,7 +221,7 @@ template `?`*(con, body: untyped): untyped =
   else:
     if con: yield body
 
-macro `|`*(aa, bb: untyped): string =
+macro `|`*(aa, bb: untyped): untyped =
   ## 'filter' alias, often used in other template engines.
   ## `a | b` is an alias to `a.b`.
   ## This enables syntax like this:
