@@ -840,6 +840,42 @@ userlist.nimja
         </li>
     {% endfor %}
 </ul>
+
+HTML Escaping and Automatic Escaping
+====================================
+
+You may pass `autoEscape = true` to the template compilation procs to enable automatic HTML escaping for variables.
+
+```nim
+import nimja
+
+proc renderPage() =
+  let someUnsafeHTML = "This contains <b>HTML</b>"
+  compileTemplateStr("""
+  <html>
+    <body>
+      {{ someUnsafeHTML }}
+    </body>
+  </html>
+  """, autoEscape = true)
+```
+
+In auto-escape mode, the `|safe` filter from `nimjautils` may be used to bypass automatic escaping.
+
+If `autoEscape = false` (the default), you can use `|htmlEscape` or the alias `|e` to escape HTML yourself:
+
+```nim
+import nimja
+
+proc renderPage() =
+  let someUnsafeHTML = "This contains <b>acceptable HTML</b>"
+  compileTemplateStr("""
+  <html>
+    <body>
+      {{ someUnsafeHTML|e }}
+    </body>
+  </html>
+  """)
 ```
 
 Nimjautils
@@ -1238,6 +1274,8 @@ Changelog
 - 0.?.?
   - Added context to `importnimja`
 ## DONE
+- 0.11.0
+  - Added `autoEscape` as an option for automatic HTML escaping. Includes `|safe`, `|htmlEscape` and `|e` template filters.
 - 0.10.0
   - Possible Breaking Change.
   - [Template fragments](#template-fragments) (good for htmx); Render specific blocks from a template all procs (`tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`) got a "blockToRender" parameter, when set, only the given block is rendered.
