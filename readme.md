@@ -8,6 +8,7 @@ Nimja Template Engine
 
 typed and compiled template engine inspired by [jinja2](https://jinja.palletsprojects.com/), [twig](https://twig.symfony.com/) and [onionhammer/nim-templates](https://github.com/onionhammer/nim-templates) for Nim.
 
+[Support Nimja / Buy me a coffie 💌](https://donate.stripe.com/8wMdUqd7ieGdfYIbII)
 
 FEATURES
 ========
@@ -145,7 +146,7 @@ index.nimja:
 {% endblock footer %} {# the 'footer' in endblock is completely optional #}
 ```
 
-master.nimja
+partials/_master.nimja
 ```twig
 {#
 
@@ -513,6 +514,8 @@ extends
 a child template can extend a master template.
 So that placeholder blocks in the master are filled
 with content from the child.
+
+Basically the rendered template chooses its "sourrounding" template.
 
 (Since Nimja 0.9.0) If you extend other templates, make sure to use the `baseDir` param with 
 `tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`.
@@ -1281,3 +1284,4 @@ Changelog
 - 0.5.1 Added self variable, to print blocks multiple times
 - 0.5.0 Added hot code reloading.
 - 0.4.2 Added `includeRawStatic` and `includeStaticAsDataurl`
+
