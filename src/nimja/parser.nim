@@ -75,7 +75,8 @@ var cacheNwtNode {.compileTime.}: Table[string, seq[NwtNode]] ## a cache for ren
 var cacheNwtNodeFile {.compileTime.}: Table[Path, string] ## a cache for content of a path
 var nwtIter {.compileTime.} = false
 var nwtVarname {.compileTime.}: string
-var nwtBaseDir {.compileTime.}: string 
+var nwtBaseDir {.compileTime.}: string
+var nwtStrProc {.compileTime.}: string
 var blocks {.compileTime.} : Table[string, seq[NwtNode]]
 var guessedStringLen {.compileTime.} = 0
 
@@ -372,7 +373,7 @@ proc astVariable(token: NwtNode): NimNode =
       newIdentNode("&="),
       newIdentNode(nwtVarname),
       newCall(
-        "$",
+        nwtStrProc,
         varb
       )
     )
@@ -387,11 +388,11 @@ proc astStr(token: NwtNode): NimNode =
     )
   )
 
-func astVariableIter(token: NwtNode): NimNode =
+proc astVariableIter(token: NwtNode): NimNode =
   return nnkStmtList.newTree(
     nnkYieldStmt.newTree(
       newCall(
-        "$",
+        nwtStrProc,
         parseStmt(token.variableBody)
       )
     )
@@ -810,7 +811,8 @@ template tmplsMacroImpl() =
 
 macro compileTemplateStr*(str: typed, baseDir: static string = "", 
     blockToRender: static string = "", iter: static bool = false,
-    varname: static string = "result",  context: untyped = nil): untyped =
+    varname: static string = "result",  context: untyped = nil,
+    autoEscape: static bool = false): untyped =
   ## Compiles a Nimja template from a string.
   ##
   ## .. code-block:: Nim
@@ -832,6 +834,11 @@ macro compileTemplateStr*(str: typed, baseDir: static string = "",
   ##
   ## `varname` specifies the variable that is appended to.
   ##
+  ## When `autoEscape` is `false` (default) you can escape HTML string with
+  ## `{{ thevar|e }}`.
+  ## 
+  ## Set `autoEscape` to `true` to automatically escape HTML strings. Override
+  ## individual variables with `{{ thevar|safe }}`.
   ##
   ## A context can be supplied to the `compileTemplateStr` (also `compileTemplateFile`), to override variable names:
   ##
@@ -851,12 +858,14 @@ macro compileTemplateStr*(str: typed, baseDir: static string = "",
   nwtVarname = varname
   nwtIter = iter
   nwtBaseDir = baseDir
+  nwtStrProc = if autoEscape: "htmlEscape" else: "$"
   tmplsMacroImpl()
   doCompile(str.strVal, blockToRender, result)
 
 macro compileTemplateFile*(path: static string, baseDir: static string = "", 
     blockToRender: static string = "", iter: static bool = false,
-    varname: static string = "result", context: untyped = nil): untyped =
+    varname: static string = "result", context: untyped = nil,
+    autoEscape: static bool = false): untyped =
   ## Compiles a Nimja template from a file.
   ##
   ## .. code-block:: nim
@@ -878,6 +887,12 @@ macro compileTemplateFile*(path: static string, baseDir: static string = "",
   ##
   ## `varname` specifies the variable that is appended to.
   ##
+  ## When `autoEscape` is `false` (default) you can escape HTML string with
+  ## `{{ thevar|e }}`.
+  ## 
+  ## Set `autoEscape` to `true` to automatically escape HTML strings. Override
+  ## individual variables with `{{ thevar|safe }}`.
+  ##
   ## A context can be supplied to the `compileTemplateFile` (also `compileTemplateStr`), to override variable names:
   ##
   ## .. code-block:: nim
@@ -894,6 +909,7 @@ macro compileTemplateFile*(path: static string, baseDir: static string = "",
   nwtVarname = varname
   nwtIter = iter
   nwtBaseDir = baseDir
+  nwtStrProc = if autoEscape: "htmlEscape" else: "$"
   let str = loadCacheFile(path)
   tmplsMacroImpl()
   doCompile(str, blockToRender, result)
