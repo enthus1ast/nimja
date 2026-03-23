@@ -37,4 +37,6 @@ suite "case":
     isNothing = false
     check "something" == tmplf("case" / "case2.nimja", baseDir = getScriptDir(), context = {ee: ddd})
 
-
+  test "no whitespace control":
+    let x = 0
+    check "zero\n" == tmplf("case" / "noWhitespaceControl.nimja", baseDir = getScriptDir())

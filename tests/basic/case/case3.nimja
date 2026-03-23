@@ -1,5 +1,5 @@
 {%- case ee -%}
-{%- of Foo.aaa -%}
+{%- of Foo.aaa-%}
   AAA
 {%- of bbb -%}
   BBB

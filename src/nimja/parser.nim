@@ -181,6 +181,9 @@ proc parseSsCase(fsTokens: seq[FsNode], pos: var int): NwtNode =
       pos.inc
       result = NwtNode(kind: NwtNodeKind.NCase)
       result.caseStmt = elem.value
+      let nextElem = fsTokens[pos]
+      if nextElem.kind == FsStr and nextElem.value.isEmptyOrWhitespace:
+        pos.inc
     of FsOf:
       pos.inc
       result.nnCaseOf.add NwtNode(kind: NCaseOf, caseOfStmt: elem.value)
