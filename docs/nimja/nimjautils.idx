@@ -1,4 +1,4 @@
-nimTitle	nimjautils	nimja/nimjautils.html	module nimja/nimjautils		0
+nimTitle	nimjautils	nimja/nimjautils.html	module src/nimja/nimjautils		0
 nim	Loop	nimja/nimjautils.html#Loop	object Loop		11
 nim	Loopable	nimja/nimjautils.html#Loopable	type Loopable		21
 nim	allowedCharsInSlug	nimja/nimjautils.html#allowedCharsInSlug	const allowedCharsInSlug		26
@@ -11,6 +11,6 @@ nim	includeStaticAsDataurl	nimja/nimjautils.html#includeStaticAsDataurl,staticst
 nim	truncate	nimja/nimjautils.html#truncate,string,Natural,string	proc truncate(str: string; num: Natural; preserveWords = true; suf = "..."): string		113
 nim	nl2br	nimja/nimjautils.html#nl2br,string	proc nl2br(str: string; keepNl = true): string		132
 nim	spaceless	nimja/nimjautils.html#spaceless,string	proc spaceless(str: string): string		143
-nim	slugify	nimja/nimjautils.html#slugify,string,string	proc slugify(str: string; sperator = "-"; allowedChars = allowedCharsInSlug): string		162
+nim	slugify	nimja/nimjautils.html#slugify,string,string	proc slugify(str: string; seperator = "-"; allowedChars = allowedCharsInSlug): string		162
 nim	`?`	nimja/nimjautils.html#?.t,untyped,untyped	template `?`(con, body: untyped): untyped		174
 nim	`|`	nimja/nimjautils.html#|.m,untyped,untyped	macro `|`(aa, bb: untyped): string		185

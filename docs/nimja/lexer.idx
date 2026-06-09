@@ -1,4 +1,4 @@
-nimTitle	lexer	nimja/lexer.html	module nimja/lexer		0
+nimTitle	lexer	nimja/lexer.html	module src/nimja/lexer		0
 nim	NwtNone	nimja/lexer.html#NwtNone	NwtTokenKind.NwtNone		4
 nim	NwtString	nimja/lexer.html#NwtString	NwtTokenKind.NwtString		4
 nim	NwtComment	nimja/lexer.html#NwtComment	NwtTokenKind.NwtComment		4

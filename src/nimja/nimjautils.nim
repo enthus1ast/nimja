@@ -186,8 +186,10 @@ macro `|`*(aa, bb: untyped): string =
   ## 'filter' alias, often used in other template engines.
   ## `a | b` is an alias to `a.b`.
   ## This enables syntax like this:
+  ##
   ## .. code-block:: Nim
   ##  {{ "foo baa baz" | slugify()}}
+  ##
   result = newStmtList()
   let ss = "(" & (repr aa) & "." & (repr bb) & ")"
   result.add parseStmt(ss)

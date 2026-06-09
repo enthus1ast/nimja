@@ -41,20 +41,20 @@
 <dt><a name="compileTemplateFile" href="#compileTemplateFile"><span>compileTemplateFile:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="parser: macro compileTemplateFile(path: static string; baseDir: static string = &quot;&quot;;
+                    blockToRender: static string = &quot;&quot;;
                     iter: static bool = false;
-                    varname: static string = &quot;result&quot;;
-                    blockToRender: static string = &quot;&quot;; context: untyped = nil): untyped" href="nimja/parser.html#compileTemplateFile.m%2Cstaticstring%2Cstaticstring%2Cstaticbool%2Cstaticstring%2Cstaticstring%2Cuntyped">parser: macro compileTemplateFile(path: static string; baseDir: static string = &quot;&quot;;
+                    varname: static string = &quot;result&quot;; context: untyped = nil): untyped" href="nimja/parser.html#compileTemplateFile.m%2Cstaticstring%2Cstaticstring%2Cstaticstring%2Cstaticbool%2Cstaticstring%2Cuntyped">parser: macro compileTemplateFile(path: static string; baseDir: static string = &quot;&quot;;
+                    blockToRender: static string = &quot;&quot;;
                     iter: static bool = false;
-                    varname: static string = &quot;result&quot;;
-                    blockToRender: static string = &quot;&quot;; context: untyped = nil): untyped</a></li>
+                    varname: static string = &quot;result&quot;; context: untyped = nil): untyped</a></li>
           </ul></dd>
 <dt><a name="compileTemplateStr" href="#compileTemplateStr"><span>compileTemplateStr:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="parser: macro compileTemplateStr(str: typed; baseDir: static string = &quot;&quot;;
-                   iter: static bool = false; varname: static string = &quot;result&quot;;
-                   blockToRender: static string = &quot;&quot;; context: untyped = nil): untyped" href="nimja/parser.html#compileTemplateStr.m%2Ctyped%2Cstaticstring%2Cstaticbool%2Cstaticstring%2Cstaticstring%2Cuntyped">parser: macro compileTemplateStr(str: typed; baseDir: static string = &quot;&quot;;
-                   iter: static bool = false; varname: static string = &quot;result&quot;;
-                   blockToRender: static string = &quot;&quot;; context: untyped = nil): untyped</a></li>
+                   blockToRender: static string = &quot;&quot;; iter: static bool = false;
+                   varname: static string = &quot;result&quot;; context: untyped = nil): untyped" href="nimja/parser.html#compileTemplateStr.m%2Ctyped%2Cstaticstring%2Cstaticstring%2Cstaticbool%2Cstaticstring%2Cuntyped">parser: macro compileTemplateStr(str: typed; baseDir: static string = &quot;&quot;;
+                   blockToRender: static string = &quot;&quot;; iter: static bool = false;
+                   varname: static string = &quot;result&quot;; context: untyped = nil): untyped</a></li>
           </ul></dd>
 <dt><a name="cycle" href="#cycle"><span>cycle:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -126,7 +126,7 @@
           </ul></dd>
 <dt><a name="slugify" href="#slugify"><span>slugify:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="nimjautils: proc slugify(str: string; sperator = &quot;-&quot;; allowedChars = allowedCharsInSlug): string" href="nimja/nimjautils.html#slugify%2Cstring%2Cstring">nimjautils: proc slugify(str: string; sperator = &quot;-&quot;; allowedChars = allowedCharsInSlug): string</a></li>
+          data-doc-search-tag="nimjautils: proc slugify(str: string; seperator = &quot;-&quot;; allowedChars = allowedCharsInSlug): string" href="nimja/nimjautils.html#slugify%2Cstring%2Cstring">nimjautils: proc slugify(str: string; seperator = &quot;-&quot;; allowedChars = allowedCharsInSlug): string</a></li>
           </ul></dd>
 <dt><a name="spaceless" href="#spaceless"><span>spaceless:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -134,7 +134,9 @@
           </ul></dd>
 <dt><a name="tmplf" href="#tmplf"><span>tmplf:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="parser: macro tmplf(str: static string; baseDir: static string = &quot;&quot;; context: untyped = nil): string" href="nimja/parser.html#tmplf.m%2Cstaticstring%2Cstaticstring%2Cuntyped">parser: macro tmplf(str: static string; baseDir: static string = &quot;&quot;; context: untyped = nil): string</a></li>
+          data-doc-search-tag="parser: macro tmplf(str: static string; baseDir: static string = &quot;&quot;;
+      blockToRender: static string = &quot;&quot;; context: untyped = nil): string" href="nimja/parser.html#tmplf.m%2Cstaticstring%2Cstaticstring%2Cstaticstring%2Cuntyped">parser: macro tmplf(str: static string; baseDir: static string = &quot;&quot;;
+      blockToRender: static string = &quot;&quot;; context: untyped = nil): string</a></li>
           </ul></dd>
 <dt><a name="tmpls" href="#tmpls"><span>tmpls:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -154,7 +156,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2024-09-16 11:01:55 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2025-09-11 09:46:45 UTC</small>
       </div>
     </div>
   </div>
