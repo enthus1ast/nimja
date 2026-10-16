@@ -1,6 +1,6 @@
 discard """
   joinable: false
-  errormsg: '''Unexpected template tag (unbalanced or misplaced): FsElse'''
+  errormsg: '''unhandled exception: Unexpected template tag (unbalanced or misplaced): else'''
   file: "parser.nim"
 """
 include ../../src/nimja/parser

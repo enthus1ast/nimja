@@ -1270,6 +1270,8 @@ Changelog
     pre-allocation size is computed from the final node tree (no more
     `newStringOfCap(0)` on cache hits).
   - Added render benchmarks in `bench/` (`nimble bench`).
+  - Template errors now report the template **file, line and column**
+    (e.g. `path/page.nimja(3, 5) Error: ...`), with no runtime cost.
 - 0.10.0
   - Possible Breaking Change.
   - [Template fragments](#template-fragments) (good for htmx); Render specific blocks from a template all procs (`tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`) got a "blockToRender" parameter, when set, only the given block is rendered.

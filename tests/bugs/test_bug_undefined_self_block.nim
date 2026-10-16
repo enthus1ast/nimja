@@ -1,7 +1,6 @@
 discard """
   joinable: false
   errormsg: '''Undefined block referenced by `self.`'''
-  file: "parser.nim"
 """
 import ../../src/nimja
 

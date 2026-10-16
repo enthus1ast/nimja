@@ -1,6 +1,6 @@
 discard """
   joinable: false
-  errormsg: '''unhandled exception: uneven block's'''
+  errormsg: '''unhandled exception: `block` is missing `endblock`'''
   file: "parser.nim"
 """
 include ../../src/nimja/parser

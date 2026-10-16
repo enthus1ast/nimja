@@ -1,7 +1,7 @@
 discard """
   joinable: false
   errormsg: '''circular extends detected'''
-  file: "parser.nim"
+  file: "bug_circular.nimja"
 """
 import ../../src/nimja
 import os

@@ -65,3 +65,4 @@ tests/bugs/test_bug_107_self_blockname
 tests/bugs/test_bug_comment_whitespace
 tests/bugs/test_bug_cycle_empty
 bench/benchmark
+tests/bugs/test_bug_error_positions

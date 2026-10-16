@@ -3,6 +3,13 @@ import lexer, sharedhelper
 export getScriptDir
 export os
 
+type
+  NimjaError* = ref object of ValueError
+    ## a template error with the position inside the template
+    file*: string
+    line*: int
+    col*: int
+
 # special case `self` variable, used to reference blocks
 const specialSelf {.strdefine.} = "self."
 
@@ -14,6 +21,9 @@ type
     NExtends, NProc, NFunc, NWhen,
     NCase, NCaseOf, NCaseElse, NScope, NScopeEnd
   NwtNode = object
+    line: int  ## source position (compile time only, never emitted)
+    col: int
+    file: string
     case kind: NwtNodeKind
     of NStr:
       strBody: string
@@ -70,14 +80,44 @@ type
     value: string
     stripPre: bool
     stripPost: bool
+    line: int
+    col: int
+    file: string
 
 var cacheNwtNode {.compileTime.}: Table[string, seq[NwtNode]] ## a cache for rendered NwtNodes
 var cacheNwtNodeFile {.compileTime.}: Table[Path, string] ## a cache for content of a path
 var nwtIter {.compileTime.} = false
 var nwtVarname {.compileTime.}: string
 var nwtBaseDir {.compileTime.}: string 
+var nwtFallbackFile {.compileTime.}: string ## entry source file, for string templates
+var nwtFallbackLine {.compileTime.}: int
+var nwtFallbackCol {.compileTime.}: int
 var blocks {.compileTime.} : Table[string, seq[NwtNode]]
 var guessedStringLen {.compileTime.} = 0
+
+proc templateError(msg, file: string, line, col: int) {.noreturn.} =
+  ## Raises a located template error. `line`/`col` are 0 based.
+  ## This is caught at the macro boundary and re-reported with
+  ## `macros.error(msg, node)` so the compiler points at the template
+  ## (`file(line, col)`), while `compile(...)` called directly still raises
+  ## a catchable `ValueError`. Zero runtime cost: compile time only.
+  raise NimjaError(msg: msg, file: file, line: line, col: col)
+
+proc reportNimjaError(e: NimjaError) {.noreturn.} =
+  ## Converts a raised `NimjaError` into a compiler error located at the
+  ## template position (or the macro call site for string templates).
+  let n = newIdentNode("templateError")
+  var msg = e.msg
+  if e.file.len > 0:
+    n.setLineInfo(e.file, e.line + 1, e.col)
+  else:
+    msg = msg & " (template line " & $(e.line + 1) & ", col " & $(e.col + 1) & ")"
+    if nwtFallbackFile.len > 0:
+      try:
+        n.setLineInfo(nwtFallbackFile, nwtFallbackLine, nwtFallbackCol)
+      except CatchableError:
+        discard
+  error(msg, n)
 
 when defined(dumpNwtAstPretty):
   import json
@@ -88,7 +128,7 @@ when defined(dumpNwtAstPretty):
 proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc astAst(tokens: seq[NwtNode]): seq[NimNode]
-proc compile(str: string, blockToRender: string = ""): seq[NwtNode]
+proc compile(str: string, blockToRender: string = "", file: string = ""): seq[NwtNode]
 proc astAstOne(token: NwtNode): NimNode
 
 func staticLen(nodes: seq[NwtNode]): int =
@@ -114,6 +154,18 @@ func staticLen(nodes: seq[NwtNode]): int =
     of NScope: result += staticLen(node.scopeBody)
     of NProc: result += staticLen(node.procBody)
     else: discard
+
+func atPos(n: NwtNode, fs: FSNode): NwtNode =
+  ## copies the compile-time source position of an `FSNode` onto an `NwtNode`
+  result = n
+  result.line = fs.line
+  result.col = fs.col
+  result.file = fs.file
+
+func tagName(k: FsNodeKind): string {.inline.} =
+  ## user facing tag name, derived from the enum member name:
+  ## `FsIf` -> "if", `FsEndBlock` -> "endblock"
+  result = ($k)[2 .. ^1].toLowerAscii()
 
 func mustStrip(token: Token): tuple[token: Token, stripPre, stripPost: bool] =
   ## identifies if whitespaceControl chars are in the string,
@@ -148,49 +200,51 @@ iterator findAll(fsns: seq[FsNode], kind: FsNodeKind | set[FsNodeKind]): FsNode 
     else:
       if kind.contains(fsn.kind): yield fsn
 
-proc parseFirstStep(tokens: seq[Token]): seq[FSNode] =
+proc parseFirstStep(tokens: seq[Token], file: string): seq[FSNode] =
   result = @[]
   for token in tokens:
     let (cleanedToken, stripPre, stripPost) = mustStrip(token)
+    template addFs(k: FsNodeKind, v: string) =
+      result.add FSNode(kind: k, value: v, stripPre: stripPre, stripPost: stripPost,
+                        line: token.line, col: token.col, file: file)
     case token.kind
     of NwtEval:
       let (pref, suf) = splitStmt(cleanedToken.value)
       case pref
-      of "if": result.add FSNode(kind: FsIf, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "elif": result.add FSNode(kind: FsElif, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "else": result.add FSNode(kind: FsElse, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "endif": result.add FSNode(kind: FsEndif, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "for": result.add FSNode(kind: FsFor, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "endfor": result.add FSNode(kind: FsEndfor, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "while": result.add FSNode(kind: FsWhile, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "endwhile": result.add FSNode(kind: FsEndWhile, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "importnwt", "importnimja": result.add FSNode(kind: FsImport, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "block": result.add FSNode(kind: FsBlock, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "endblock": result.add FSNode(kind: FsEndBlock, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "extends": result.add FSNode(kind: FsExtends, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "proc": result.add FSNode(kind: FsProc, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "endproc": result.add FSNode(kind: FsEndProc, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "macro": result.add FSNode(kind: FsProc, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "endmacro": result.add FSNode(kind: FsEndProc, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "func": result.add FSNode(kind: FsFunc, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "endfunc": result.add FSNode(kind: FsEndFunc, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "end": result.add FSNode(kind: FsEnd, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "when": result.add FSNode(kind: FsWhen, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "endwhen": result.add FSNode(kind: FsEndWhen, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "case": result.add FSNode(kind: FsCase, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "of": result.add FSNode(kind: FsOf, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "endcase": result.add FSNode(kind: FsEndCase, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "scope": result.add FSNode(kind: FsScope, value: suf, stripPre: stripPre, stripPost: stripPost)
-      of "endscope": result.add FSNode(kind: FsEndScope, value: suf, stripPre: stripPre, stripPost: stripPost)
+      of "if": addFs(FsIf, suf)
+      of "elif": addFs(FsElif, suf)
+      of "else": addFs(FsElse, suf)
+      of "endif": addFs(FsEndif, suf)
+      of "for": addFs(FsFor, suf)
+      of "endfor": addFs(FsEndfor, suf)
+      of "while": addFs(FsWhile, suf)
+      of "endwhile": addFs(FsEndWhile, suf)
+      of "importnwt", "importnimja": addFs(FsImport, suf)
+      of "block": addFs(FsBlock, suf)
+      of "endblock": addFs(FsEndBlock, suf)
+      of "extends": addFs(FsExtends, suf)
+      of "proc": addFs(FsProc, suf)
+      of "endproc": addFs(FsEndProc, suf)
+      of "macro": addFs(FsProc, suf)
+      of "endmacro": addFs(FsEndProc, suf)
+      of "func": addFs(FsFunc, suf)
+      of "endfunc": addFs(FsEndFunc, suf)
+      of "end": addFs(FsEnd, suf)
+      of "when": addFs(FsWhen, suf)
+      of "endwhen": addFs(FsEndWhen, suf)
+      of "case": addFs(FsCase, suf)
+      of "of": addFs(FsOf, suf)
+      of "endcase": addFs(FsEndCase, suf)
+      of "scope": addFs(FsScope, suf)
+      of "endscope": addFs(FsEndScope, suf)
       else:
-        result.add FSNode(kind: FsEval, value: cleanedToken.value, stripPre: stripPre, stripPost: stripPost)
-    of NwtString: result.add FSNode(kind: FsStr, value: token.value)
-    of NwtVariable: result.add FSNode(kind: FsVariable, value: cleanedToken.value, stripPre: stripPre, stripPost: stripPost)
+        addFs(FsEval, cleanedToken.value)
+    of NwtString: addFs(FsStr, token.value)
+    of NwtVariable: addFs(FsVariable, cleanedToken.value)
     of NwtComment:
       # keep whitespace control chars of comments (eg.: `{#- foo -#}`),
       # but drop the comment text itself
-      result.add FSNode(kind: FsStr, value: "",
-                        stripPre: stripPre, stripPost: stripPost)
+      addFs(FsStr, "")
     else: echo "[FS] Not catched:", token
 
 proc consumeBlock(fsTokens: seq[FSNode], pos: var int, endTags: set[FsNodeKind]): seq[NwtNode] =
@@ -207,11 +261,11 @@ proc parseSsCase(fsTokens: seq[FsNode], pos: var int): NwtNode =
     case elem.kind
     of FsCase:
       pos.inc
-      result = NwtNode(kind: NwtNodeKind.NCase)
+      result = NwtNode(kind: NwtNodeKind.NCase).atPos(elem)
       result.caseStmt = elem.value
     of FsOf:
       pos.inc
-      result.nnCaseOf.add NwtNode(kind: NCaseOf, caseOfStmt: elem.value)
+      result.nnCaseOf.add NwtNode(kind: NCaseOf, caseOfStmt: elem.value).atPos(elem)
       result.nnCaseOf[^1].caseOfBody.add consumeBlock(fsTokens, pos, {FsOf, FsElse, FsEndCase})
     of FsElse:
       pos.inc
@@ -220,7 +274,7 @@ proc parseSsCase(fsTokens: seq[FsNode], pos: var int): NwtNode =
       pos.inc
       break
     else:
-      raise newException(ValueError, "should not happen: " & $elem)
+      templateError("should not happen: " & tagName(elem.kind), elem.file, elem.line, elem.col)
 
 proc parseSsIf(fsTokens: seq[FsNode], pos: var int): NwtNode =
   while pos < fsTokens.len:
@@ -228,12 +282,12 @@ proc parseSsIf(fsTokens: seq[FsNode], pos: var int): NwtNode =
     case elem.kind
     of FsIf:
       pos.inc
-      result = NwtNode(kind: NwtNodeKind.NIf)
+      result = NwtNode(kind: NwtNodeKind.NIf).atPos(elem)
       result.ifStmt = elem.value
       result.nnThen.add consumeBlock(fsTokens, pos, {FsElif, FsElse, FsEndif})
     of FsElif:
       pos.inc
-      result.nnElif.add NwtNode(kind: NElif, elifStmt: elem.value)
+      result.nnElif.add NwtNode(kind: NElif, elifStmt: elem.value).atPos(elem)
       result.nnElif[^1].elifBody.add consumeBlock(fsTokens, pos, {FsElif, FsElse, FsEndif} )
     of FsElse:
       pos.inc
@@ -242,7 +296,7 @@ proc parseSsIf(fsTokens: seq[FsNode], pos: var int): NwtNode =
       pos.inc
       break
     else:
-      raise newException(ValueError, "should not happen: " & $elem)
+      templateError("should not happen: " & tagName(elem.kind), elem.file, elem.line, elem.col)
 
 proc parseSsWhen(fsTokens: seq[FsNode], pos: var int): NwtNode =
   while pos < fsTokens.len:
@@ -250,12 +304,12 @@ proc parseSsWhen(fsTokens: seq[FsNode], pos: var int): NwtNode =
     case elem.kind
     of FsWhen:
       pos.inc
-      result = NwtNode(kind: NwtNodeKind.NWhen)
+      result = NwtNode(kind: NwtNodeKind.NWhen).atPos(elem)
       result.ifStmt = elem.value
       result.nnThen.add consumeBlock(fsTokens, pos, {FsElif, FsElse, FsEndWhen})
     of FsElif:
       pos.inc
-      result.nnElif.add NwtNode(kind: NElif, elifStmt: elem.value)
+      result.nnElif.add NwtNode(kind: NElif, elifStmt: elem.value).atPos(elem)
       result.nnElif[^1].elifBody.add consumeBlock(fsTokens, pos, {FsElif, FsElse, FsEndWhen} )
     of FsElse:
       pos.inc
@@ -264,11 +318,11 @@ proc parseSsWhen(fsTokens: seq[FsNode], pos: var int): NwtNode =
       pos.inc
       break
     else:
-      raise newException(ValueError, "should not happen: " & $elem)
+      templateError("should not happen: " & tagName(elem.kind), elem.file, elem.line, elem.col)
 
 proc parseSsWhile(fsTokens: seq[FsNode], pos: var int): NwtNode =
   var elem: FsNode = fsTokens[pos] # first is the while that we got called about
-  result = NwtNode(kind: NwtNodeKind.NWhile)
+  result = NwtNode(kind: NwtNodeKind.NWhile).atPos(elem)
   result.whileStmt = elem.value
   pos.inc # skip FsWhile
   result.whileBody = consumeBlock(fsTokens, pos, {FsEndWhile})
@@ -276,7 +330,7 @@ proc parseSsWhile(fsTokens: seq[FsNode], pos: var int): NwtNode =
 
 proc parseSsFor(fsTokens: seq[FsNode], pos: var int): NwtNode =
   var elem: FsNode = fsTokens[pos] # first is the for that we got called about
-  result = NwtNode(kind: NwtNodeKind.NFor)
+  result = NwtNode(kind: NwtNodeKind.NFor).atPos(elem)
   result.forStmt = elem.value
   pos.inc #skip FsFor
   result.forBody = consumeBlock(fsTokens, pos, {FsEndFor})
@@ -285,14 +339,14 @@ proc parseSsFor(fsTokens: seq[FsNode], pos: var int): NwtNode =
 proc parseSsBlock(fsTokens: seq[FsNode], pos: var int): NwtNode =
   var elem: FsNode = fsTokens[pos]
   let blockName = elem.value
-  result = NwtNode(kind: NwtNodeKind.NBlock, blockName: blockName)
+  result = NwtNode(kind: NwtNodeKind.NBlock, blockName: blockName).atPos(elem)
   pos.inc # skip FsBlock
   result.blockBody = consumeBlock(fsTokens, pos, {FsEndBlock})
   pos.inc # skip FsEndBlock
 
 proc parseSsProc(fsTokens: seq[FsNode], pos: var int, kind: NwtNodeKind = NProc): NwtNode =
   var elem: FsNode = fsTokens[pos]
-  result = NwtNode(kind: NwtNodeKind.NProc)
+  result = NwtNode(kind: NwtNodeKind.NProc).atPos(elem)
   result.procHeader = elem.value
   pos.inc # skip FsProc
   if kind == NProc:
@@ -305,13 +359,13 @@ proc parseSsExtends(fsTokens: seq[FsNode], pos: var int): NwtNode =
   var elem: FsNode = fsTokens[pos]
   let extendsPath = elem.value.strip(true, true, {'"'})
   pos.inc # skip FsExtends
-  return NwtNode(kind: NExtends, extendsPath: extendsPath)
+  return NwtNode(kind: NExtends, extendsPath: extendsPath).atPos(elem)
 
 proc parseSsScope(fsTokens: seq[FsNode], pos: var int): NwtNode =
   var elem: FsNode = fsTokens[pos]
   pos.inc # skip FsScope
   let parts = elem.value.split(" ")
-  result = NwtNode(kind: NScope)
+  result = NwtNode(kind: NScope).atPos(elem)
   if parts.len >= 1:
     result.scopeName = parts[0].strip()
   result.scopeBody = consumeBlock(fsTokens, pos, {FsEnd, FsEndScope})
@@ -322,7 +376,7 @@ converter singleNwtNodeToSeq(nwtNode: NwtNode): seq[NwtNode] =
 
 proc importNimja(nodes: var seq[NwtNode], path: string, blockToRender = "") =
   var str = read(nwtBaseDir / path)
-  nodes = compile(str, blockToRender)
+  nodes = compile(str, blockToRender, nwtBaseDir / path)
 
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     let fsToken = fsTokens[pos]
@@ -346,13 +400,13 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     # Simple Types
     of FsStr:
       pos.inc
-      return NwtNode(kind: NStr, strBody: fsToken.value)
+      return NwtNode(kind: NStr, strBody: fsToken.value).atPos(fsToken)
     of FsVariable:
       pos.inc
-      return NwtNode(kind: NVariable, variableBody: fsToken.value)
+      return NwtNode(kind: NVariable, variableBody: fsToken.value).atPos(fsToken)
     of FsEval:
       pos.inc
-      return NwtNode(kind: NEval, evalBody: fsToken.value)
+      return NwtNode(kind: NEval, evalBody: fsToken.value).atPos(fsToken)
     of FsExtends:
       return parseSsExtends(fsTokens, pos)
     of FsImport:
@@ -371,9 +425,9 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
           )
       importNimja(result, file, blockToRender = blockToRender)
     else:
-      raise newException(ValueError,
-        "Unexpected template tag (unbalanced or misplaced): " &
-        $fsToken.kind & " '" & fsToken.value & "'")
+      templateError("Unexpected template tag (unbalanced or misplaced): " &
+        tagName(fsToken.kind) & " '" & fsToken.value & "'",
+        fsToken.file, fsToken.line, fsToken.col)
 
 
 proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
@@ -383,7 +437,8 @@ proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
 proc astVariable(token: NwtNode): NimNode =
   var varb: NimNode
   if token.variableBody.strip().len == 0:
-    error "Empty variable body, a stray whitespace control char? `{{-}}`"
+    templateError("Empty variable body, a stray whitespace control char? `{{-}}`",
+      token.file, token.line, token.col)
   # The "self." block insertion
   if token.variableBody.startsWith(specialSelf):
     let blockname = token.variableBody[specialSelf.len .. ^1]
@@ -393,11 +448,13 @@ proc astVariable(token: NwtNode): NimNode =
         result.add astAstOne(token)
       return
     else:
-      error "Undefined block referenced by `self.`: " & blockname
+      templateError("Undefined block referenced by `self.`: " & blockname,
+        token.file, token.line, token.col)
   try:
     varb = parseStmt(token.variableBody)
   except:
-    error "Cannot parse variable body: " & token.variableBody
+    templateError("Cannot parse variable body: " & token.variableBody,
+      token.file, token.line, token.col)
   return nnkStmtList.newTree(
     nnkInfix.newTree(
       newIdentNode("&="),
@@ -439,7 +496,8 @@ func astEval(token: NwtNode): NimNode =
   try:
     return parseStmt(token.evalBody)
   except:
-    error "Cannot parse eval body: " & token.evalBody
+    templateError("Cannot parse eval body: " & token.evalBody,
+      token.file, token.line, token.col)
 
 proc astFor(token: NwtNode): NimNode =
   let easyFor = "for " & token.forStmt & ": discard" # `discard` to make a parsable construct
@@ -550,7 +608,8 @@ proc astAstOne(token: NwtNode): NimNode =
   of NFunc: return astProc(token, procStr = "func")
   of NCase: return astCase(token)
   of NScope: return astScope(token)
-  else: raise newException(ValueError, "cannot convert to ast:" & $token.kind)
+  else: templateError("cannot convert to ast: " & $token.kind,
+                      token.file, token.line, token.col)
 
 proc astAst(tokens: seq[NwtNode]): seq[NimNode] =
   for token in tokens:
@@ -572,9 +631,9 @@ proc validExtend(secondsStepTokens: seq[NwtNode]): int =
       validBeforeExtend = false
 
   if (result > -1) and (not validBeforeExtend):
-    raise newException(ValueError,
-      "Invalid token(s) before {%extend%}: " & $ secondsStepTokens[0 .. result]
-    )
+    let ext = secondsStepTokens[result]
+    templateError("Invalid token(s) before {%extend%}",
+      ext.file, ext.line, ext.col)
 
 func condenseStrings(nodes: seq[FsNode]): seq[FsNode] =
   ## tries to combine multiple string assignments into one. Operates on `FsNodes` seq
@@ -636,7 +695,8 @@ proc errorOnDuplicatedBlocks(fsns: seq[FSNode]) =
   var blocknames: HashSet[string]
   for fsnode in fsns.findAll(FsBlock):
     if blocknames.contains(fsnode.value):
-      raise newException(ValueError, "found duplicated block:" & fsnode.value & " :" & $ fsns)
+      templateError("found duplicated block: " & fsnode.value,
+        fsnode.file, fsnode.line, fsnode.col)
     else:
       blocknames.incl fsnode.value
 
@@ -644,44 +704,47 @@ proc errorOnDuplicatedExtends(fsns: seq[FSNode]) =
   ## Find duplicated extends
   # TODO give context and line
   var foundExtends = false
-  for _ in fsns.findAll(FsExtends):
+  for fsnode in fsns.findAll(FsExtends):
     if foundExtends == true:
-      raise newException(ValueError, "found multiple extends: " & $fsns)
+      templateError("found multiple extends", fsnode.file, fsnode.line, fsnode.col)
     else:
       foundExtends = true
 
 proc errorOnUnevenBlocks(fsns: seq[FSNode]) =
-  ## Find and errors uneven/lonely blocks
-  # TODO give context and line
-  var ifs = 0
-  var fors = 0
-  var whiles = 0
-  var whens = 0
-  var blockcount = 0
+  ## Find and report uneven/lonely blocks at the offending tag
+  var stack: seq[FSNode]
+  template matchingEnd(k: FsNodeKind): string =
+    case k
+    of FsIf: "endif"
+    of FsFor: "endfor"
+    of FsWhile: "endwhile"
+    of FsWhen: "endwhen"
+    of FsBlock: "endblock"
+    else: "end"
   for fsnode in fsns.findAll({FsIf, FsEndif, FsFor, FsEndfor, FsWhile, FsEndWhile,
                                FsWhen, FsEndWhen, FsBlock, FsEndBlock}):
     case fsnode.kind
-    of FsIf: ifs.inc
-    of FsEndif: ifs.dec
-    of FsFor: fors.inc
-    of FsEndfor: fors.dec
-    of FsWhile: whiles.inc
-    of FsEndWhile: whiles.dec
-    of FsWhen: whens.inc
-    of FsEndWhen: whens.dec
-    of FsBlock: blockcount.inc
-    of FsEndBlock: blockcount.dec
+    of FsIf, FsFor, FsWhile, FsWhen, FsBlock:
+      stack.add fsnode
+    of FsEndif, FsEndfor, FsEndWhile, FsEndWhen, FsEndBlock:
+      let opener =
+        case fsnode.kind
+        of FsEndif: FsIf
+        of FsEndfor: FsFor
+        of FsEndWhile: FsWhile
+        of FsEndWhen: FsWhen
+        of FsEndBlock: FsBlock
+        else: FsIf
+      if stack.len == 0 or stack[^1].kind != opener:
+        templateError("unexpected `" & tagName(fsnode.kind) & "` without matching opener",
+          fsnode.file, fsnode.line, fsnode.col)
+      else:
+        stack.setLen(stack.len - 1)
     else: discard # Cannot happen
-  if ifs != 0:
-    raise newException(ValueError, "uneven if's: " & $fsns)
-  if fors != 0:
-    raise newException(ValueError, "uneven for's: " & $fsns)
-  if whiles != 0:
-    raise newException(ValueError, "uneven while's: " & $fsns)
-  if whens != 0:
-    raise newException(ValueError, "uneven when's: " & $fsns)
-  if blockcount != 0:
-    raise newException(ValueError, "uneven block's: " & $fsns)
+  if stack.len > 0:
+    let opener = stack[^1]
+    templateError("`" & tagName(opener.kind) & "` is missing `" &
+      matchingEnd(opener.kind) & "`", opener.file, opener.line, opener.col)
 
 template firstStepErrorChecks(fsns: seq[FSNode]) =
   ## TODO combine all these?
@@ -689,7 +752,7 @@ template firstStepErrorChecks(fsns: seq[FSNode]) =
   errorOnDuplicatedBlocks(fsns)
   errorOnUnevenBlocks(fsns)
 
-proc loadCache(str: string): seq[NwtNode] =
+proc loadCache(str: string, file: string = ""): seq[NwtNode] =
   ## For faster compilation
   ## ```-d:nwtCacheOff``` to disable caching
   ## Creates NwtNodes only the first time for a given string,
@@ -699,7 +762,7 @@ proc loadCache(str: string): seq[NwtNode] =
   else:
     # No cache hit (or cache disabled)
     var lexerTokens = toSeq(lex(str))
-    var fsns = parseFirstStep(lexerTokens)
+    var fsns = parseFirstStep(lexerTokens, file)
     fsns.firstStepErrorChecks()
     fsns = fsns.whitespaceControl()
     fsns = fsns.condenseStrings() # we condense on the FSNodes that are cached
@@ -726,18 +789,19 @@ proc loadCacheFile(path: Path): string =
       return cacheNwtNodeFile[nwtBaseDir / path]
 
 proc extend(str: string, templateCache: var Deque[seq[NwtNode]],
-            seen: var HashSet[string]) =
-  var secondsStepTokens = loadCache(str)
+            seen: var HashSet[string], file: string = "") =
+  var secondsStepTokens = loadCache(str, file)
   let foundExtendAt = validExtend(secondsStepTokens)
   if foundExtendAt > -1:
     templateCache.addFirst secondsStepTokens
     let extPath = secondsStepTokens[foundExtendAt].extendsPath
     if seen.contains(extPath):
-      raise newException(ValueError,
-        "circular extends detected: " & extPath & " (extends chain: " & $seen & ")")
+      let extNode = secondsStepTokens[foundExtendAt]
+      templateError("circular extends detected: " & extPath,
+        extNode.file, extNode.line, extNode.col)
     seen.incl extPath
     let ext = loadCacheFile(extPath)
-    extend(ext, templateCache, seen)
+    extend(ext, templateCache, seen, nwtBaseDir / extPath)
   else:
     templateCache.addFirst secondsStepTokens
 
@@ -805,10 +869,10 @@ proc resolveSelf(nodes: seq[NwtNode], resolving: var HashSet[string]): seq[NwtNo
       discard
     result.add n
 
-proc compile(str: string, blockToRender: string = ""): seq[NwtNode] =
+proc compile(str: string, blockToRender: string = "", file: string = ""): seq[NwtNode] =
   var templateCache = initDeque[seq[NwtNode]]()
   var seen = initHashSet[string]()
-  extend(str, templateCache, seen)
+  extend(str, templateCache, seen, file)
   for idx, tmp in enumerate(templateCache):
     for nwtn in tmp.recursiveFindAllBlocks():
       # echo nwtn.blockName ## HERE ## TODO remove
@@ -820,7 +884,8 @@ proc compile(str: string, blockToRender: string = ""): seq[NwtNode] =
     if blocks.contains(blockToRender):
       result = fillBlocks(blocks[blockToRender])
     else:
-      raise newException(ValueError, "Block '" & blockToRender & "' is not known.")
+      templateError("Block '" & blockToRender & "' is not known.",
+        "", 0, 0)
   # resolve `self.` here, while `blocks` still holds this template's blocks,
   # then run the Nwt-stage string condense so `self.` inlining gets merged too
   var resolving = initHashSet[string]()
@@ -855,20 +920,24 @@ proc generatePreallocatedStringDef(len: int): NimNode =
   )
 
 
-template doCompile(str: untyped, blockToRender: string = "", res = newStmtList()): untyped =
+template doCompile(str: untyped, blockToRender: string = "", res = newStmtList(),
+                  file: string = ""): untyped =
   guessedStringLen = 0
-  let nwtNodes = compile(str, blockToRender)
-  when defined(dumpNwtAst): echo nwtNodes
-  when defined(dumpNwtAstPretty): echo nwtNodes.pretty
-  result = res
+  try:
+    let nwtNodes = compile(str, blockToRender, file)
+    when defined(dumpNwtAst): echo nwtNodes
+    when defined(dumpNwtAstPretty): echo nwtNodes.pretty
+    result = res
 
-  if not nwtIter:
-    if (not defined(noPreallocatedString)) and guessedStringLen > 0:
-      result.add generatePreallocatedStringDef(guessedStringLen)
+    if not nwtIter:
+      if (not defined(noPreallocatedString)) and guessedStringLen > 0:
+        result.add generatePreallocatedStringDef(guessedStringLen)
 
-  for nwtNode in nwtNodes:
-    result.add astAstOne(nwtNode)
-  when defined(dumpNwtMacro): echo toStrLit(result)
+    for nwtNode in nwtNodes:
+      result.add astAstOne(nwtNode)
+    when defined(dumpNwtMacro): echo toStrLit(result)
+  except NimjaError as e:
+    reportNimjaError(e)
 
 template tmplsMacroImpl() =
   # we use templates as a "variable alias"
@@ -943,8 +1012,12 @@ macro compileTemplateStr*(str: typed, baseDir: static string = "",
   nwtVarname = varname
   nwtIter = iter
   nwtBaseDir = baseDir
+  let entry = str.lineInfoObj
+  nwtFallbackFile = entry.filename
+  nwtFallbackLine = entry.line
+  nwtFallbackCol = entry.column
   tmplsMacroImpl()
-  doCompile(str.strVal, blockToRender, result)
+  doCompile(str.strVal, blockToRender, result, file = "")
 
 macro compileTemplateFile*(path: static string, baseDir: static string = "", 
     blockToRender: static string = "", iter: static bool = false,
@@ -986,9 +1059,13 @@ macro compileTemplateFile*(path: static string, baseDir: static string = "",
   nwtVarname = varname
   nwtIter = iter
   nwtBaseDir = baseDir
+  const ii = instantiationInfo(-1, true)
+  nwtFallbackFile = ii.filename
+  nwtFallbackLine = ii.line
+  nwtFallbackCol = ii.column
   let str = loadCacheFile(path)
   tmplsMacroImpl()
-  doCompile(str, blockToRender, result)
+  doCompile(str, blockToRender, result, file = nwtBaseDir / path)
 
 template tmplsImpl(str: static string, baseDir: static string, blockToRender: static string): string =
   var nimjaTmplsVar: string

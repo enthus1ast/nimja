@@ -1,7 +1,6 @@
 discard """
   joinable: false
   errormsg: '''Block 'doesNotExist' is not known.'''
-  file: "parser.nim"
 """
 import ../../src/nimja
 

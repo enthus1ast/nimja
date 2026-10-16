@@ -1,7 +1,6 @@
 discard """
   joinable: false
   errormsg: '''Empty variable body'''
-  file: "parser.nim"
 """
 import ../../src/nimja
 

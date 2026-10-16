@@ -1,6 +1,6 @@
 discard """
   joinable: false
-  errormsg: '''unhandled exception: Invalid token(s) before {%extend%}: @[(kind: NStr, strBody: " "), (kind: NEval, evalBody: "invalid"), (kind: NStr, strBody: "  "), (kind: NExtends, extendsPath: "../templates/blockMaster.nimja")] [ValueError]'''
+  errormsg: '''unhandled exception: Invalid token(s) before {%extend%}'''
   file: "parser.nim"
 """
 include ../../src/nimja/parser

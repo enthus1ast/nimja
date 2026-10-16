@@ -8,6 +8,10 @@ import ../../src/nimja/lexer
 proc newToken(kind: NwtTokenKind, value: string, line = 0): Token =
   return Token(kind: kind, value: value, line: line)
 
+proc `==`(a, b: Token): bool =
+  ## compare token content; line/col are covered by the lexer's own tests
+  a.kind == b.kind and a.value == b.value
+
 suite "lexer string handling bugs":
   test "escaped quote inside a single quoted string is kept intact":
     # compiled template body: {{ "a\"b" }}

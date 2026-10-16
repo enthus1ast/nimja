@@ -120,6 +120,11 @@ Useful compile-time defines (from the readme):
   paths resolve against `baseDir`, not the importing file.
 - `errorOnUnevenBlocks` checks `if`, `for`, `while`, `when` and `block` only;
   unbalanced `case`/`scope`/`proc` fall through to Nim errors.
+- Template errors report **file, line and column**. Positions live in
+  `Token`/`FSNode`/`NwtNode` (compile-time only, never emitted into the AST);
+  `templateError` raises `NimjaError` and `doCompile` converts it via
+  `reportNimjaError` (`setLineInfo` + `error`). Calling `compile` directly still
+  raises a catchable `NimjaError` (a `ValueError`). See `error-reporting.md`.
 - `condenseStrings` runs twice on purpose (FS stage, then Nwt stage after
   `fillBlocks`/`self` resolution) to merge adjacent strings and reduce runtime
   `&=` calls. The output pre-allocation size (`newStringOfCap`) is computed
