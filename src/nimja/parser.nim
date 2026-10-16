@@ -20,7 +20,7 @@ type
     NStr, NIf, NElif, NElse, NWhile, NFor,
     NVariable, NEval, NBlock,
     NExtends, NProc, NFunc, NWhen,
-    NCase, NCaseOf, NCaseElse, NScope, NScopeEnd
+    NCase, NCaseOf, NCaseElse, NScope, NScopeEnd, NImportContext
   NwtNode = object
     line: int  ## source position (compile time only, never emitted)
     col: int
@@ -66,6 +66,8 @@ type
     of NScope:
       scopeName: string
       scopeBody: seq[NwtNode]
+    of NImportContext:
+      ctxBody: string  ## `importnimja "..." {name: value}` context expression
     else: discard
 
 # First step nodes
@@ -395,6 +397,42 @@ proc importNimja(nodes: var seq[NwtNode], path: string, blockToRender = "") =
   var str = read(nwtBaseDir / path)
   nodes = compile(str, blockToRender, nwtBaseDir / path)
 
+func parseImportArgs(value: string): tuple[file, blockName, ctx: string] =
+  ## parses the body of `{% importnimja ... %}`:
+  ## `"path"`, `"path" "block"`, `"path" {name: value}` or
+  ## `"path" "block" {name: value}`
+  var i = 0
+  while i < value.len and value[i] in Whitespace: inc i
+  # path (quoted or bare)
+  if i < value.len and value[i] in {'"', '\''}:
+    let q = value[i]
+    inc i
+    while i < value.len and value[i] != q:
+      result.file.add value[i]
+      inc i
+    if i < value.len: inc i
+  else:
+    while i < value.len and value[i] notin Whitespace:
+      result.file.add value[i]
+      inc i
+  while i < value.len and value[i] in Whitespace: inc i
+  # optional block name (quoted or bare; a bare `{` starts the context)
+  if i < value.len and value[i] in {'"', '\''}:
+    let q = value[i]
+    inc i
+    while i < value.len and value[i] != q:
+      result.blockName.add value[i]
+      inc i
+    if i < value.len: inc i
+  elif i < value.len and value[i] != '{':
+    while i < value.len and value[i] notin Whitespace and value[i] != '{':
+      result.blockName.add value[i]
+      inc i
+  while i < value.len and value[i] in Whitespace: inc i
+  # the rest is the context expression
+  if i < value.len:
+    result.ctx = value[i..^1].strip()
+
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     let fsToken = fsTokens[pos]
 
@@ -428,19 +466,17 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
       return parseSsExtends(fsTokens, pos)
     of FsImport:
       pos.inc
-      let parts = fsToken.value.split(" ")
-      let (file, blockToRender) =
-        if parts.len == 2:
-          (
-            parts[0].strip(true, true, {'"'}),
-            parts[1].strip(true, true, {'"'})
-          )
-        else:
-          (
-            fsToken.value.strip(true, true, {'"'}),
-            ""
-          )
-      importNimja(result, file, blockToRender = blockToRender)
+      let (file, blockToRender, ctx) = parseImportArgs(fsToken.value)
+      var imported: seq[NwtNode]
+      importNimja(imported, file, blockToRender = blockToRender)
+      if ctx.len == 0:
+        for n in imported: result.add n
+      else:
+        # scope the context aliases to this import only
+        var scope = NwtNode(kind: NScope).atPos(fsToken)
+        scope.scopeBody = @[NwtNode(kind: NImportContext, ctxBody: ctx).atPos(fsToken)]
+        for n in imported: scope.scopeBody.add n
+        result.add scope
     else:
       templateError("Unexpected template tag (unbalanced or misplaced): " &
         tagName(fsToken.kind) & " '" & fsToken.value & "'",
@@ -615,6 +651,32 @@ proc astScope(token: NwtNode): NimNode =
   blockStmt[1].add astAst(token.scopeBody)
   result.add blockStmt
 
+proc astImportContext(token: NwtNode): NimNode =
+  ## emits `template <name> = <value>` aliases for an
+  ## `{% importnimja "..." {name: value} %}` context. The caller wraps the
+  ## import in a block, so the aliases are scoped to the imported template.
+  let ast = parseStmt(token.ctxBody)
+  let tbl = if ast.kind == nnkStmtList and ast.len == 1: ast[0] else: ast
+  if tbl.kind != nnkTableConstr:
+    templateError("importnimja context must be `{name: value, ...}`",
+                  token.file, token.line, token.col)
+  result = newStmtList()
+  for pair in tbl:
+    if pair.kind != nnkExprColonExpr:
+      templateError("importnimja context must be `name: value` pairs",
+                    token.file, token.line, token.col)
+    var alias = newTree(nnkTemplateDef)
+    alias.add pair[0]                             # name
+    alias.add newNimNode(nnkEmpty)                # pattern
+    alias.add newNimNode(nnkEmpty)                # generic params
+    var formalParams = newNimNode(nnkFormalParams)
+    formalParams.add newIdentNode("untyped")
+    alias.add formalParams
+    alias.add newNimNode(nnkEmpty)                # pragmas
+    alias.add newNimNode(nnkEmpty)                # reserved
+    alias.add newStmtList(pair[1])                # body
+    result.add alias
+
 proc astAstOne(token: NwtNode): NimNode =
   case token.kind
   of NVariable:
@@ -633,6 +695,7 @@ proc astAstOne(token: NwtNode): NimNode =
   of NFunc: return astProc(token, procStr = "func")
   of NCase: return astCase(token)
   of NScope: return astScope(token)
+  of NImportContext: return astImportContext(token)
   else: templateError("cannot convert to ast: " & $token.kind,
                       token.file, token.line, token.col)
 

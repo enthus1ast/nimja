@@ -1,12 +1,12 @@
-import options
+import std/options
 export options
 import sharedhelper
 import escaping
 export escaping
-import strutils
-import parseutils
+import std/strutils
+import std/parseutils
 import unidecode
-import os, mimetypes, uri, tables, macros, std/enumerate
+import std/[os, mimetypes, uri, tables, macros, enumerate]
 export uri
 
 type

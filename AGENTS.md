@@ -125,6 +125,10 @@ Useful compile-time defines (from the readme):
   `templateError` raises `NimjaError` and `doCompile` converts it via
   `reportNimjaError` (`setLineInfo` + `error`). Calling `compile` directly still
   raises a catchable `NimjaError` (a `ValueError`). See `error-reporting.md`.
+- `{% importnimja "path" %}` sees the parent's variables. An optional
+  `"block"` picks a block; an optional `{name: value}` context (`NImportContext`)
+  emits `template name = value` aliases inside a `block`, so they are scoped to
+  the imported template only.
 - `compileTemplateStr(str)` accepts a string literal, a `const` string or a
   folded static expression (`staticStr` resolves consts via `getImpl`); a
   runtime `let`/`var` argument errors instead of silently using its name.

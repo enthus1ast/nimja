@@ -488,6 +488,18 @@ The syntax to load one specific block via importnimja is:
 {% importnimja "path/to/file.nima" "theBlockToRender" %}
 ```
 
+You can also pass variables to the imported template with a **context**, using
+the same `{name: value}` syntax as the compile procs:
+
+```
+{% importnimja "path/to/file.nimja" {user: theUser} %}
+{% importnimja "path/to/file.nimja" "theBlockToRender" {user: theUser} %}
+```
+
+This makes `{{ user }}` inside the imported template resolve to `theUser` from
+the importing template. The names are scoped to the imported template; they do
+not leak into the rest of the parent template.
+
 partials/_user.nimja:
 ```twig
 <div class="col-3">
@@ -1289,9 +1301,11 @@ Changelog
 
 ## TODO
 - 0.?.?
-  - Added context to `importnimja`
 ## DONE
 - 0.10.4
+  - `importnimja` accepts a `{name: value}` context so the imported template
+    can use a variable under a different name, e.g.
+    `{% importnimja "x.nimja" {user: theUser} %}` (#81).
   - Fixed `self.<block>` resolving to the last-registered block when a block
     name was used by multiple templates in the same project; `self.<block>` is
     now bound per `compile` invocation (#107).
