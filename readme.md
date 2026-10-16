@@ -311,7 +311,7 @@ block:
   var rax = Rax(aa: "aaaa", bb: 13.37)
   var foo = 123
   proc render(): string =
-    compileTemplateString("{{node.bb}}{{baa}}", {node: rax, baa: foo})
+    compileTemplateString("{{node.bb}}{{baa}}", context = {node: rax, baa: foo})
 ```
 
 Please note, currently the context **cannot be** procs/funcs etc.
@@ -395,7 +395,7 @@ block:
       bb: float
   var rax = Rax(aa: "aaaa", bb: 13.37)
   var foo = 123
-  tmpls("{{node.bb}}{{baa}}", {node: rax, baa: foo})
+  tmpls("{{node.bb}}{{baa}}", context = {node: rax, baa: foo})
 ```
 
 Please note, currently the context **cannot be** procs/funcs etc.
@@ -1251,8 +1251,8 @@ Changelog
   - in order to fix #15 & #89 and to enable nimja components imported from other modules,
     all proc (`tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`) got a `baseDir` param:
     ```
-        compileTemplateStr("""{{importnimja "some/template.nimja"}}""", baseDir = getScriptDir())
-        tmpls("""{{importnimja "some/template.nimja"}}""", baseDir = getScriptDir())
+        compileTemplateStr("""{% importnimja "some/template.nimja" %}""", baseDir = getScriptDir())
+        tmpls("""{% importnimja "some/template.nimja" %}""", baseDir = getScriptDir())
         compileTemplateFile("some/template.nimja", baseDir = getScriptDir())
         tmpls("some/template.nimja", baseDir = getScriptDir())
     ```

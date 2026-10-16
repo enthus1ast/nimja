@@ -41,10 +41,13 @@ if result.token.value[^1] == '-':                    # now on possibly-empty str
   result.stripPost = true
   result.token.value = result.token.value[0 .. ^2]
 ```
-If the cleaned value is exactly `"-"` (e.g. template `{{-}}`) or `"--"`
-(`{{--}}`), the first slice yields `""`/`"-"` and the second check
-`value[^1]` runs on an empty string → `IndexError: index out of bounds, the
-container is empty`.
+If the cleaned value is exactly `"-"` (e.g. template `{{-}}`), the first
+slice yields `""` and the second check `value[^1]` runs on an empty string
+→ `IndexError: index out of bounds, the container is empty`.
+
+Note: `{{--}}` does **not** crash; only a value that becomes empty after the
+first strip does (`"--"` strips to `"-"`, then to `""` without indexing the
+empty string).
 
 Reproduced (compile-time, inside a proc):
 ```
@@ -74,9 +77,9 @@ Reproduced:
 compileTemplateStr("{% when true %}B")   # missing endwhen
 => "B"                                   # no error raised (unlike a missing endif)
 ```
-The same routine DOES catch missing `if`/`for`/`while`; the gap is specific to
-`when` (and the readme changelog claims "Error on uneven when blocks" since
-0.8.7, which is not actually true).
+The same routine DOES catch missing `if`/`for`/`while`; the gap was specific
+to `when` (and `block`, see `nimjaBugs4.md`). Both are fixed in
+`nimjaBugs4.md` (F-2).
 
 ---
 

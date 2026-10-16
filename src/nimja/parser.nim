@@ -102,7 +102,7 @@ func mustStrip(token: Token): tuple[token: Token, stripPre, stripPost: bool] =
     if result.token.value[0] == '-':
       result.stripPre = true
       result.token.value = result.token.value[1 .. ^1] # remove the first
-    if result.token.value[^1] == '-':
+    if result.token.value.len != 0 and result.token.value[^1] == '-':
       result.stripPost = true
       result.token.value = result.token.value[0 .. ^2] # remove the last
   # if "-" was removed, lex() has not stripped it. Strip it here
@@ -342,9 +342,6 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
             fsToken.value.strip(true, true, {'"'}),
             ""
           )
-      echo file
-      echo blockToRender
-      # importNimja(result, fsToken.value.strip(true, true, {'"'}))
       importNimja(result, file, blockToRender = blockToRender)
     else: raise newException(ValueError, "[SS] NOT IMPL: " & $fsToken)
 
@@ -355,6 +352,8 @@ proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
 
 proc astVariable(token: NwtNode): NimNode =
   var varb: NimNode
+  if token.variableBody.strip().len == 0:
+    error "Empty variable body, a stray whitespace control char? `{{-}}`"
   # The "self." block insertion
   if token.variableBody.startsWith(specialSelf):
     let blockname = token.variableBody[specialSelf.len .. ^1]
@@ -363,6 +362,8 @@ proc astVariable(token: NwtNode): NimNode =
       for token in blocks[blockname]:
         result.add astAstOne(token)
       return
+    else:
+      error "Undefined block referenced by `self.`: " & blockname
   try:
     varb = parseStmt(token.variableBody)
   except:
@@ -626,7 +627,9 @@ proc errorOnUnevenBlocks(fsns: seq[FSNode]) =
   var fors = 0
   var whiles = 0
   var whens = 0
-  for fsnode in fsns.findAll({FsIf, FsEndif, FsFor, FsEndfor, FsWhile, FsEndWhile}):
+  var blockcount = 0
+  for fsnode in fsns.findAll({FsIf, FsEndif, FsFor, FsEndfor, FsWhile, FsEndWhile,
+                               FsWhen, FsEndWhen, FsBlock, FsEndBlock}):
     case fsnode.kind
     of FsIf: ifs.inc
     of FsEndif: ifs.dec
@@ -636,6 +639,8 @@ proc errorOnUnevenBlocks(fsns: seq[FSNode]) =
     of FsEndWhile: whiles.dec
     of FsWhen: whens.inc
     of FsEndWhen: whens.dec
+    of FsBlock: blockcount.inc
+    of FsEndBlock: blockcount.dec
     else: discard # Cannot happen
   if ifs != 0:
     raise newException(ValueError, "uneven if's: " & $fsns)
@@ -644,7 +649,9 @@ proc errorOnUnevenBlocks(fsns: seq[FSNode]) =
   if whiles != 0:
     raise newException(ValueError, "uneven while's: " & $fsns)
   if whens != 0:
-    raise newException(ValueError, "uneven whens's: " & $fsns)
+    raise newException(ValueError, "uneven when's: " & $fsns)
+  if blockcount != 0:
+    raise newException(ValueError, "uneven block's: " & $fsns)
 
 template firstStepErrorChecks(fsns: seq[FSNode]) =
   ## TODO combine all these?
@@ -688,13 +695,19 @@ proc loadCacheFile(path: Path): string =
       cacheNwtNodeFile[nwtBaseDir / path] = read(nwtBaseDir / path)
       return cacheNwtNodeFile[nwtBaseDir / path]
 
-proc extend(str: string, templateCache: var Deque[seq[NwtNode]]) =
+proc extend(str: string, templateCache: var Deque[seq[NwtNode]],
+            seen: var HashSet[string]) =
   var secondsStepTokens = loadCache(str)
   let foundExtendAt = validExtend(secondsStepTokens)
   if foundExtendAt > -1:
     templateCache.addFirst secondsStepTokens
-    let ext = loadCacheFile(secondsStepTokens[foundExtendAt].extendsPath)
-    extend(ext, templateCache)
+    let extPath = secondsStepTokens[foundExtendAt].extendsPath
+    if seen.contains(extPath):
+      raise newException(ValueError,
+        "circular extends detected: " & extPath & " (extends chain: " & $seen & ")")
+    seen.incl extPath
+    let ext = loadCacheFile(extPath)
+    extend(ext, templateCache, seen)
   else:
     templateCache.addFirst secondsStepTokens
 
@@ -720,7 +733,8 @@ proc fillBlocks(nodes: seq[NwtNode]): seq[NwtNode] =
 
 proc compile(str: string, blockToRender: string = ""): seq[NwtNode] =
   var templateCache = initDeque[seq[NwtNode]]()
-  extend(str, templateCache)
+  var seen = initHashSet[string]()
+  extend(str, templateCache, seen)
   for idx, tmp in enumerate(templateCache):
     for nwtn in tmp.recursiveFindAllBlocks():
       # echo nwtn.blockName ## HERE ## TODO remove
@@ -732,9 +746,7 @@ proc compile(str: string, blockToRender: string = ""): seq[NwtNode] =
     if blocks.contains(blockToRender):
       result = fillBlocks(blocks[blockToRender]).condenseStrings()
     else:
-      echo "Block '" & blockToRender & "' is not known." # TODO how communicate the error?
-      # return # TODO should we return here or quit?
-      quit()
+      raise newException(ValueError, "Block '" & blockToRender & "' is not known.")
   # echo result
 
 proc generatePreallocatedStringDef(len: int): NimNode =

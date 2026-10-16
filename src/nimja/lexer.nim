@@ -19,7 +19,7 @@ proc debugPrint(buffer: string, pos: int) =
   echo '-'.repeat(pointPos) & "^"
 
 template thisIs(chr: char): bool =
-  (not (pos > buf.len)) and (buf[pos] == chr)
+  (not (pos >= buf.len)) and (buf[pos] == chr)
 
 template nextIs(chr: char, cnt = 1): bool =
   (not (pos + cnt >= buf.len)) and (buf[pos + cnt] == chr)
@@ -47,6 +47,13 @@ func lexInnerStr(buf: string, pos: var int): string =
   pos.inc # skip '"'
   while pos < buf.len:
     let ch = buf[pos]
+    if ch == '\\' and pos + 1 < buf.len:
+      # keep the escape sequence (eg.: '\"') intact, do not
+      # mistake the escaped quote for the closing quote
+      result &= ch
+      result &= buf[pos + 1]
+      pos.inc 2
+      continue
     if ch == '"':
       result &= '"'
       break
@@ -54,7 +61,8 @@ func lexInnerStr(buf: string, pos: var int): string =
       result &= ch
     pos.inc
 
-func lexInnerStrTripple(buf: string, pos: var int): string =
+func lexInnerStrTripple(buf: string, pos: var int, closed: var bool): string =
+  closed = false
   result &= buf[pos .. pos + 2] # the '"""'
   pos.inc # skip '"'
   pos.inc # skip '"'
@@ -66,6 +74,7 @@ func lexInnerStrTripple(buf: string, pos: var int): string =
       result &= '"'
       result &= '"'
       pos.inc 2
+      closed = true
       break
     else:
       result &= ch
@@ -98,8 +107,11 @@ proc lexBetween(buf: string, pos: var int, line: var int, bstart = "{{", bend = 
       pos.inc # skip next '}'
       break
     elif thisIs('"') and nextIs('"') and nextIs('"', 2):
-      # echo "Triple quotes"
-      result.token.value &= lexInnerStrTripple(buf, pos)
+      var closed = false
+      result.token.value &= lexInnerStrTripple(buf, pos, closed)
+      if not closed:
+        raise newException(ValueError,
+          fmt"Unterminated triple quoted string in block at line {line}")
     elif thisIs('"'):
       result.token.value &= lexInnerStr(buf, pos)
     else:

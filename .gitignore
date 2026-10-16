@@ -60,3 +60,4 @@ tests/basic/test_variable_escape
 tests/basic/test_fragments
 tests/basic/test_procmodule
 src/nimja/lexer
+tests/bugs/test_bug_lexer_strings
