@@ -1325,7 +1325,10 @@ Changelog
   - Added HTML escaping: the `{{ x|e }}` / `{{ x|htmlEscape }}` and
     `{{ x|safe }}` filters, plus an `escapeWith` proc option for
     `compileTemplateStr`, `compileTemplateFile`, `tmpls` and `tmplf`
-    (`escapeWith = htmlEscape` for HTML, any proc for URL/JS/...)..
+    (`escapeWith = htmlEscape` for HTML, any proc for URL/JS/...).
+  - Performance: compile-time constant variables in `{{ ... }}` are folded
+    into a single string block when the whole string/variable run is static
+    (issue #53), so `add` calls are saved. See `const-folding.md`.
 - 0.10.0
   - Possible Breaking Change.
   - [Template fragments](#template-fragments) (good for htmx); Render specific blocks from a template all procs (`tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`) got a "blockToRender" parameter, when set, only the given block is rendered.

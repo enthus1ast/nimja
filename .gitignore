@@ -68,3 +68,4 @@ bench/benchmark
 tests/bugs/test_bug_error_positions
 tests/bugs/test_bug_86_for_multi_vars
 tests/basic/test_autoescape
+tests/basic/test_const_folding

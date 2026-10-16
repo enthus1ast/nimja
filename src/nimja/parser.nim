@@ -627,9 +627,94 @@ proc astAstOne(token: NwtNode): NimNode =
   else: templateError("cannot convert to ast: " & $token.kind,
                       token.file, token.line, token.col)
 
+proc varExpr(body: string): NimNode =
+  ## `parseStmt` wraps the expression in a `StmtList`; unwrap the single stmt
+  result = parseStmt(body)
+  if result.kind == nnkStmtList and result.len == 1:
+    result = result[0]
+
+proc isFoldableIdent(n: NwtNode): bool =
+  ## Only simple identifiers are folded. `x is static` is broader than
+  ## "is a const": a pure proc call is `static` too, and folding it would move
+  ## its evaluation (and any side effect) to compile time.
+  if n.kind != NVariable: return false
+  if n.variableBody.startsWith(specialSelf): return false
+  try:
+    result = varExpr(n.variableBody).kind == nnkIdent
+  except:
+    result = false
+
+proc stringifyVar(n: NwtNode): NimNode =
+  ## `$var` or `escapeWith(var)`, as a plain string for `&` concatenation
+  var varb: NimNode
+  try:
+    varb = varExpr(n.variableBody)
+  except:
+    templateError("Cannot parse variable body: " & n.variableBody,
+                  n.file, n.line, n.col)
+  result = newCall(nwtStrProc, varb)
+  if nwtEscaping:
+    result = newCall(newIdentNode("$"), result)
+
+proc appendValue(value: NimNode): NimNode =
+  if nwtIter:
+    result = nnkYieldStmt.newTree(value)
+  else:
+    result = nnkStmtList.newTree(
+      nnkInfix.newTree(newIdentNode("&="), newIdentNode(nwtVarname), value))
+
+proc astRun(run: seq[NwtNode]): NimNode =
+  ## A maximal run of `NStr`/`NVariable`. When it contains only simple
+  ## identifiers, emit a `when <ident> is static` branch so the compiler can
+  ## constant fold `"a" & $const & "b"` into a single string (issue #53),
+  ## saving runtime `add` calls. Otherwise use the normal per node code.
+  var sep = newStmtList()
+  var hasVar = false
+  var foldable = true
+  for n in run:
+    if n.kind == NVariable:
+      hasVar = true
+      if not isFoldableIdent(n): foldable = false
+    sep.add astAstOne(n)
+  if not hasVar:
+    return astAstOne(run[0])        # a single (already condensed) string
+  if not foldable:
+    return sep
+  var cond, folded: NimNode
+  for n in run:
+    case n.kind
+    of NStr:
+      let lit = newStrLitNode(n.strBody)
+      folded = if folded.isNil: lit else:
+        nnkInfix.newTree(newIdentNode("&"), folded, lit)
+    of NVariable:
+      let v = stringifyVar(n)
+      folded = if folded.isNil: v else:
+        nnkInfix.newTree(newIdentNode("&"), folded, v)
+      let c = nnkInfix.newTree(newIdentNode("is"), varExpr(n.variableBody),
+                               newIdentNode("static"))
+      cond = if cond.isNil: c else:
+        nnkInfix.newTree(newIdentNode("and"), cond, c)
+    else: discard
+  result = nnkWhenStmt.newTree(
+    nnkElifBranch.newTree(cond, newStmtList(appendValue(folded))),
+    nnkElse.newTree(sep))
+
 proc astAst(tokens: seq[NwtNode]): seq[NimNode] =
-  for token in tokens:
-    result.add astAstOne(token)
+  var i = 0
+  while i < tokens.len:
+    let k = tokens[i].kind
+    let foldStart = k == NStr or (k == NVariable and isFoldableIdent(tokens[i]))
+    if foldStart:
+      var run: seq[NwtNode]
+      while i < tokens.len and (tokens[i].kind == NStr or
+            (tokens[i].kind == NVariable and isFoldableIdent(tokens[i]))):
+        run.add tokens[i]
+        i.inc
+      result.add astRun(run)
+    else:
+      result.add astAstOne(tokens[i])
+      i.inc
 
 proc validExtend(secondsStepTokens: seq[NwtNode]): int =
   ## Scans if invalid tokens come before extend.
@@ -949,8 +1034,8 @@ template doCompile(str: untyped, blockToRender: string = "", res = newStmtList()
       if (not defined(noPreallocatedString)) and guessedStringLen > 0:
         result.add generatePreallocatedStringDef(guessedStringLen)
 
-    for nwtNode in nwtNodes:
-      result.add astAstOne(nwtNode)
+    for nwtNode in astAst(nwtNodes):
+      result.add nwtNode
     when defined(dumpNwtMacro): echo toStrLit(result)
   except NimjaError as e:
     reportNimjaError(e)

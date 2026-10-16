@@ -126,6 +126,23 @@ proc benchProc() =
   for i in 0 ..< inner:
     acc += withProc("World").len
 
+# ---------------------------------------------------------------------------
+# A run of compile-time const variables (issue #53). They are folded into a
+# single `result &= "..."` instead of one add per variable.
+# ---------------------------------------------------------------------------
+const
+  cf1 = "alpha"
+  cf2 = "beta"
+  cf3 = "gamma"
+  cf4 = "delta"
+
+proc constBlock(flag: bool): string =
+  compileTemplateStr("{{cf1}}{{cf2}}{{cf3}}{{cf4}}{% if flag %}<b>on</b>{% endif %}")
+
+proc benchConstBlock() =
+  for i in 0 ..< inner:
+    acc += constBlock(i mod 2 == 0).len
+
 timeIt "page (8 items)", 50:
   benchPage()
 
@@ -140,6 +157,9 @@ timeIt "cache hit (same template twice)", 50:
 
 timeIt "template proc", 50:
   benchProc()
+
+timeIt "const block", 50:
+  benchConstBlock()
 
 # keep `acc` alive
 if acc < 0: echo "unreachable ", acc
