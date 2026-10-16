@@ -482,23 +482,28 @@ This way you create reusable template blocks to use all over your webpage.
 
 (Since Nimja 0.10.0) You can also use the [template fragment](#template-fragments) feature.
 
-The syntax to load one specific block via importnimja is:
+The syntax is:
 
 ```
-{% importnimja "path/to/file.nima" "theBlockToRender" %}
-```
-
-You can also pass variables to the imported template with a **context**, using
-the same `{name: value}` syntax as the compile procs:
-
-```
+{% importnimja "path/to/file.nimja" %}
+{% importnimja "path/to/file.nimja" "theBlockToRender" %}
 {% importnimja "path/to/file.nimja" {user: theUser} %}
 {% importnimja "path/to/file.nimja" "theBlockToRender" {user: theUser} %}
 ```
 
-This makes `{{ user }}` inside the imported template resolve to `theUser` from
-the importing template. The names are scoped to the imported template; they do
-not leak into the rest of the parent template.
+The optional `"theBlockToRender"` (Since Nimja 0.10.0) renders only that
+`{% block %}` of the imported template.
+
+The optional `{name: value}` context makes `{{ name }}` inside the imported
+template resolve to `value` from the importing template (the line above makes
+`{{ user }}` resolve to `theUser`). The names are scoped to the imported
+template, so they do not leak into the rest of the parent template. As with the
+`context` of the compile procs, the values must be variables; procs/funcs are
+not supported yet.
+
+Do not use the same name for the context key and the parent variable
+(`{x: x}` creates a self referential alias); use the name the imported template
+expects, e.g. `{user: theUser}`.
 
 partials/_user.nimja:
 ```twig
