@@ -1272,6 +1272,8 @@ Changelog
   - Added render benchmarks in `bench/` (`nimble bench`).
   - Template errors now report the template **file, line and column**
     (e.g. `path/page.nimja(3, 5) Error: ...`), with no runtime cost.
+  - Fixed multi-variable `for` loops (e.g. `{% for name, val in fieldPairs(x) %}`)
+    where the iterator expression was overwritten by the loop body (#86).
 - 0.10.0
   - Possible Breaking Change.
   - [Template fragments](#template-fragments) (good for htmx); Render specific blocks from a template all procs (`tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`) got a "blockToRender" parameter, when set, only the given block is rendered.

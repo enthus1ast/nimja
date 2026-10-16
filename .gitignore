@@ -66,3 +66,4 @@ tests/bugs/test_bug_comment_whitespace
 tests/bugs/test_bug_cycle_empty
 bench/benchmark
 tests/bugs/test_bug_error_positions
+tests/bugs/test_bug_86_for_multi_vars

@@ -502,7 +502,9 @@ func astEval(token: NwtNode): NimNode =
 proc astFor(token: NwtNode): NimNode =
   let easyFor = "for " & token.forStmt & ": discard" # `discard` to make a parsable construct
   result = parseStmt(easyFor)
-  result[0][2] = newStmtList(astAst(token.forBody)) # overwrite discard with real `for` body
+  # the body is the last child of nnkForStmt; index 2 is only the body for a
+  # single loop variable (`for k, v in pairs(x)` has an extra Ident, see #86)
+  result[0][^1] = newStmtList(astAst(token.forBody)) # overwrite discard with real `for` body
 
 proc astWhile(token: NwtNode): NimNode =
   nnkStmtList.newTree(
