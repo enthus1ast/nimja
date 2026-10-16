@@ -126,12 +126,11 @@ Two issues:
 2. `guessedStringLen` counted `greet`'s literals (`"Hi "`, `"!"` = 4) and used
    them for the **outer** render's buffer, which has no literals at all.
 
-**Recommendation — implemented, benchmarked, reverted.** Emitting a
-`newStringOfCap` inside `astProc` (guarded by a `>= 32` length threshold) was
-implemented and measured; it was neutral-to-slightly-negative on the
-`template proc` benchmark (the extra call per invocation is not repaid by
-fewer reallocations for small procs), so it was reverted. It may still be
-worth it for templates with large proc bodies.
+**Applied (thresholded).** `astProc` emits `generatePreallocatedStringDef`
+for a proc/func body whose static length is `>= 64`. Small procs are left
+alone (the call is not repaid), large ones preallocate. A 213-char proc body
+called three times went from ~1.0ms to ~0.88ms (~12%). The `big proc` bench
+scenario tracks it; the small `template proc` generated code is unchanged.
 
 ---
 
@@ -240,8 +239,8 @@ The `cache` win is exactly F-2 (the second proc now gets
 `newStringOfCap(54)` instead of `newStringOfCap(0)`); the `vars` win is F-5
 (no more `newStringOfCap(0)` no-op).
 
-F-3 and F-4 were implemented and benchmarked, then reverted because they gave
-no measurable improvement (see above).
+F-4 was implemented and benchmarked, then reverted because it gave no
+measurable improvement; F-3 was later applied with a size threshold.
 
 ## Summary
 
@@ -249,7 +248,7 @@ no measurable improvement (see above).
 |---|---------|--------|--------|
 | F-1 | `self.` inlining re-created adjacent strings, no re-condense | extra runtime `&=` | **applied** |
 | F-2 | `guessedStringLen` wrong on cache hits / overridden blocks | wrong `newStringOfCap` | **applied** |
-| F-3 | template procs/funcs get no pre-allocation; leak into outer cap | wrong/unused pre-allocation | measured, reverted |
+| F-3 | template procs/funcs get no pre-allocation; leak into outer cap | wrong/unused pre-allocation | **applied** (>= 64 chars) |
 | F-4 | unconditional `$` for string expressions | extra call | measured, reverted |
 | F-5 | `newStringOfCap(0)` emitted | dead statement | **applied** |
 | F-6 | `$` applied to `StmtList` (`$ do:`) | cosmetic | not implemented |

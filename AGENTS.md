@@ -140,6 +140,8 @@ Useful compile-time defines (from the readme):
   fold to one string; mixed runs fold each const with its preceding literal.
   Literal variables (`{{"x"}}`, `{{42}}`) are folded directly. Only simple
   identifiers are folded, so proc calls keep their runtime side effects.
+- Template `proc`/`func` bodies with `>= 64` static chars get their own
+  `newStringOfCap` in `astProc` (see `macro-generation-analysis.md` F-3).
 - Benchmark edits to generated code with `nimble bench` (see
   `bench/benchmark.nim` and `macro-generation-analysis.md`); results are noisy,
   pin with `taskset -c 0` and compare min times. `$` on a Nim `string` is an

@@ -80,3 +80,8 @@ suite "proc":
         {{ textarea("name", "value") }}
       """)
     check test().strip() == """<textarea name="name" rows="10" cols="40">value</textarea>"""
+
+  test "large proc body (preallocated result)":
+    proc test(name: string): string =
+      compileTemplateStr("""{% proc big(n: string): string = %}<section><header><h1>Title</h1></header><article><p>Some longer static paragraph that is part of the component body and is over the preallocation threshold.</p></article><footer>{{ n }}</footer></section>{% end %}{{ big(name) }}""")
+    check test("foot") == "<section><header><h1>Title</h1></header><article><p>Some longer static paragraph that is part of the component body and is over the preallocation threshold.</p></article><footer>foot</footer></section>"

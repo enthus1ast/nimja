@@ -143,6 +143,7 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc astAst(tokens: seq[NwtNode]): seq[NimNode]
 proc compile(str: string, blockToRender: string = "", file: string = ""): seq[NwtNode]
 proc astAstOne(token: NwtNode): NimNode
+proc generatePreallocatedStringDef(len: int): NimNode
 
 func staticLen(nodes: seq[NwtNode]): int =
   ## Sums the length of all static string blocks in `nodes`; used to
@@ -594,9 +595,14 @@ proc astCase(token: NwtNode): NimNode =
 proc astProc(token: NwtNode, procStr = "proc"): NimNode =
   let easyProc =  procStr & " " & token.procHeader & " discard"
   result = parseStmt(easyProc) # dummy to build valid procBody
-  result[0].body = nnkStmtList.newTree(
-    astAst(token.procBody) # fill the proc body with content
-  )
+  result[0].body = newStmtList()
+  # preallocate the proc's own result for large static bodies; small procs are
+  # left alone (the newStringOfCap call is not worth it there)
+  let plen = staticLen(token.procBody)
+  if plen >= 64:
+    result[0].body.add generatePreallocatedStringDef(plen)
+  for n in astAst(token.procBody): # fill the proc body with content
+    result[0].body.add n
 
 proc astScope(token: NwtNode): NimNode =
   result = newStmtList()

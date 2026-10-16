@@ -126,6 +126,14 @@ proc benchProc() =
   for i in 0 ..< inner:
     acc += withProc("World").len
 
+# large template proc body: its own result is preallocated (>= 64 static chars)
+proc bigProc(n: string): string =
+  compileTemplateStr("{% proc big(n: string): string = %}<section><header><h1>Title</h1></header><article><p>Some longer static paragraph that is part of the component body and is over the preallocation threshold.</p></article><footer>{{ n }}</footer></section>{% end %}{{ big(n) }}")
+
+proc benchBigProc() =
+  for i in 0 ..< inner:
+    acc += bigProc($i).len
+
 # ---------------------------------------------------------------------------
 # A run of compile-time const variables (issue #53). They are folded into a
 # single `result &= "..."` instead of one add per variable.
@@ -170,6 +178,9 @@ timeIt "const block", 50:
 
 timeIt "const mixed", 50:
   benchMixedConst()
+
+timeIt "big proc", 50:
+  benchBigProc()
 
 # keep `acc` alive
 if acc < 0: echo "unreachable ", acc
