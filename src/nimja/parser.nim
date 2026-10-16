@@ -731,6 +731,50 @@ proc fillBlocks(nodes: seq[NwtNode]): seq[NwtNode] =
     else:
       result.add node
 
+proc resolveSelf(nodes: seq[NwtNode], resolving: var HashSet[string]): seq[NwtNode] =
+  ## Replaces `{{self.<block>}}` variables with the body of the corresponding
+  ## block. This has to happen at the end of each `compile` invocation because
+  ## `blocks` is global: if we waited until AST generation a later template
+  ## could already have overwritten a block of the same name (issue #107).
+  ## `resolving` guards against a block referencing itself via `self.`.
+  for node in nodes:
+    var n = node
+    case n.kind
+    of NVariable:
+      if n.variableBody.startsWith(specialSelf):
+        let blockname = n.variableBody[specialSelf.len .. ^1]
+        if blocks.hasKey(blockname) and not resolving.contains(blockname):
+          resolving.incl blockname
+          result.add resolveSelf(blocks[blockname], resolving)
+          resolving.excl blockname
+          continue
+    of NIf, NWhen:
+      n.nnThen = resolveSelf(n.nnThen, resolving)
+      n.nnElif = resolveSelf(n.nnElif, resolving)
+      n.nnElse = resolveSelf(n.nnElse, resolving)
+    of NElif:
+      n.elifBody = resolveSelf(n.elifBody, resolving)
+    of NWhile:
+      n.whileBody = resolveSelf(n.whileBody, resolving)
+    of NFor:
+      n.forBody = resolveSelf(n.forBody, resolving)
+    of NBlock:
+      n.blockBody = resolveSelf(n.blockBody, resolving)
+    of NProc:
+      n.procBody = resolveSelf(n.procBody, resolving)
+    of NCase:
+      n.nnCaseOf = resolveSelf(n.nnCaseOf, resolving)
+      n.nnCaseElse = resolveSelf(n.nnCaseElse, resolving)
+    of NCaseOf:
+      n.caseOfBody = resolveSelf(n.caseOfBody, resolving)
+    of NCaseElse:
+      n.caseElseBody = resolveSelf(n.caseElseBody, resolving)
+    of NScope:
+      n.scopeBody = resolveSelf(n.scopeBody, resolving)
+    else:
+      discard
+    result.add n
+
 proc compile(str: string, blockToRender: string = ""): seq[NwtNode] =
   var templateCache = initDeque[seq[NwtNode]]()
   var seen = initHashSet[string]()
@@ -747,6 +791,9 @@ proc compile(str: string, blockToRender: string = ""): seq[NwtNode] =
       result = fillBlocks(blocks[blockToRender]).condenseStrings()
     else:
       raise newException(ValueError, "Block '" & blockToRender & "' is not known.")
+  # resolve `self.` here, while `blocks` still holds this template's blocks
+  var resolving = initHashSet[string]()
+  result = resolveSelf(result, resolving)
   # echo result
 
 proc generatePreallocatedStringDef(len: int): NimNode =

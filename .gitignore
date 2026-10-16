@@ -61,3 +61,4 @@ tests/basic/test_fragments
 tests/basic/test_procmodule
 src/nimja/lexer
 tests/bugs/test_bug_lexer_strings
+tests/bugs/test_bug_107_self_blockname

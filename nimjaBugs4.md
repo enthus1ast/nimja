@@ -157,6 +157,23 @@ Re-verified every item:
 
 The file was removed since it contained no valid open findings.
 
+### F-15 `self.<block>` resolved to the last-registered block (issue #107)
+`parser.nim`, `compile`/`astVariable`. `blocks` is a compile-time global and
+`{{ self.<name> }}` was resolved lazily during AST generation, so when the same
+block name existed in more than one template the reference picked up whichever
+template registered last. With `importnimja` this made an imported template's
+`self.title` render the importing template's `title`.
+
+Fix: `compile` now walks the finished node tree and replaces every
+`self.<block>` variable with the block's body **at the end of the same `compile`
+invocation** (`resolveSelf`), before a later template can overwrite `blocks`.
+A `resolving` set guards against a block referencing itself through `self.`.
+
+Test: `tests/bugs/test_bug_107_self_blockname.nim` +
+`tests/bugs/self_blockname_parent.nimja` / `self_blockname_child.nimja`.
+Before the fix the test produced `parentchildparent`; it now produces the
+expected `parentchildchild`.
+
 ---
 
 ## OPEN (verified, not fixed here)
@@ -196,6 +213,7 @@ The file was removed since it contained no valid open findings.
 - `test_bug_circular_extend.nim` + `bug_circular.nimja` — F-6
 - `test_bug_undefined_self_block.nim` — F-7
 - `test_bug_unknown_block_to_render.nim` — F-8
+- `test_bug_107_self_blockname.nim` (+ parent/child `.nimja`) — F-15
 
 Run with `nimble tests` or
 `testament --directory:"./tests/" p "bugs/*.nim"`.
