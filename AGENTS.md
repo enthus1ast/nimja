@@ -40,8 +40,6 @@ variable.
 | `tests/templates`, `tests/basic/**/*.nimja` | template fixtures |
 | `examples/` | fromReadme, prologue/jester, dynlib, hcr examples |
 | `readme.md` | the user manual (large; the source of truth for features) |
-| `nimjaBugs2.md` | historical static analysis (pre-fix) |
-| `nimjaBugs4.md` | **current** bug/fix log — append new findings here |
 
 ## Build & test
 
@@ -101,13 +99,13 @@ Useful compile-time defines (from the readme):
 
 1. **Verify before you edit.** Read the relevant `readme.md` section and the
    source, then reproduce the behaviour with a small harness. Do not trust
-   comments or the bug files blindly.
-2. **Keep `nimjaBugs4.md` current.** Add new findings there; move an item to
-   the FIXED section with its regression test when you fix it.
-3. **Remove false claims.** If a doc/comment (including older bug files)
-   contradicts verified behaviour, correct or delete it.
+   comments blindly.
+2. **Add a regression test for every bug.** Put it in `tests/bugs/` and make it
+   fail before the fix, pass after. This is the durable record of the fix.
+3. **Remove false claims.** If a doc/comment contradicts verified behaviour,
+   correct or delete it.
 4. **After a fix, run both suites** (`basic/*.nim` and `bugs/*.nim`) and keep
-   the existing 41+ basic tests green.
+   the existing basic tests green.
 5. Clean up scratch files and generated binaries; add new test binaries to
    `.gitignore` if they are not already covered.
 
@@ -115,18 +113,21 @@ Useful compile-time defines (from the readme):
 
 - `blocks` and the `cacheNwtNode*` tables are **compile-time globals** shared by
   every template compiled in the same module; block bodies are re-registered on
-  each `compile`.
-- Whitespace control works for `{%- -%}` and `{{- -}}`; `{#- -#}` does **not**
-  strip whitespace (comments are dropped before `whitespaceControl`).
+  each `compile`, and `self.<block>` is resolved per `compile` invocation.
+- Whitespace control works for `{%- -%}`, `{{- -}}` and `{#- -#}`.
 - `baseDir` must be set (`getScriptDir()`) for `extends`/`importnimja`. Import
   paths resolve against `baseDir`, not the importing file.
 - `errorOnUnevenBlocks` checks `if`, `for`, `while`, `when` and `block` only;
   unbalanced `case`/`scope`/`proc` fall through to Nim errors.
+- `condenseStrings` runs twice on purpose (FS stage, then Nwt stage after
+  `fillBlocks`/`self` inlining) to merge adjacent strings and reduce runtime
+  `&=` calls.
 - Entry/output is a `string` (`result` / `varname`) appended with `&=`; the
   generated code preallocates when possible (`noPreallocatedString` disables it).
 
-## Known open issues
+## Bug history
 
-See the **OPEN** section of `nimjaBugs4.md` (double condense, dead branches,
-comment whitespace control, internal error messages for stray block tags,
-`cycle` on empty seq, path resolution).
+The earlier static-analysis notes (`nimjaBugs2.md`/`nimjaBugs4.md`) were
+removed once every finding was either fixed or shown to be intentional. Their
+regression tests live in `tests/bugs/`; use those and the git history as the
+record of what was wrong and how it was fixed.

@@ -162,7 +162,11 @@ proc parseFirstStep(tokens: seq[Token]): seq[FSNode] =
         result.add FSNode(kind: FsEval, value: cleanedToken.value, stripPre: stripPre, stripPost: stripPost)
     of NwtString: result.add FSNode(kind: FsStr, value: token.value)
     of NwtVariable: result.add FSNode(kind: FsVariable, value: cleanedToken.value, stripPre: stripPre, stripPost: stripPost)
-    of NwtComment: discard # ignore comments
+    of NwtComment:
+      # keep whitespace control chars of comments (eg.: `{#- foo -#}`),
+      # but drop the comment text itself
+      result.add FSNode(kind: FsStr, value: "",
+                        stripPre: stripPre, stripPost: stripPost)
     else: echo "[FS] Not catched:", token
 
 proc consumeBlock(fsTokens: seq[FSNode], pos: var int, endTags: set[FsNodeKind]): seq[NwtNode] =
@@ -343,7 +347,10 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
             ""
           )
       importNimja(result, file, blockToRender = blockToRender)
-    else: raise newException(ValueError, "[SS] NOT IMPL: " & $fsToken)
+    else:
+      raise newException(ValueError,
+        "Unexpected template tag (unbalanced or misplaced): " &
+        $fsToken.kind & " '" & fsToken.value & "'")
 
 
 proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
@@ -671,8 +678,8 @@ proc loadCache(str: string): seq[NwtNode] =
     var lexerTokens = toSeq(lex(str))
     var fsns = parseFirstStep(lexerTokens)
     fsns.firstStepErrorChecks()
-    fsns = fsns.condenseStrings() # we condense on the FSNodes that are cached
     fsns = fsns.whitespaceControl()
+    fsns = fsns.condenseStrings() # we condense on the FSNodes that are cached
     var pos = 0
     when defined(nwtCacheOff):
       return parseSecondStep(fsns, pos)

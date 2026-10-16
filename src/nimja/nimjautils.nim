@@ -33,6 +33,8 @@ proc cycle*[T](loop: Loop, elems: openArray[T]): T =
   ##       <li class="{{ loop.cycle(@["odd", "even"]) }}">{{ row }}</li>
   ##   {% endfor %}
   ##
+  if elems.len == 0:
+    raise newException(ValueError, "nimja: cycle() called with an empty sequence")
   return elems[loop.index0 mod elems.len]
 
 # iterator loop*[T](a: Loopable[T]): tuple[loop: Loop[T], val: T] = # TODO cannot access fields in the template; why?
