@@ -134,10 +134,12 @@ Useful compile-time defines (from the readme):
   `fillBlocks`/`self` resolution) to merge adjacent strings and reduce runtime
   `&=` calls. The output pre-allocation size (`newStringOfCap`) is computed
   from the final node tree by `staticLen` in `compile`.
-- `astAst` groups maximal runs of `NStr`/`NVariable`; for runs made of simple
-  identifiers it emits `when v is static:` so the compiler folds `const`
-  variables into the neighbouring literal (issue #53, see `const-folding.md`).
-  Only idents are folded, so proc calls keep their runtime side effects.
+- `astAst` groups maximal runs of `NStr`/`NVariable`; `astRun` emits
+  `when v is static:` so the compiler folds `const` variables into the
+  neighbouring literal (issue #53, see `const-folding.md`). All-static runs
+  fold to one string; mixed runs fold each const with its preceding literal.
+  Only simple identifiers are folded, so proc calls keep their runtime side
+  effects.
 - Benchmark edits to generated code with `nimble bench` (see
   `bench/benchmark.nim` and `macro-generation-analysis.md`); results are noisy,
   pin with `taskset -c 0` and compare min times. `$` on a Nim `string` is an

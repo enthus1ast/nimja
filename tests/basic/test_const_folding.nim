@@ -25,6 +25,11 @@ suite "const folding (#53)":
       compileTemplateStr("A {{ name }} B {{ x }} C")
     check test("dyn") == "A World B dyn C"
 
+  test "mixed run folds the consts around a runtime value":
+    proc test(x: string): string =
+      compileTemplateStr("A {{ name }} B {{ x }} C {{ name }} D")
+    check test("dyn") == "A World B dyn C World D"
+
   test "consts fold with escaping":
     proc test(): string =
       compileTemplateStr("<b>{{ name }}</b>", escapeWith = htmlEscape)

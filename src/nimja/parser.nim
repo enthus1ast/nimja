@@ -663,23 +663,55 @@ proc appendValue(value: NimNode): NimNode =
     result = nnkStmtList.newTree(
       nnkInfix.newTree(newIdentNode("&="), newIdentNode(nwtVarname), value))
 
+proc staticCond(n: NwtNode): NimNode =
+  nnkInfix.newTree(newIdentNode("is"), varExpr(n.variableBody),
+                   newIdentNode("static"))
+
 proc astRun(run: seq[NwtNode]): NimNode =
-  ## A maximal run of `NStr`/`NVariable`. When it contains only simple
-  ## identifiers, emit a `when <ident> is static` branch so the compiler can
-  ## constant fold `"a" & $const & "b"` into a single string (issue #53),
-  ## saving runtime `add` calls. Otherwise use the normal per node code.
-  var sep = newStmtList()
+  ## A maximal run of `NStr`/`NVariable`.
+  ##
+  ## * if every variable is a simple identifier, the first branch is
+  ##   `when v1 is static and v2 is static ...:` so the compiler can constant
+  ##   fold the whole run into a single string (issue #53);
+  ## * the `else` branch folds each variable with the literal before it, so a
+  ##   mixed run (some runtime variables) still saves one `add` per static
+  ##   variable;
+  ## * runs containing non identifiers use the normal per node code.
   var hasVar = false
   var foldable = true
   for n in run:
     if n.kind == NVariable:
       hasVar = true
       if not isFoldableIdent(n): foldable = false
-    sep.add astAstOne(n)
   if not hasVar:
     return astAstOne(run[0])        # a single (already condensed) string
   if not foldable:
-    return sep
+    var plain = newStmtList()
+    for n in run: plain.add astAstOne(n)
+    return plain
+  # mixed-run fallback: fold each variable with the preceding literal
+  var sep = newStmtList()
+  var pending: NimNode = nil
+  for n in run:
+    case n.kind
+    of NStr:
+      let lit = newStrLitNode(n.strBody)
+      pending = if pending.isNil: lit else:
+        nnkInfix.newTree(newIdentNode("&"), pending, lit)
+    of NVariable:
+      let v = stringifyVar(n)
+      if pending.isNil:
+        sep.add appendValue(v)
+      else:
+        let merged = nnkInfix.newTree(newIdentNode("&"), pending, v)
+        sep.add nnkWhenStmt.newTree(
+          nnkElifBranch.newTree(staticCond(n), newStmtList(appendValue(merged))),
+          nnkElse.newTree(newStmtList(appendValue(pending), appendValue(v))))
+      pending = nil
+    else: discard
+  if not pending.isNil:
+    sep.add appendValue(pending)
+  # all-static: fold the complete run into one string
   var cond, folded: NimNode
   for n in run:
     case n.kind
@@ -691,10 +723,8 @@ proc astRun(run: seq[NwtNode]): NimNode =
       let v = stringifyVar(n)
       folded = if folded.isNil: v else:
         nnkInfix.newTree(newIdentNode("&"), folded, v)
-      let c = nnkInfix.newTree(newIdentNode("is"), varExpr(n.variableBody),
-                               newIdentNode("static"))
-      cond = if cond.isNil: c else:
-        nnkInfix.newTree(newIdentNode("and"), cond, c)
+      cond = if cond.isNil: staticCond(n) else:
+        nnkInfix.newTree(newIdentNode("and"), cond, staticCond(n))
     else: discard
   result = nnkWhenStmt.newTree(
     nnkElifBranch.newTree(cond, newStmtList(appendValue(folded))),

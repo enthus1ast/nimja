@@ -143,6 +143,13 @@ proc benchConstBlock() =
   for i in 0 ..< inner:
     acc += constBlock(i mod 2 == 0).len
 
+proc mixedConst(x: string): string =
+  compileTemplateStr("{{cf1}} {{cf2}} {{cf3}} {{cf4}}{{x}}")
+
+proc benchMixedConst() =
+  for i in 0 ..< inner:
+    acc += mixedConst($i).len
+
 timeIt "page (8 items)", 50:
   benchPage()
 
@@ -160,6 +167,9 @@ timeIt "template proc", 50:
 
 timeIt "const block", 50:
   benchConstBlock()
+
+timeIt "const mixed", 50:
+  benchMixedConst()
 
 # keep `acc` alive
 if acc < 0: echo "unreachable ", acc
