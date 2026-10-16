@@ -792,15 +792,16 @@ proc compile(str: string, blockToRender: string = ""): seq[NwtNode] =
       blocks[nwtn.blockName] = nwtn.blockBody
   if blockToRender == "":
     var base = templateCache[0]
-    result = fillBlocks(base).condenseStrings() # ast condense after blocks are filled
+    result = fillBlocks(base)
   else:
     if blocks.contains(blockToRender):
-      result = fillBlocks(blocks[blockToRender]).condenseStrings()
+      result = fillBlocks(blocks[blockToRender])
     else:
       raise newException(ValueError, "Block '" & blockToRender & "' is not known.")
-  # resolve `self.` here, while `blocks` still holds this template's blocks
+  # resolve `self.` here, while `blocks` still holds this template's blocks,
+  # then run the Nwt-stage string condense so `self.` inlining gets merged too
   var resolving = initHashSet[string]()
-  result = resolveSelf(result, resolving)
+  result = resolveSelf(result, resolving).condenseStrings()
   # echo result
 
 proc generatePreallocatedStringDef(len: int): NimNode =
