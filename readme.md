@@ -1243,6 +1243,28 @@ Changelog
 - 0.?.?
   - Added context to `importnimja`
 ## DONE
+- 0.10.4
+  - Fixed `self.<block>` resolving to the last-registered block when a block
+    name was used by multiple templates in the same project; `self.<block>` is
+    now bound per `compile` invocation (#107).
+  - Added whitespace control for comments: `{#- ... -#}` now strips whitespace
+    like `{%- ... -%}` and `{{- ... -}}`.
+  - Lexer: an unterminated triple-quoted string now raises a clear error
+    instead of swallowing the closing `}}`.
+  - Lexer: escaped quotes inside a quoted string (`{{ "a\"b" }}`) are kept
+    intact instead of ending the string early.
+  - Parser: a lone whitespace control char (`{{-}}`) no longer crashes the
+    compiler; empty variable bodies raise a clear error.
+  - Parser: unbalanced `when` and `block` blocks are now reported
+    (`errorOnUnevenBlocks` previously skipped both).
+  - Parser: circular/self `extends` is detected instead of recursing until the
+    VM call depth is exceeded.
+  - Parser: undefined `self.` blocks, unknown `blockToRender` values and
+    stray/misplaced tags now report a clear error instead of a confusing Nim
+    error, an internal `[SS] NOT IMPL` dump, or `quit()`.
+  - Removed leftover compile-time debug output when importing templates.
+  - `cycle()` with an empty sequence now raises instead of dividing by zero.
+  - Readme: fixed the `context` and `importnimja` examples.
 - 0.10.0
   - Possible Breaking Change.
   - [Template fragments](#template-fragments) (good for htmx); Render specific blocks from a template all procs (`tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`) got a "blockToRender" parameter, when set, only the given block is rendered.
