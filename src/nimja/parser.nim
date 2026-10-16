@@ -91,6 +91,30 @@ proc astAst(tokens: seq[NwtNode]): seq[NimNode]
 proc compile(str: string, blockToRender: string = ""): seq[NwtNode]
 proc astAstOne(token: NwtNode): NimNode
 
+func staticLen(nodes: seq[NwtNode]): int =
+  ## Sums the length of all static strings in `nodes`; used to preallocate the
+  ## output. Operates on the final tree, so it is independent of the
+  ## parse/cache path (avoids `newStringOfCap(0)` on cache hits).
+  for node in nodes:
+    case node.kind
+    of NStr: result += node.strBody.len
+    of NIf, NWhen:
+      result += staticLen(node.nnThen)
+      result += staticLen(node.nnElif)
+      result += staticLen(node.nnElse)
+    of NElif: result += staticLen(node.elifBody)
+    of NWhile: result += staticLen(node.whileBody)
+    of NFor: result += staticLen(node.forBody)
+    of NBlock: result += staticLen(node.blockBody)
+    of NCase:
+      result += staticLen(node.nnCaseOf)
+      result += staticLen(node.nnCaseElse)
+    of NCaseOf: result += staticLen(node.caseOfBody)
+    of NCaseElse: result += staticLen(node.caseElseBody)
+    of NScope: result += staticLen(node.scopeBody)
+    of NProc: result += staticLen(node.procBody)
+    else: discard
+
 func mustStrip(token: Token): tuple[token: Token, stripPre, stripPost: bool] =
   ## identifies if whitespaceControl chars are in the string,
   ## clear the string of these, but fill `stripPre` and `stripPost` accordingly
@@ -322,7 +346,6 @@ proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     # Simple Types
     of FsStr:
       pos.inc
-      guessedStringLen.inc fsToken.value.len
       return NwtNode(kind: NStr, strBody: fsToken.value)
     of FsVariable:
       pos.inc
@@ -802,6 +825,8 @@ proc compile(str: string, blockToRender: string = ""): seq[NwtNode] =
   # then run the Nwt-stage string condense so `self.` inlining gets merged too
   var resolving = initHashSet[string]()
   result = resolveSelf(result, resolving).condenseStrings()
+  # compute the pre-allocation size from the final tree (cache independent)
+  guessedStringLen = staticLen(result)
   # echo result
 
 proc generatePreallocatedStringDef(len: int): NimNode =
@@ -838,7 +863,7 @@ template doCompile(str: untyped, blockToRender: string = "", res = newStmtList()
   result = res
 
   if not nwtIter:
-    if (not defined(noPreallocatedString)):
+    if (not defined(noPreallocatedString)) and guessedStringLen > 0:
       result.add generatePreallocatedStringDef(guessedStringLen)
 
   for nwtNode in nwtNodes:

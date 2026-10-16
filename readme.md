@@ -1265,6 +1265,11 @@ Changelog
   - Removed leftover compile-time debug output when importing templates.
   - `cycle()` with an empty sequence now raises instead of dividing by zero.
   - Readme: fixed the `context` and `importnimja` examples.
+  - Performance: strings spliced in by `self.<block>` are condensed into the
+    surrounding literal (fewer runtime `&=` calls), and the output
+    pre-allocation size is computed from the final node tree (no more
+    `newStringOfCap(0)` on cache hits).
+  - Added render benchmarks in `bench/` (`nimble bench`).
 - 0.10.0
   - Possible Breaking Change.
   - [Template fragments](#template-fragments) (good for htmx); Render specific blocks from a template all procs (`tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`) got a "blockToRender" parameter, when set, only the given block is rendered.

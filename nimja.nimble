@@ -34,3 +34,6 @@ task tests, "Run all tests":
 task docs, "Generate all docs":
   rmDir("src/nimja/htmldocs/")
   exec "nim doc --project -o:docs/ src/nimja.nim"
+
+task bench, "Run the render benchmarks (needs treeform/benchy, see bench/)":
+  exec "nim c -r -d:release bench/benchmark.nim"

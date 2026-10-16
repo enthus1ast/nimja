@@ -47,6 +47,7 @@ Nim 2.x is required (`nimble` version pins `nim >= 1.4.8`).
 
 ```bash
 nimble tests                 # runs basic/ + bugs/ + compiles all examples
+nimble bench                 # render benchmarks (needs treeform/benchy, see bench/)
 # focused:
 testament --directory:"./tests/" p "basic/*.nim"
 testament --directory:"./tests/" p "bugs/*.nim"
@@ -120,8 +121,13 @@ Useful compile-time defines (from the readme):
 - `errorOnUnevenBlocks` checks `if`, `for`, `while`, `when` and `block` only;
   unbalanced `case`/`scope`/`proc` fall through to Nim errors.
 - `condenseStrings` runs twice on purpose (FS stage, then Nwt stage after
-  `fillBlocks`/`self` inlining) to merge adjacent strings and reduce runtime
-  `&=` calls.
+  `fillBlocks`/`self` resolution) to merge adjacent strings and reduce runtime
+  `&=` calls. The output pre-allocation size (`newStringOfCap`) is computed
+  from the final node tree by `staticLen` in `compile`.
+- Benchmark edits to generated code with `nimble bench` (see
+  `bench/benchmark.nim` and `macro-generation-analysis.md`); results are noisy,
+  pin with `taskset -c 0` and compare min times. `$` on a Nim `string` is an
+  inlined identity, so an "avoid `$`" helper does not help.
 - Entry/output is a `string` (`result` / `varname`) appended with `&=`; the
   generated code preallocates when possible (`noPreallocatedString` disables it).
 

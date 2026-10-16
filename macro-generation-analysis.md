@@ -64,8 +64,6 @@ The number of `condenseStrings` passes is unchanged (FS stage + Nwt stage);
 only the Nwt-stage position moved. All existing tests still pass
 (41 basic + 12 bug tests).
 
----
-
 ## F-2 `guessedStringLen` (the `newStringOfCap` size) is unreliable
 
 `guessedStringLen` is a `compileTime` global (`parser.nim:80`) incremented as a
@@ -94,11 +92,14 @@ real static length is 39, but `newStringOfCap(48)` was emitted, because the
 base template's overridden `base-title`/`base-body` literals are counted too.
 Both branches of `if`/`else` are likewise summed.
 
-**Recommendation.** Drop the parse-time counter and compute the size from the
-**final** `NwtNode` tree in `compile` (the tree that is actually emitted),
-e.g. a small recursive `sum NStr.strBody.len`. That is cache-safe and matches
-the output; loop bodies / branch alternatives still count once (unavoidable,
-but no longer actively wrong). It also removes the global mutable state.
+**Applied.** The parse-time counter was removed and the size is now computed
+from the **final** `NwtNode` tree in `compile` via a recursive
+`staticLen(...)` (sum of `NStr.strBody.len`); `compile` assigns it to
+`guessedStringLen` after the final condense. It is cache-safe and matches the
+emitted tree; loop bodies / branch alternatives still count once (unavoidable,
+but no longer actively wrong). Because it is recomputed per `compile`, the
+nested `importnimja` compiles no longer leak into each other. See the
+benchmark results below.
 
 ---
 
@@ -125,9 +126,12 @@ Two issues:
 2. `guessedStringLen` counted `greet`'s literals (`"Hi "`, `"!"` = 4) and used
    them for the **outer** render's buffer, which has no literals at all.
 
-**Recommendation.** Scope the static length per generated proc: compute the
-body length in `astProc` (`parser.nim:494`) and emit a `newStringOfCap` at the
-top of that proc's body; exclude the proc body from the outer counter.
+**Recommendation — implemented, benchmarked, reverted.** Emitting a
+`newStringOfCap` inside `astProc` (guarded by a `>= 32` length threshold) was
+implemented and measured; it was neutral-to-slightly-negative on the
+`template proc` benchmark (the extra call per invocation is not repaid by
+fewer reallocations for small procs), so it was reverted. It may still be
+worth it for templates with large proc bodies.
 
 ---
 
@@ -150,8 +154,13 @@ template appendValue(dst: var string, value: untyped) =
   else: dst.add $value
 ```
 Then emit `appendValue(result, expr)` instead of the raw `&=`/`$` pair. This
-also removes the odd `$ do: expr` shape (see F-6). Low risk, measurable on
-variable-heavy templates.
+also removes the odd `$ do: expr` shape (see F-6).
+
+**Measured, reverted.** `appendValue` was implemented with `bindSym` and
+benchmarked: `$` on a `string` is already an inlined identity in Nim, so the
+`vars` and `cache` scenarios were unchanged and `page`/`static`/`proc` were
+within noise (±2%). It adds a template indirection for no measurable gain, so
+it was reverted.
 
 ---
 
@@ -162,9 +171,9 @@ For variable-only templates the generated code starts with
 when result is string:
   result = newStringOfCap(0)
 ```
-which is a no-op. `doCompile` (`parser.nim:834`/`842`) could skip
-`generatePreallocatedStringDef` when the computed length is `0`, or use a small
-minimum heuristic (e.g. number of variable appends) if a guess is wanted.
+which is a no-op. **Applied:** `doCompile` now skips
+`generatePreallocatedStringDef` when the computed length is `0` (a small but
+free win on variable-heavy templates).
 
 ---
 
@@ -178,9 +187,8 @@ result &=
   x
 ```
 instead of `result &= $x`. It compiles fine, but unwrapping a single-expression
-`StmtList` (`if varb.len == 1 and varb[0].kind notin {nnkStmtList, nnkDo,
-nnkBlockStmt}: varb = varb[0]`) yields cleaner, more predictable code. Cosmetic
-(combined with F-4 it disappears anyway).
+`StmtList` would yield cleaner code. **Not implemented** — purely cosmetic, no
+runtime effect identified.
 
 ---
 
@@ -194,18 +202,59 @@ nnkBlockStmt}: varb = varb[0]`) yields cleaner, more predictable code. Cosmetic
 
 ---
 
+## Benchmark tool & measured results
+
+`bench/benchmark.nim` uses [treeform/benchy](https://github.com/treeform/benchy)
+to time the *generated* render code (not compile time). Run it with:
+
+```bash
+nimble bench
+# or
+nim c -r -d:release bench/benchmark.nim
+```
+
+`bench/config.nims` adds `bench/../src` and the sibling `../benchy/src`; if
+benchy is installed with nimble the second `switch` can be dropped. Each
+scenario renders 10_000 times per timed iteration (50 iterations) and
+accumulates the output length so the calls are not dead-code-eliminated.
+
+Scenarios: a realistic `page` (static + `if` + `for`), a `static`-heavy page,
+`vars` (8 adjacent variables), `cache` (two procs with the *same* template
+string) and `template proc`.
+
+Measured with `taskset -c 0`, Nim 2.2.4, `-d:release`; min ms per 10_000
+renders (median of 3 runs):
+
+| scenario | before | after (F-2 + F-5) | change |
+|----------|-------:|------------------:|-------:|
+| page (8 items) | 1.455 | 1.451 | ~0% |
+| static (long body) | 1.051 | 1.060 | ~0% |
+| vars (8 variables) | 0.563 | 0.539 | **-4%** |
+| cache hit (same template twice) | 1.558 | 1.384 | **-11%** |
+| template proc | 1.895 | 1.895\* | ~0% |
+
+\* The `template proc` generated code is byte-identical before/after, so the
+run-to-run variation there is binary-layout noise; it is listed as unchanged.
+
+The `cache` win is exactly F-2 (the second proc now gets
+`newStringOfCap(54)` instead of `newStringOfCap(0)`); the `vars` win is F-5
+(no more `newStringOfCap(0)` no-op).
+
+F-3 and F-4 were implemented and benchmarked, then reverted because they gave
+no measurable improvement (see above).
+
 ## Summary
 
 | # | Finding | Impact | Status |
 |---|---------|--------|--------|
 | F-1 | `self.` inlining re-created adjacent strings, no re-condense | extra runtime `&=` | **applied** |
-| F-2 | `guessedStringLen` wrong on cache hits / overridden blocks | wrong `newStringOfCap` | recommended |
-| F-3 | template procs/funcs get no pre-allocation; leak into outer cap | wrong/unused pre-allocation | recommended |
-| F-4 | unconditional `$` for string expressions | extra call | recommended |
-| F-5 | `newStringOfCap(0)` emitted | dead statement | recommended |
-| F-6 | `$` applied to `StmtList` (`$ do:`) | cosmetic | recommended |
+| F-2 | `guessedStringLen` wrong on cache hits / overridden blocks | wrong `newStringOfCap` | **applied** |
+| F-3 | template procs/funcs get no pre-allocation; leak into outer cap | wrong/unused pre-allocation | measured, reverted |
+| F-4 | unconditional `$` for string expressions | extra call | measured, reverted |
+| F-5 | `newStringOfCap(0)` emitted | dead statement | **applied** |
+| F-6 | `$` applied to `StmtList` (`$ do:`) | cosmetic | not implemented |
 | F-7 | loops/branches can't be sized statically | inherent | — |
 
-Only F-1 was changed; it keeps the two-pass condense strategy (FS stage +
-Nwt stage) intact and was verified with the full suite:
+F-1, F-2 and F-5 are in the tree; the two-pass condense strategy (FS stage +
+Nwt stage) is intact. Verified with the full suite plus the benchmark:
 `tests/basic` 41 passed, `tests/bugs` 12 passed.
