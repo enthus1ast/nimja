@@ -125,6 +125,11 @@ Useful compile-time defines (from the readme):
   `templateError` raises `NimjaError` and `doCompile` converts it via
   `reportNimjaError` (`setLineInfo` + `error`). Calling `compile` directly still
   raises a catchable `NimjaError` (a `ValueError`). See `error-reporting.md`.
+- HTML escaping lives in `src/nimja/escaping.nim` (`HTMLSafeStr`, `htmlEscape`,
+  `safe`, `e`). `compileTemplateStr`/`File`/`tmpls`/`tmplf` take an
+  `escapeWith` proc (`escapeWith = htmlEscape` for HTML, any proc for
+  URL/JS/...). Escaping is idempotent; the generated call is `nwtStrProc`,
+  defaulting to `$` so escaping costs nothing when unused.
 - `condenseStrings` runs twice on purpose (FS stage, then Nwt stage after
   `fillBlocks`/`self` resolution) to merge adjacent strings and reduce runtime
   `&=` calls. The output pre-allocation size (`newStringOfCap`) is computed

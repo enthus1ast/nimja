@@ -1,6 +1,8 @@
 import options
 export options
 import sharedhelper
+import escaping
+export escaping
 import strutils
 import parseutils
 import unidecode
@@ -184,7 +186,7 @@ template `?`*(con, body: untyped): untyped =
   else:
     if con: yield body
 
-macro `|`*(aa, bb: untyped): string =
+macro `|`*(aa, bb: untyped): untyped =
   ## 'filter' alias, often used in other template engines.
   ## `a | b` is an alias to `a.b`.
   ## This enables syntax like this:

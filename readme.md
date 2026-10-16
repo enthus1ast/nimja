@@ -847,6 +847,54 @@ userlist.nimja
 </ul>
 ```
 
+HTML escaping / auto escaping
+==============================
+
+By default Nimja does **not** escape variables, so be careful with
+user supplied data (XSS). You can escape individual variables with the
+`e` alias or the `htmlEscape` filter:
+
+```twig
+{{ someUnsafeHTML|e }}
+```
+
+To escape every `{{ ... }}` variable of a template, pass the escaping proc as
+`escapeWith`. Use the built in `htmlEscape` for HTML:
+
+```nim
+proc renderPage(): string =
+  let someUnsafeHTML = "This contains <b>HTML</b>"
+  compileTemplateStr("<p>{{ someUnsafeHTML }}</p>", escapeWith = htmlEscape)
+```
+
+You can bypass escaping for a single variable with the `safe` filter
+(for trusted markup):
+
+```twig
+{{ trustedMarkup|safe }}
+```
+
+`htmlEscape` is idempotent, so `{{ x|e }}` is safe to combine with
+`escapeWith = htmlEscape` (it will not be escaped twice).
+
+Escaping something else
+-----------------------
+
+The escaping proc is not tied to HTML. Pass any proc that turns a value into a
+string (or into a type with a borrowed `add`/`$`) to escape for another
+target, e.g. URLs, JS or shell:
+
+```nim
+proc urlEscape(s: string): string = ...
+
+proc renderQuery(search: string): string =
+  compileTemplateStr("q={{ search }}", escapeWith = urlEscape)
+```
+
+`escapeWith` works with `compileTemplateStr`, `compileTemplateFile`, `tmpls`
+and `tmplf`. The built in escaping lives in `nimja/escaping` (`HTMLSafeStr`,
+`htmlEscape`, `safe`, `e`).
+
 Nimjautils
 ==========
 
@@ -1274,6 +1322,10 @@ Changelog
     (e.g. `path/page.nimja(3, 5) Error: ...`), with no runtime cost.
   - Fixed multi-variable `for` loops (e.g. `{% for name, val in fieldPairs(x) %}`)
     where the iterator expression was overwritten by the loop body (#86).
+  - Added HTML escaping: the `{{ x|e }}` / `{{ x|htmlEscape }}` and
+    `{{ x|safe }}` filters, plus an `escapeWith` proc option for
+    `compileTemplateStr`, `compileTemplateFile`, `tmpls` and `tmplf`
+    (`escapeWith = htmlEscape` for HTML, any proc for URL/JS/...)..
 - 0.10.0
   - Possible Breaking Change.
   - [Template fragments](#template-fragments) (good for htmx); Render specific blocks from a template all procs (`tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`) got a "blockToRender" parameter, when set, only the given block is rendered.

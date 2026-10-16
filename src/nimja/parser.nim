@@ -1,5 +1,6 @@
 import strutils, macros, sequtils, parseutils, os, tables, sets, deques, std/enumerate
-import lexer, sharedhelper
+import lexer, sharedhelper, escaping
+export escaping
 export getScriptDir
 export os
 
@@ -89,6 +90,8 @@ var cacheNwtNodeFile {.compileTime.}: Table[Path, string] ## a cache for content
 var nwtIter {.compileTime.} = false
 var nwtVarname {.compileTime.}: string
 var nwtBaseDir {.compileTime.}: string 
+var nwtStrProc {.compileTime.}: NimNode ## stringifies values: `$`, `htmlEscape` or a custom proc
+var nwtEscaping {.compileTime.} = false ## true when a real escaping proc is active
 var nwtFallbackFile {.compileTime.}: string ## entry source file, for string templates
 var nwtFallbackLine {.compileTime.}: int
 var nwtFallbackCol {.compileTime.}: int
@@ -118,6 +121,16 @@ proc reportNimjaError(e: NimjaError) {.noreturn.} =
       except CatchableError:
         discard
   error(msg, n)
+
+proc setEscapeProc(escapeWith: NimNode) =
+  ## chooses the proc used to stringify `{{ ... }}` values: a user supplied
+  ## `escapeWith` (e.g. `htmlEscape` for HTML) or `$` when none is given.
+  if escapeWith.kind != nnkNilLit:
+    nwtStrProc = escapeWith
+    nwtEscaping = true
+  else:
+    nwtStrProc = newIdentNode("$")
+    nwtEscaping = false
 
 when defined(dumpNwtAstPretty):
   import json
@@ -460,7 +473,7 @@ proc astVariable(token: NwtNode): NimNode =
       newIdentNode("&="),
       newIdentNode(nwtVarname),
       newCall(
-        "$",
+        nwtStrProc,
         varb
       )
     )
@@ -475,13 +488,14 @@ proc astStr(token: NwtNode): NimNode =
     )
   )
 
-func astVariableIter(token: NwtNode): NimNode =
+proc astVariableIter(token: NwtNode): NimNode =
+  var v = newCall(nwtStrProc, parseStmt(token.variableBody))
+  if nwtEscaping:
+    # `htmlEscape` returns HTMLSafeStr; iterators yield a plain string
+    v = newCall(newIdentNode("$"), v)
   return nnkStmtList.newTree(
     nnkYieldStmt.newTree(
-      newCall(
-        "$",
-        parseStmt(token.variableBody)
-      )
+      v
     )
   )
 
@@ -973,7 +987,8 @@ template tmplsMacroImpl() =
 
 macro compileTemplateStr*(str: typed, baseDir: static string = "", 
     blockToRender: static string = "", iter: static bool = false,
-    varname: static string = "result",  context: untyped = nil): untyped =
+    varname: static string = "result",  escapeWith: untyped = nil,
+    context: untyped = nil): untyped =
   ## Compiles a Nimja template from a string.
   ##
   ## .. code-block:: Nim
@@ -995,6 +1010,9 @@ macro compileTemplateStr*(str: typed, baseDir: static string = "",
   ##
   ## `varname` specifies the variable that is appended to.
   ##
+  ## `escapeWith = htmlEscape` HTML-escapes every `{{ ... }}` variable; any
+  ## other proc (e.g. URL/JS escaping) can be passed as `escapeWith`.
+  ## `{{ x|safe }}` bypasses escaping, `{{ x|e }}` always escapes.
   ##
   ## A context can be supplied to the `compileTemplateStr` (also `compileTemplateFile`), to override variable names:
   ##
@@ -1014,6 +1032,7 @@ macro compileTemplateStr*(str: typed, baseDir: static string = "",
   nwtVarname = varname
   nwtIter = iter
   nwtBaseDir = baseDir
+  setEscapeProc(escapeWith)
   let entry = str.lineInfoObj
   nwtFallbackFile = entry.filename
   nwtFallbackLine = entry.line
@@ -1023,7 +1042,8 @@ macro compileTemplateStr*(str: typed, baseDir: static string = "",
 
 macro compileTemplateFile*(path: static string, baseDir: static string = "", 
     blockToRender: static string = "", iter: static bool = false,
-    varname: static string = "result", context: untyped = nil): untyped =
+    varname: static string = "result", escapeWith: untyped = nil,
+    context: untyped = nil): untyped =
   ## Compiles a Nimja template from a file.
   ##
   ## .. code-block:: nim
@@ -1045,6 +1065,9 @@ macro compileTemplateFile*(path: static string, baseDir: static string = "",
   ##
   ## `varname` specifies the variable that is appended to.
   ##
+  ## `escapeWith = htmlEscape` HTML-escapes every `{{ ... }}` variable; any
+  ## other proc (e.g. URL/JS escaping) can be passed as `escapeWith`.
+  ## `{{ x|safe }}` bypasses escaping, `{{ x|e }}` always escapes.
   ## A context can be supplied to the `compileTemplateFile` (also `compileTemplateStr`), to override variable names:
   ##
   ## .. code-block:: nim
@@ -1061,6 +1084,7 @@ macro compileTemplateFile*(path: static string, baseDir: static string = "",
   nwtVarname = varname
   nwtIter = iter
   nwtBaseDir = baseDir
+  setEscapeProc(escapeWith)
   const ii = instantiationInfo(-1, true)
   nwtFallbackFile = ii.filename
   nwtFallbackLine = ii.line
@@ -1069,13 +1093,16 @@ macro compileTemplateFile*(path: static string, baseDir: static string = "",
   tmplsMacroImpl()
   doCompile(str, blockToRender, result, file = nwtBaseDir / path)
 
-template tmplsImpl(str: static string, baseDir: static string, blockToRender: static string): string =
+template tmplsImpl(str: static string, baseDir: static string, blockToRender: static string,
+                   escapeProc: untyped = nil): string =
   var nimjaTmplsVar: string
-  compileTemplateStr(str, baseDir, blockToRender, varname = astToStr nimjaTmplsVar)
+  compileTemplateStr(str, baseDir, blockToRender, varname = astToStr nimjaTmplsVar,
+                     escapeWith = escapeProc)
   nimjaTmplsVar
 
 macro tmpls*(str: static string, baseDir: static string = "", 
-    blockToRender: static string = "", context: untyped = nil): string =
+    blockToRender: static string = "", escapeWith: untyped = nil,
+    context: untyped = nil): string =
   ## Compiles a Nimja template string and returns directly.
   ## Can be used inline, without a wrapper proc.
   ##
@@ -1095,14 +1122,17 @@ macro tmpls*(str: static string, baseDir: static string = "",
   ##
   tmplsMacroImpl()
   result.add quote do:
-    tmplsImpl(`str`, `baseDir`, `blockToRender`)
+    tmplsImpl(`str`, `baseDir`, `blockToRender`, `escapeWith`)
 
-template tmplfImpl(path: static string, baseDir: static string = "", blockToRender: static string = ""): string =
+template tmplfImpl(path: static string, baseDir: static string = "", blockToRender: static string = "",
+                   escapeProc: untyped = nil): string =
   var nimjaTmplfVar: string
-  compileTemplateFile(path, baseDir, blockToRender, varname = astToStr nimjaTmplfVar)
+  compileTemplateFile(path, baseDir, blockToRender, varname = astToStr nimjaTmplfVar,
+                      escapeWith = escapeProc)
   nimjaTmplfVar
 
-macro tmplf*(str: static string, baseDir: static string = "", blockToRender: static string = "", context: untyped = nil): string =
+macro tmplf*(str: static string, baseDir: static string = "", blockToRender: static string = "",
+    escapeWith: untyped = nil, context: untyped = nil): string =
   ## Compiles a Nimja template file and returns directly.
   ## Can be used inline, without a wrapper proc.
   ##
@@ -1121,4 +1151,4 @@ macro tmplf*(str: static string, baseDir: static string = "", blockToRender: sta
   ##
   tmplsMacroImpl()
   result.add quote do:
-    tmplfImpl(`str`, `baseDir`, `blockToRender`)
+    tmplfImpl(`str`, `baseDir`, `blockToRender`, `escapeWith`)
