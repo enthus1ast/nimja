@@ -37,3 +37,7 @@ task docs, "Generate all docs":
 
 task bench, "Run the render benchmarks (needs treeform/benchy, see bench/)":
   exec "nim c -r -d:release bench/benchmark.nim"
+
+task jinja, "Benchmark against Jinja2 (needs python3 with jinja2, see bench/vs_jinja2.*)":
+  exec "nim c -r -d:release bench/vs_jinja2.nim 2000000"
+  exec "python3 bench/vs_jinja2.py 200000"
