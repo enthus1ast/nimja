@@ -138,8 +138,8 @@ Useful compile-time defines (from the readme):
   `when v is static:` so the compiler folds `const` variables into the
   neighbouring literal (issue #53, see `const-folding.md`). All-static runs
   fold to one string; mixed runs fold each const with its preceding literal.
-  Only simple identifiers are folded, so proc calls keep their runtime side
-  effects.
+  Literal variables (`{{"x"}}`, `{{42}}`) are folded directly. Only simple
+  identifiers are folded, so proc calls keep their runtime side effects.
 - Benchmark edits to generated code with `nimble bench` (see
   `bench/benchmark.nim` and `macro-generation-analysis.md`); results are noisy,
   pin with `taskset -c 0` and compare min times. `$` on a Nim `string` is an

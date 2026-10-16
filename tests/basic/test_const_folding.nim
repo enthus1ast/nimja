@@ -47,6 +47,16 @@ suite "const folding (#53)":
       compileTemplateStr("A {{ \"lit\" }} B")
     check test() == "A lit B"
 
+  test "literals are folded into the surrounding strings":
+    proc test(): string =
+      compileTemplateStr("A {{ \"lit\" }} B {{ 42 }} C {{ 3.5 }} D")
+    check test() == "A lit B 42 C 3.5 D"
+
+  test "literals are escaped when escaping is active":
+    proc test(): string =
+      compileTemplateStr("{{ \"a<b>\" }}", escapeWith = htmlEscape)
+    check test() == "a&lt;b&gt;"
+
   test "proc calls are not folded (no compile time side effect)":
     calls = 0
     proc test(): string =

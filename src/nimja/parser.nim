@@ -145,9 +145,12 @@ proc compile(str: string, blockToRender: string = "", file: string = ""): seq[Nw
 proc astAstOne(token: NwtNode): NimNode
 
 func staticLen(nodes: seq[NwtNode]): int =
-  ## Sums the length of all static strings in `nodes`; used to preallocate the
-  ## output. Operates on the final tree, so it is independent of the
-  ## parse/cache path (avoids `newStringOfCap(0)` on cache hits).
+  ## Sums the length of all static string blocks in `nodes`; used to
+  ## preallocate the output. Operates on the final tree, so it is independent
+  ## of the parse/cache path (avoids `newStringOfCap(0)` on cache hits).
+  ## Const/literal variable values are unknown at macro time and are not
+  ## counted: calling `parseStmt` for them here crashes `const` evaluation
+  ## under ARC/ORC with a NimNode `=destroy` internal error (Nim #25120).
   for node in nodes:
     case node.kind
     of NStr: result += node.strBody.len
@@ -633,6 +636,21 @@ proc varExpr(body: string): NimNode =
   if result.kind == nnkStmtList and result.len == 1:
     result = result[0]
 
+proc literalBody(body: string): tuple[ok: bool, value: string] =
+  ## If the variable body is a literal (and not escaped, so its value is
+  ## exactly what `$` would produce), its string value. It can then be merged
+  ## into the neighbouring string like a string block.
+  try:
+    let ast = varExpr(body)
+    case ast.kind
+    of nnkStrLit .. nnkTripleStrLit: (true, ast.strVal)
+    of nnkIntLit .. nnkUInt64Lit: (true, $ast.intVal)
+    of nnkFloatLit .. nnkFloat128Lit: (true, $ast.floatVal)
+    of nnkCharLit: (true, $ast.intVal.char)
+    else: (false, "")
+  except:
+    (false, "")
+
 proc isFoldableIdent(n: NwtNode): bool =
   ## Only simple identifiers are folded. `x is static` is broader than
   ## "is a const": a pure proc call is `static` too, and folding it would move
@@ -684,7 +702,13 @@ proc astRun(run: seq[NwtNode]): NimNode =
       hasVar = true
       if not isFoldableIdent(n): foldable = false
   if not hasVar:
-    return astAstOne(run[0])        # a single (already condensed) string
+    # a run of string blocks (possibly made of several literal variables)
+    var folded: NimNode
+    for n in run:
+      let lit = newStrLitNode(n.strBody)
+      folded = if folded.isNil: lit else:
+        nnkInfix.newTree(newIdentNode("&"), folded, lit)
+    return appendValue(folded)
   if not foldable:
     var plain = newStmtList()
     for n in run: plain.add astAstOne(n)
@@ -731,19 +755,33 @@ proc astRun(run: seq[NwtNode]): NimNode =
     nnkElse.newTree(sep))
 
 proc astAst(tokens: seq[NwtNode]): seq[NimNode] =
+  # fold literal variables (`{{"x"}}`, `{{42}}`) into string blocks so they
+  # merge with their neighbours; skip this when escaping is active because an
+  # escaping proc may transform the literal
+  var nodes = tokens
+  if not nwtEscaping:
+    nodes = @[]
+    for n in tokens:
+      if n.kind == NVariable:
+        let lit = literalBody(n.variableBody)
+        if lit.ok:
+          nodes.add NwtNode(kind: NStr, strBody: lit.value, line: n.line,
+                            col: n.col, file: n.file)
+          continue
+      nodes.add n
   var i = 0
-  while i < tokens.len:
-    let k = tokens[i].kind
-    let foldStart = k == NStr or (k == NVariable and isFoldableIdent(tokens[i]))
+  while i < nodes.len:
+    let k = nodes[i].kind
+    let foldStart = k == NStr or (k == NVariable and isFoldableIdent(nodes[i]))
     if foldStart:
       var run: seq[NwtNode]
-      while i < tokens.len and (tokens[i].kind == NStr or
-            (tokens[i].kind == NVariable and isFoldableIdent(tokens[i]))):
-        run.add tokens[i]
+      while i < nodes.len and (nodes[i].kind == NStr or
+            (nodes[i].kind == NVariable and isFoldableIdent(nodes[i]))):
+        run.add nodes[i]
         i.inc
       result.add astRun(run)
     else:
-      result.add astAstOne(tokens[i])
+      result.add astAstOne(nodes[i])
       i.inc
 
 proc validExtend(secondsStepTokens: seq[NwtNode]): int =

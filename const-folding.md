@@ -66,6 +66,10 @@ else:
 ### Implementation (`parser.nim`)
 
 * `astAst` groups maximal runs of `NStr`/`NVariable` and calls `astRun`.
+* Before grouping, `astAst` folds **literal variables** (`{{"x"}}`, `{{42}}`,
+  `{{3.5}}`, `{{'c'}}`) into string nodes, so they merge with their neighbours
+  with no `when` at all. This is skipped when `escapeWith` is set, because the
+  escaping proc may transform the literal.
 * `astRun`:
   * if any variable is **not** a simple identifier (`varExpr(...).kind ==
     nnkIdent`), it uses the normal per-node code;
@@ -113,8 +117,11 @@ Run with Nim 2.2.4, `-d:release`, `taskset -c 0`, 5000 renders per timed run.
   only folded when *all* of them are static; in a mixed run they stay as
   separate adds (there is no literal to merge with).
 * **Pre-allocation still under-estimates.** `newStringOfCap` is computed at
-  macro time from literal lengths only; the const value is unknown then. The
-  folded literal is longer than the cap, but the string still grows correctly.
+  macro time from string-block lengths only. Counting literal variables there
+  means calling `parseStmt` inside `compile`, which crashes `const`/compile-time
+  evaluation under ARC/ORC with a NimNode `=destroy` internal error
+  (Nim #25120), so it is not done. Const values are unknown at macro time
+  anyway.
 * **Compile-time cost.** The `when` adds a second copy of the run's AST (only
   the taken branch is compiled, so runtime code size is unchanged).
 * **`is static` vs `is const`.** Restricting to simple identifiers keeps this
