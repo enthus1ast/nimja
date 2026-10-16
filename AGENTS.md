@@ -125,6 +125,9 @@ Useful compile-time defines (from the readme):
   `templateError` raises `NimjaError` and `doCompile` converts it via
   `reportNimjaError` (`setLineInfo` + `error`). Calling `compile` directly still
   raises a catchable `NimjaError` (a `ValueError`). See `error-reporting.md`.
+- `compileTemplateStr(str)` accepts a string literal, a `const` string or a
+  folded static expression (`staticStr` resolves consts via `getImpl`); a
+  runtime `let`/`var` argument errors instead of silently using its name.
 - HTML escaping lives in `src/nimja/escaping.nim` (`HTMLSafeStr`, `htmlEscape`,
   `safe`, `e`). `compileTemplateStr`/`File`/`tmpls`/`tmplf` take an
   `escapeWith` proc (`escapeWith = htmlEscape` for HTML, any proc for

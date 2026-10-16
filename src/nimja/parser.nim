@@ -1144,6 +1144,22 @@ template tmplsMacroImpl() =
     alias.add body
     result.add alias
 
+proc staticStr(n: NimNode): string =
+  ## the compile-time value of a string literal or `const` argument.
+  ## `strVal` alone returns the *name* for a const symbol, so resolve consts
+  ## through `getImpl` (a typed macro argument for a const is an `nnkSym`).
+  case n.kind
+  of nnkStrLit .. nnkTripleStrLit:
+    n.strVal
+  of nnkSym:
+    let impl = getImpl(n)
+    if impl.kind == nnkConstDef:
+      staticStr(impl[^1])
+    else:
+      error("expected a string literal or const, got: " & n.repr, n)
+  else:
+    error("expected a string literal or const, got: " & n.repr, n)
+
 macro compileTemplateStr*(str: typed, baseDir: static string = "", 
     blockToRender: static string = "", iter: static bool = false,
     varname: static string = "result",  escapeWith: untyped = nil,
@@ -1197,7 +1213,7 @@ macro compileTemplateStr*(str: typed, baseDir: static string = "",
   nwtFallbackLine = entry.line
   nwtFallbackCol = entry.column
   tmplsMacroImpl()
-  doCompile(str.strVal, blockToRender, result, file = "")
+  doCompile(staticStr(str), blockToRender, result, file = "")
 
 macro compileTemplateFile*(path: static string, baseDir: static string = "", 
     blockToRender: static string = "", iter: static bool = false,

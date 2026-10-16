@@ -8,10 +8,10 @@ type
     name: string
     age: int
 
+const src = "<html><head><title>{{ title }}</title></head><body>{% if loggedIn %}<p>Welcome!</p>{% else %}<p>Please log in.</p>{% endif %}<ul>{% for user in users %}<li>{{ user.name }} ({{ user.age }})</li>{% endfor %}</ul></body></html>"
+
 proc renderPage(title: string, users: seq[User], loggedIn: bool): string =
-  # NOTE: a literal (not a const): `compileTemplateStr` uses `strVal`, which
-  # returns the identifier name for a const argument
-  compileTemplateStr("<html><head><title>{{ title }}</title></head><body>{% if loggedIn %}<p>Welcome!</p>{% else %}<p>Please log in.</p>{% endif %}<ul>{% for user in users %}<li>{{ user.name }} ({{ user.age }})</li>{% endfor %}</ul></body></html>")
+  compileTemplateStr(src)
 
 let users = @[
   User(name: "Katja", age: 32),

@@ -18,3 +18,12 @@ doAssert simpleObj(MyObj(ff: 13.37, ss: "leet")) == "simple 13.37 simple leet"
 
 proc stmts(obj: MyObj): string = compileTemplateStr("{{obj.ff.int * 2}} {{obj.ss.len}}")
 doAssert stmts(MyObj(ff: 21.0, ss: "leet")) == "42 4"
+
+# a const template argument must use the const's value, not its identifier (was #53-ish bug)
+const constTemplate = "const {{ii}} template"
+proc constTmpl(ii: int): string = compileTemplateStr(constTemplate)
+doAssert constTmpl(7) == "const 7 template"
+
+const staticExprTemplate = "static " & "{{ii}}"
+proc staticExprTmpl(ii: int): string = compileTemplateStr(staticExprTemplate)
+doAssert staticExprTmpl(9) == "static 9"

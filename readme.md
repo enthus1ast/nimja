@@ -1326,6 +1326,9 @@ Changelog
     `{{ x|safe }}` filters, plus an `escapeWith` proc option for
     `compileTemplateStr`, `compileTemplateFile`, `tmpls` and `tmplf`
     (`escapeWith = htmlEscape` for HTML, any proc for URL/JS/...).
+  - Fixed `compileTemplateStr` with a `const` string argument: it compiled the
+    identifier name instead of the const's value. Non-literal/const string
+    arguments now raise a clear error instead of compiling the name.
   - Performance: compile-time constant variables in `{{ ... }}` are folded
     into a single string block when the whole string/variable run is static
     (issue #53); in mixed runs each const is still folded with its preceding
