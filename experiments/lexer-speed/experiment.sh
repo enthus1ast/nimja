@@ -30,7 +30,7 @@ LOGS="$HERE/logs"
 TSV="$HERE/results.tsv"
 STAMP="$(date +%Y%m%d-%H%M%S)-$$"
 MIN_SPEEDUP="${MIN_SPEEDUP:-1.01}"
-REPS="${REPS:-5}"
+REPS="${REPS:-8}"
 PATCH="$LOGS/$STAMP.patch"
 
 baseline_only=0
@@ -45,6 +45,12 @@ if [ -z "$DESC" ]; then
 fi
 
 mkdir -p "$WORK" "$LOGS"
+
+# Pin the benchmark to one core to reduce migration/frequency noise.
+TASKSET=""
+if command -v taskset >/dev/null 2>&1; then
+  TASKSET="taskset -c 0"
+fi
 
 die() {
   echo "FATAL: $*" >&2
@@ -130,7 +136,7 @@ if [ -z "$status" ]; then
     reason="bench_metric.nim failed to build ($LOGS/$STAMP-bench-build.log)"
     tail -n 20 "$LOGS/$STAMP-bench-build.log"
   elif ! CAND_LEX="$LEXER" BASE_LEX="$BASE/nimja/lexer.nim" REPS="$REPS" \
-      timeout -s KILL 1800 "$WORK/bench_metric" > "$LOGS/$STAMP-bench.log" 2>&1; then
+      timeout -s KILL 1800 $TASKSET "$WORK/bench_metric" > "$LOGS/$STAMP-bench.log" 2>&1; then
     status="crash"
     reason="benchmark failed or timed out ($LOGS/$STAMP-bench.log)"
     tail -n 20 "$LOGS/$STAMP-bench.log"
