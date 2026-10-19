@@ -242,12 +242,17 @@ proc slugify*(str: string, seperator = "-", allowedChars = allowedCharsInSlug): 
   # `toLowerAscii` is enough in *both* branches: the input is ASCII here, and
   # `unidecode` only ever produces ASCII. `strutils.toLower` is re-exported
   # from `std/unicode` and decodes runes (~10x slower for nothing).
-  if isAscii:
-    cleaned = str.strip(true, true).toLowerAscii()
-  else:
-    cleaned = str.unidecode().strip(true, true).toLowerAscii()
-  result = newStringOfCap(cleaned.len)
-  for ch in cleaned:
+  #
+  # Strip, lower-case and filter in a single pass: `strip()` and `toLowerAscii()`
+  # each allocated a temporary string before.
+  let src = if isAscii: str else: str.unidecode()
+  var first = 0
+  var last = src.len - 1
+  while first <= last and src[first] in Whitespace: inc first
+  while last >= first and src[last] in Whitespace: dec last
+  result = newStringOfCap(last - first + 1)
+  for i in first .. last:
+    let ch = toLowerAscii(src[i])
     if ch in Whitespace:
       result.add seperator
     elif ch in allowedChars:
