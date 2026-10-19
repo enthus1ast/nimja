@@ -3,10 +3,25 @@
 ## `GATE=1` renders every template once and prints the outputs (the gate diffs
 ## them between candidate and baseline). Otherwise each timed workload is run
 ## and the minimum of five samples is printed as
-##   case<TAB>name<TAB>nanoseconds
+##   case<TAB>name<TAB>cpu-nanoseconds
+##
+## Timing uses **process CPU time** (CLOCK_PROCESS_CPUTIME_ID), not wall clock:
+## the agent's own model server and other experiments may be hammering the CPU
+## while this runs, and CPU time measures the work this process actually did.
 ##
 ## This file is FIXED. Do not modify it.
 import std/[os, strutils, monotimes]
+
+when defined(posix):
+  import std/posix
+
+proc cpuNs(): int64 =
+  ## CPU time (user+sys) of this process in nanoseconds.
+  when defined(posix):
+    var ts: Timespec
+    if clock_gettime(ClockId(CLOCK_PROCESS_CPUTIME_ID), ts) == 0:
+      return int64(ts.tv_sec) * 1_000_000_000'i64 + int64(ts.tv_nsec)
+  result = getMonoTime().ticks # non-POSIX fallback: wall clock
 
 include "templates.nim"
 
@@ -23,11 +38,11 @@ template bench(name: string, iters: int, call: untyped) =
       sink += (call).len
     var best = high(int64)
     for _ in 0 ..< 5:
-      let t0 = getMonoTime().ticks
+      let t0 = cpuNs()
       var n = 0
       for _ in 0 ..< iters:
         n += (call).len
-      let t1 = getMonoTime().ticks
+      let t1 = cpuNs()
       sink += n
       let d = t1 - t0
       if d < best:
