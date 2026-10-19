@@ -177,10 +177,13 @@ proc slugify*(str: string, seperator = "-", allowedChars = allowedCharsInSlug): 
     if c < '\x01' or c > '\x7f':
       isAscii = false
       break
+  # `toLowerAscii` is enough in *both* branches: the input is ASCII here, and
+  # `unidecode` only ever produces ASCII. `strutils.toLower` is re-exported
+  # from `std/unicode` and decodes runes (~10x slower for nothing).
   if isAscii:
-    cleaned = str.strip(true, true).toLower()
+    cleaned = str.strip(true, true).toLowerAscii()
   else:
-    cleaned = str.unidecode().strip(true, true).toLower()
+    cleaned = str.unidecode().strip(true, true).toLowerAscii()
   result = newStringOfCap(cleaned.len)
   for ch in cleaned:
     if ch in Whitespace:
