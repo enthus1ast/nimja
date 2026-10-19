@@ -61,22 +61,23 @@ iterator loop*[T](a: openArray[T]): tuple[loop: Loop[T], val: T] {.inline.} =
   # TODO this should be a concept, but does not work why?
   # however, the element you iterate over must match the Concept `Loopable`.
   # This means you can propably not use loop() with an iterator, since they do not have a `len()` and `[]`
+  let n = a.len()
   var idx = 0
   for each in a:
-    var loop = Loop[T]()
-    loop.index = idx + 1
-    loop.index0 = idx
-    loop.first = idx == 0
-    loop.last = idx == a.len() - 1
-    if not loop.first:
-      loop.previtem = some(a[idx - 1])
-    if not loop.last:
-      loop.nextitem = some(a[idx + 1])
-    loop.length = a.len()
-    loop.revindex0 = a.len() - (idx + 1)
-    loop.revindex = a.len() - idx
-    idx.inc
-    yield (loop, each)
+    var lp = Loop[T]()
+    lp.index = idx + 1
+    lp.index0 = idx
+    lp.first = idx == 0
+    lp.last = idx == n - 1
+    if not lp.first:
+      lp.previtem = some(a[idx - 1])
+    if not lp.last:
+      lp.nextitem = some(a[idx + 1])
+    lp.length = n
+    lp.revindex0 = n - (idx + 1)
+    lp.revindex = n - idx
+    inc idx
+    yield (lp, each)
 
 
 template `~`*(aa, bb: untyped): string =
@@ -136,6 +137,7 @@ proc truncate*(str: string, num: Natural, preserveWords = true, suf = "..."): st
 func nl2br*(str: string, keepNl = true): string =
   ## Converts all \n to <br>
   ## if keepNL == true: newlines will still be in the output.
+  result = newStringOfCap(str.len)
   for ch in str:
     if ch == '\n':
       result.add("<br>")
@@ -167,13 +169,12 @@ proc slugify*(str: string, seperator = "-", allowedChars = allowedCharsInSlug): 
   ## converts any string to an url friendly one.
   ## Removes any special chars and replaces non ASCII runes to their ASCII representation.
   var cleaned = str.unidecode().strip(true, true).toLower()
+  result = newStringOfCap(cleaned.len)
   for ch in cleaned:
     if ch in Whitespace:
-      result.add seperator 
+      result.add seperator
     elif ch in allowedChars:
       result.add ch
-    else:
-      discard
 
 template `?`*(con, body: untyped): untyped =
   ## shorthand `if` eg. for toggling html classes.
