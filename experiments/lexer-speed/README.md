@@ -23,7 +23,7 @@ is a macro), so the thing users feel is **VM** lexing speed, not C-backend
 speed. A runtime microbenchmark would happily reward changes that do nothing
 for real builds (and vice versa: building token values from one slice instead
 of per-character `&=` looks fine in C but was measured **8 % slower** in the
-VM, see `results.tsv`).
+VM, see `VALIDATION.md`).
 
 So the score is:
 
@@ -53,7 +53,7 @@ column, and raise behaviour — on
 
 1. the fixed 2 MB corpus,
 2. every real `*.nimja` template in the repo,
-3. ~70 hand-picked edge cases,
+3. ~90 hand-picked edge cases,
 4. 2500 structured random inputs with a **fresh random seed every run**.
 
 A would-be keep then also has to pass `testament` `tests/basic/*.nim` +
@@ -120,7 +120,8 @@ the measured numbers, and their diff is saved in `logs/<stamp>.patch`. Only
 
 ## Validation record
 
-This harness was validated before hand-off (numbers in `VALIDATION.md`, raw rows in `results.tsv`, diffs in `logs/`):
+This harness was validated before hand-off (noise floor, the two validation
+experiments and their raw rows are in `VALIDATION.md`; diffs are in `logs/`):
 
 * identical code measures `speedup` 0.99–1.005 (noise floor);
 * "build static text from one slice" measured 0.92 (slower in the VM) → discarded;
@@ -134,7 +135,8 @@ This harness was validated before hand-off (numbers in `VALIDATION.md`, raw rows
   `import nimja/lexer`.
 * The benchmark is pinned with `taskset -c 0` when available.
 * The benchy table needs a benchy checkout:
-  `nim c -r -d:release --skipParentCfg:on --path:$HOME/projects/benchy/src harness/bench_table.nim`.
+  `nim c -r -d:release --skipParentCfg:on --path:$HOME/projects/benchy/src \
+  --nimcache:.work/nc-table -o:.work/bench_table harness/bench_table.nim`.
 
 ## Branches
 

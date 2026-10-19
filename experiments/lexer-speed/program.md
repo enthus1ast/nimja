@@ -72,6 +72,9 @@ Do not do several ideas at once: you must be able to tell what helped.
   no `importc`/`emit`/FFI/threads/GC tricks, no reading files at run time, no
   `{.push checks:off.}` or other check disabling, no changing the public API
   (`lex*`, `Token` fields, `NwtTokenKind`).
+* **The script owns git.** Do not commit, stage or revert with git (the one
+  exception is the documented `git reset --hard HEAD~1` when you want to undo
+  your own last kept commit).
 * **Prefer simple changes.** A 1 % win from 30 lines of hacks is not worth
   keeping; a 1 % win from deleting code is great. You may revert your own last
   commit if it turns out to be ugly or if it blocks a better idea:
