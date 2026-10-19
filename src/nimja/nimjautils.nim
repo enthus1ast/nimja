@@ -15,17 +15,30 @@ type
     index0*: int ## which elemen (start from 0)
     first*: bool ## if this is the first loop iteration
     last*: bool ## if this is the last loop iteration
-    previtem*: Option[T] ## get the item from the last loop iteration
-    nextitem*: Option[T] ## get the item from the next loop iteration
     length*: int ## the length of the seq, (same as mySeq.len())
     revindex0*: int ## which element, counted from the end (last one is 0)
     revindex*: int ## which element, counted from the end (last one is 1)
+    src: ptr UncheckedArray[T] ## the iterated data (borrowed, never freed here)
   Loopable*[T] = concept x {.explain.}
     x.len() is int
     x[int] is T
     x.items is T
 
 const allowedCharsInSlug* = Letters + Digits
+
+func previtem*[T](loop: Loop[T]): Option[T] {.inline.} =
+  ## the item of the previous loop iteration (if any)
+  if loop.index0 > 0 and loop.src != nil:
+    some(loop.src[loop.index0 - 1])
+  else:
+    none(T)
+
+func nextitem*[T](loop: Loop[T]): Option[T] {.inline.} =
+  ## the item of the next loop iteration (if any)
+  if loop.index0 + 1 < loop.length and loop.src != nil:
+    some(loop.src[loop.index0 + 1])
+  else:
+    none(T)
 
 proc cycleItems*[T](loop: Loop, elems: openArray[T]): T {.inline.} =
   if elems.len == 0:
@@ -73,18 +86,14 @@ iterator loop*[T](a: openArray[T]): tuple[loop: Loop[T], val: T] {.inline.} =
   # however, the element you iterate over must match the Concept `Loopable`.
   # This means you can propably not use loop() with an iterator, since they do not have a `len()` and `[]`
   let n = a.len()
+  let src = if n > 0: cast[ptr UncheckedArray[T]](unsafeAddr a[0]) else: nil
+  var lp = Loop[T](length: n, src: src)
   var idx = 0
   for each in a:
-    var lp = Loop[T]()
     lp.index = idx + 1
     lp.index0 = idx
     lp.first = idx == 0
     lp.last = idx == n - 1
-    if not lp.first:
-      lp.previtem = some(a[idx - 1])
-    if not lp.last:
-      lp.nextitem = some(a[idx + 1])
-    lp.length = n
     lp.revindex0 = n - (idx + 1)
     lp.revindex = n - idx
     inc idx
