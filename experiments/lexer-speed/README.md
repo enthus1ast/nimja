@@ -117,7 +117,7 @@ the measured numbers, and their diff is saved in `logs/<stamp>.patch`. Only
 
 ## Validation record
 
-This harness was validated before hand-off (see `results.tsv` and `logs/`):
+This harness was validated before hand-off (numbers in `VALIDATION.md`, raw rows in `results.tsv`, diffs in `logs/`):
 
 * identical code measures `speedup` 0.99–1.005 (noise floor);
 * "build static text from one slice" measured 0.92 (slower in the VM) → discarded;
