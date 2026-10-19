@@ -163,23 +163,18 @@ iterator lex*(buf: string): Token =
   var pos = 0
   var lexReturn: LexReturn
   while pos < buf.len:
-    lexReturn = lexVar(buf, pos, line, lineStart)
-    if lexReturn.good:
-      yield lexReturn.token
-      pos.inc
-      continue
-
-    lexReturn = lexComment(buf, pos, line, lineStart)
-    if lexReturn.good:
-      yield lexReturn.token
-      pos.inc
-      continue
-
-    lexReturn = lexEval(buf, pos, line, lineStart)
-    if lexReturn.good:
-      yield lexReturn.token
-      pos.inc
-      continue
+    # Dispatch on the two-character opener once instead of probing every
+    # delimiter kind with a call.
+    if pos + 1 < buf.len and buf[pos] == '{':
+      case buf[pos + 1]
+      of '{': lexReturn = lexVar(buf, pos, line, lineStart)
+      of '#': lexReturn = lexComment(buf, pos, line, lineStart)
+      of '%': lexReturn = lexEval(buf, pos, line, lineStart)
+      else: lexReturn = (false, Token())
+      if lexReturn.good:
+        yield lexReturn.token
+        pos.inc
+        continue
 
     lexReturn = lexStr(buf, pos, line, lineStart)
     if lexReturn.good:
