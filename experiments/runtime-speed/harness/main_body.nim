@@ -51,7 +51,10 @@ else:
   bench("escape-plain", 30000, benchEscapePlain("plain text 123"))
   bench("loop", 8000, benchLoop(benchItems))
   bench("nested", 30000, benchNested(users, true))
-  bench("filters", 20000, benchFilters(benchFilterText))
+  bench("filters-spaceless", 20000, benchSpaceless(benchFilterText))
+  bench("filters-nl2br", 20000, benchNl2br(benchFilterText))
+  bench("filters-truncate", 20000, benchTruncate(benchFilterText))
+  bench("filters-slugify", 10000, benchSlugify(benchFilterText))
   bench("scalars", 20000, benchScalars(-42, 3.5, true, 'x'))
 
   if sink < 0:

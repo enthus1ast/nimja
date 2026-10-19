@@ -133,9 +133,18 @@ proc benchNested(users: seq[(string, int)], flag: bool): string =
 {% endfor %}
 """)
 
-## Runtime helper filters (string processing) on a realistic value.
-proc benchFilters(s: string): string =
-  compileTemplateStr("{{ s.spaceless }}{{ s.nl2br }}{{ s.truncate(12) }}{{ s.slugify }}")
+## Runtime string helpers, one workload each.
+proc benchSpaceless(s: string): string =
+  compileTemplateStr("{{ s.spaceless }}")
+
+proc benchNl2br(s: string): string =
+  compileTemplateStr("{{ s.nl2br }}")
+
+proc benchTruncate(s: string): string =
+  compileTemplateStr("{{ s.truncate(12) }}")
+
+proc benchSlugify(s: string): string =
+  compileTemplateStr("{{ s.slugify }}")
 
 ## Scalars of different types: `$`/formatting of int, float, bool, char.
 proc benchScalars(n: int, f: float, b: bool, c: char): string =
@@ -213,7 +222,10 @@ proc renderAll*(): seq[(string, string)] =
     ("loop-empty", benchLoop(@[])),
     ("nested", benchNested(users, true)),
     ("nested-false", benchNested(users, false)),
-    ("filters", benchFilters(benchFilterText)),
+    ("filters-spaceless", benchSpaceless(benchFilterText)),
+    ("filters-nl2br", benchNl2br(benchFilterText)),
+    ("filters-truncate", benchTruncate(benchFilterText)),
+    ("filters-slugify", benchSlugify(benchFilterText)),
     ("scalars", benchScalars(-42, 3.5, true, 'x')),
     ("if", featIf(-1) & featIf(0) & featIf(1)),
     ("case", featCase("a") & featCase("b") & featCase("z")),

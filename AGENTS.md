@@ -39,7 +39,7 @@ variable.
 | `tests/bugs/*.nim` | regression tests for fixed bugs + compile-error specs |
 | `tests/templates`, `tests/basic/**/*.nimja` | template fixtures |
 | `examples/` | fromReadme, prologue/jester, dynlib, hcr examples |
-| `experiments/lexer-speed/` | autonomous lexer-speed research loop; read its `program.md` |
+| `experiments/runtime-speed/` | autonomous runtime-speed research loop; read its `program.md` |
 | `readme.md` | the user manual (large; the source of truth for features) |
 
 ## Build & test
@@ -99,10 +99,11 @@ Useful compile-time defines (from the readme):
 
 ## Working rules
 
-0. **The `experiments/lexer-speed/` harness is fixed.** When running that
-   loop, edit only `src/nimja/lexer.nim`; the harness verifies itself with
-   `harness/FIXED.sha256` and rejects out-of-scope changes. See
-   `experiments/lexer-speed/program.md`.
+0. **The `experiments/runtime-speed/` harness is fixed.** When running that
+   loop, edit only `src/nimja/parser.nim`, `src/nimja/nimjautils.nim`,
+   `src/nimja/escaping.nim` or `src/nimja.nim`; the harness verifies itself
+   with `harness/FIXED.sha256` and rejects out-of-scope changes. See
+   `experiments/runtime-speed/program.md`.
 1. **Verify before you edit.** Read the relevant `readme.md` section and the
    source, then reproduce the behaviour with a small harness. Do not trust
    comments blindly.
@@ -117,6 +118,10 @@ Useful compile-time defines (from the readme):
 
 ## Known gotchas (verified)
 
+- `{% case %}` chokes on a string node (e.g. the newline of a nicely formatted
+  template) between `{% case expr %}` and the first `{% of ... %}`: it reports
+  `should not happen: str`. Put `{% of ... %}` on the same line as
+  `{% case ... %}`.
 - A machine-wide `$HOME/projects/nim.cfg` (Nimby) adds `--path:nimja/src`,
   which can shadow *this* checkout for path-based imports like
   `import nimja/lexer` (verified: it resolved to `~/projects/nimja/src` even
