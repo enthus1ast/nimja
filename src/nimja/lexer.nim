@@ -104,35 +104,35 @@ proc lexBetween(buf: string, pos, line, lineStart: var int, bstart = "{{",
   var endchar = false
   while pos < buf.len:
     let ch = buf[pos]
-    handleNl
+    if ch == '\n':
+      line.inc
+      lineStart = pos + 1
     if escaped:
-      store
+      result.token.value &= ch
       escaped = false
-      pos.inc
-      continue
-    elif thisIs('\\'):
+    elif ch == '\\':
       escaped = true
-    elif thisIs(bend[0]) and nextIs(bend[1]):
+    elif ch == bend[0] and pos + 1 < buf.len and buf[pos + 1] == bend[1]:
       endchar = true
-      pos.inc # skip next '}'
+      pos.inc
       break
-    elif thisIs('"') and nextIs('"') and nextIs('"', 2):
+    elif ch == '"' and pos + 1 < buf.len and buf[pos + 1] == '"' and pos + 2 < buf.len and buf[pos + 2] == '"':
       var closed = false
       result.token.value &= lexInnerStrTripple(buf, pos, line, lineStart, closed)
       if not closed:
         raise newException(ValueError,
           fmt"Unterminated triple quoted string in block at line {line + 1}")
-    elif thisIs('"'):
+    elif ch == '"':
       result.token.value &= lexInnerStr(buf, pos, line, lineStart)
     else:
-      store
+      result.token.value &= ch
     pos.inc
   # Cheaper strip: manually find first/last non-ws chars, only copy when needed.
   var lo = 0
-  while lo < result.token.value.len and result.token.value[lo] in {' ', '\t', '\n', '\r', '\f'}:
+  while lo < result.token.value.len and result.token.value[lo] in {' ', '\t', '\n', '\r', '\f', '\v'}:
     inc lo
   var hi = result.token.value.len - 1
-  while hi >= lo and result.token.value[hi] in {' ', '\t', '\n', '\r', '\f'}:
+  while hi >= lo and result.token.value[hi] in {' ', '\t', '\n', '\r', '\f', '\v'}:
     dec hi
   if lo > hi:
     result.token.value = ""
