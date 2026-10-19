@@ -1,8 +1,9 @@
 # Harness validation (hand-off record)
 
-Before hand-off the loop was exercised end to end on 2026-10-19. Raw rows are
-in `results.tsv` (untracked); logs and discarded patches are in `logs/`
-(gitignored). This file is the durable summary.
+Before hand-off the loop was exercised end to end on 2026-10-19. Logs and
+discarded patches are in `logs/` (gitignored); the raw rows are reproduced at
+the bottom of this file, because `results.tsv` is reset by `setup.sh` for every
+new run.
 
 ## Noise floor
 
