@@ -36,17 +36,23 @@ Then:
 1. **Gate**: both binaries run with `GATE=1` and render *all* templates
    (timed ones plus if/case/while/when/scope/proc/func/filter/unicode
    coverage). The outputs must be **byte-identical**.
-2. **Bench**: both binaries run in 10 interleaved rounds (alternating which
-   side runs first). Per workload the minimum of 5 in-process samples and 10
-   rounds is kept, and the per-workload minima are summed:
+2. **Bench**: both binaries run in 10 interleaved rounds, alternating which
+   side runs first; within a round the two sides run back-to-back. Timing is
+   **process CPU time** (user+sys), not wall clock, so the agent's own model
+   server and other busy processes do not pollute the numbers. Per round:
 
    ```
-   speedup = baseline_ns / candidate_ns
+   round_ratio = sum(baseline workload ns) / sum(candidate workload ns)
+   speedup     = median(round_ratio)                 # over 10 rounds
    ```
 
-   Identical code measures 0.995–1.005 on a quiet machine. A keep needs
-   `speedup >= 1.01`; wins below 1.03 are re-measured and both measurements
-   must clear the threshold (`--baseline` runs are logged as a reference).
+   The median of the paired ratios cancels slow frequency/system-load drift
+   (a min-of-minima estimator does not, and showed 2 % false deviations under
+   load). A keep needs `speedup >= 1.01`; wins below 1.03 are measured a second
+   time, the **lower** value is recorded, and both must clear the threshold.
+   Identical code records ~0.99–1.01. The `case ...` lines in `logs/*-bench.log`
+   show per-workload minima across rounds — useful for finding hot spots, not
+   used for the score.
 
 A would-be keep must then also pass `testament` on `tests/basic` and
 `tests/bugs` (~80 s). Compile time is *not* part of this score (that is a
@@ -101,11 +107,19 @@ commit  candidate_ns  baseline_ns  speedup  status  description
 differs), `crash` (did not compile / timed out). Discarded diffs are saved in
 `logs/<stamp>.patch`; only `keep` rows advance the branch (the script commits).
 
+## Validation record
+
+The loop was exercised end to end on 2026-10-19; see `VALIDATION.md` for the
+noise floor, the first kept win (`escaping: avoid allocating when nothing needs
+escaping`, +3.7 %) and the deliberate-slowdown discard that proves the revert
+path.
+
 ## Machine-specific notes
 
 * `$HOME/projects/nim.cfg` (Nimby) adds `--path:nimja/src`; the harness passes
   `--skipParentCfg:on` and explicit `--path` at every compile.
-* The benchmark is pinned with `taskset -c 0` when available.
+* The benchmark is pinned with `taskset -c 0` when available and timed with
+  `CLOCK_PROCESS_CPUTIME_ID`, so a loaded machine still yields usable numbers.
 * Known pre-existing parser bug (not introduced here): a string node between
   `{% case %}` and the first `{% of %}` (e.g. a newline) raises
   "should not happen: str". `templates.nim` keeps `{% of ... %}` on the same

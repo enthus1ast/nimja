@@ -19,11 +19,13 @@ speedup = baseline_ns / candidate_ns        (higher is better, 1.0 = no change)
 * The same driver program is compiled twice: once with **your** `src` tree
   (candidate) and once with the `src` tree at `HEAD` (baseline, i.e. the last
   kept commit).
-* It renders 17 timed workloads and reports the **sum of the per-workload
-  minimum nanoseconds** over 10 interleaved rounds. Lower is better.
-* Identical code measures 0.995–1.005, so a change is only kept when
-  `speedup >= 1.01`; a win below 1.03 is measured a second time and must
-  reproduce.
+* It renders 17 timed workloads in 10 interleaved rounds. Each round runs the
+  two binaries back-to-back and compares the summed **process CPU time**
+  (user+sys, not wall clock) of that pair; the reported speedup is the
+  **median of the 10 round ratios**. Lower candidate time is better.
+* Identical code records ~0.99–1.01, so a change is only kept when
+  `speedup >= 1.01`; a win below 1.03 is measured a second time, the lower
+  value is recorded, and both must clear the threshold.
 * This is **runtime** speed. Compile time is not scored here; a change that
   makes code generation slower is allowed as long as the result renders faster
   and the tests pass.
@@ -83,35 +85,37 @@ command runs longer than ~10 minutes, kill it and treat it as crashed.
 Iteration counts are fixed; these are the per-workload times from the harness.
 Use them to decide what is worth optimising (`loop` and `slugify` dominate).
 
+Current baseline (CPU time, after the escaping fast path):
+
 | workload | time | what it exercises |
 |---|---|---|
-| `filters-slugify` | ~11.4 ms | `slugify` (unicode folding, per-char work) |
-| `loop` | ~10.3 ms | `Loop` object + `cycle()` + first/last per iteration |
-| `proc` | ~7.1 ms | template-defined proc called 3× |
-| `scalars` | ~5.8 ms | `$` of int/float/bool/char |
-| `escape` | ~5.6 ms | `htmlEscape` on a value full of `& < > " '` |
-| `escape-plain` | ~5.6 ms | `htmlEscape` on a value with nothing to escape |
-| `static` | ~5.5 ms | long static body + one variable |
-| `filters-nl2br` | ~5.5 ms | `nl2br` |
-| `filters-spaceless` | ~5.2 ms | `spaceless` |
-| `mixedConst` | ~4.7 ms | const variables + runtime variable |
-| `vars` | ~4.6 ms | 8 variables and nothing else |
-| `nested` | ~3.3 ms | for + if + case over tuples |
-| `bigProc` | ~3.3 ms | large template-proc body (preallocated) |
-| `page` / `page-anon` | ~3.1 ms | realistic page with if + for |
-| `constBlock` | ~3.1 ms | const folding in a run |
+| `filters-slugify` | ~11.2 ms | `slugify` (unicode folding, per-char work) |
+| `loop` | ~10.0 ms | `Loop` object + `cycle()` + first/last per iteration |
+| `proc` | ~7.0 ms | template-defined proc called 3× |
+| `escape` | ~5.5 ms | `htmlEscape` on a value full of `& < > " '` |
+| `filters-nl2br` | ~5.4 ms | `nl2br` |
+| `static` | ~5.4 ms | long static body + one variable |
+| `scalars` | ~5.3 ms | `$` of int/float/bool/char |
+| `filters-spaceless` | ~4.9 ms | `spaceless` |
+| `mixedConst` | ~4.5 ms | const variables + runtime variable |
+| `vars` | ~4.4 ms | 8 variables and nothing else |
+| `nested` | ~3.2 ms | for + if + case over tuples |
+| `bigProc` | ~3.1 ms | large template-proc body (preallocated) |
+| `page` | ~3.0 ms | realistic page with if + for |
+| `constBlock` | ~3.0 ms | const folding in a run |
+| `escape-plain` | ~3.0 ms | escaping a value with nothing to escape |
+| `page-anon` | ~2.9 ms | page with empty loop and logged-out branch |
 | `filters-truncate` | ~2.7 ms | `truncate` |
 
 ## Idea bank
 
 Start with the biggest workloads; each item is one experiment.
 
-1. **Escaping fast path.** `escapeHtmlChars` always allocates a result and
-   appends character by character, even when the value contains no
-   `& < > " '`. Scan first and return the input unchanged when possible
-   (`HTMLSafeStr` makes that cheap); also copy non-special runs in bulk instead
-   of one `add` per character. This targets `escape` and especially
-   `escape-plain`.
+1. **Escaping.** The "nothing to escape → return the input" fast path is
+   already in place (kept, +3.7 %); `escape-plain` dropped from ~5.5 ms to
+   ~3.0 ms. Next steps: copy non-special *runs* in bulk instead of one `add`
+   per character on the escaping path, and preallocate more accurately for the
+   special-heavy case (`escape`).
 2. **Escaping is idempotent.** `htmlEscape` on an `HTMLSafeStr` returns it
    unchanged. Check what the generated code does for `{{x|e}}` with
    `escapeWith = htmlEscape` and remove redundant work if the code generator
