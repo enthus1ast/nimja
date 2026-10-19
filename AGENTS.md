@@ -39,6 +39,7 @@ variable.
 | `tests/bugs/*.nim` | regression tests for fixed bugs + compile-error specs |
 | `tests/templates`, `tests/basic/**/*.nimja` | template fixtures |
 | `examples/` | fromReadme, prologue/jester, dynlib, hcr examples |
+| `experiments/lexer-speed/` | autonomous lexer-speed research loop; read its `program.md` |
 | `readme.md` | the user manual (large; the source of truth for features) |
 
 ## Build & test
@@ -98,6 +99,10 @@ Useful compile-time defines (from the readme):
 
 ## Working rules
 
+0. **The `experiments/lexer-speed/` harness is fixed.** When running that
+   loop, edit only `src/nimja/lexer.nim`; the harness verifies itself with
+   `harness/FIXED.sha256` and rejects out-of-scope changes. See
+   `experiments/lexer-speed/program.md`.
 1. **Verify before you edit.** Read the relevant `readme.md` section and the
    source, then reproduce the behaviour with a small harness. Do not trust
    comments blindly.
@@ -111,6 +116,13 @@ Useful compile-time defines (from the readme):
    `.gitignore` if they are not already covered.
 
 ## Known gotchas (verified)
+
+- A machine-wide `$HOME/projects/nim.cfg` (Nimby) adds `--path:nimja/src`,
+  which can shadow *this* checkout for path-based imports like
+  `import nimja/lexer` (verified: it resolved to `~/projects/nimja/src` even
+  with an absolute `--path:`). The test suite is unaffected (it uses relative
+  imports), but ad-hoc harnesses should use relative imports or
+  `--skipParentCfg:on`.
 
 - `blocks` and the `cacheNwtNode*` tables are **compile-time globals** shared by
   every template compiled in the same module; block bodies are re-registered on
