@@ -11,6 +11,8 @@ srcDir        = "src"
 # Dependencies
 
 requires "nim >= 1.4.8"
+requires "nimsimd >= 1.2.0"
+requires "unidecode"
 
 task tests, "Run all tests":
   exec """testament --directory:"./tests/" p "basic/*.nim""""
