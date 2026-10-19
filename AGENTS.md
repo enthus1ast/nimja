@@ -150,7 +150,10 @@ Useful compile-time defines (from the readme):
   folded static expression (`staticStr` resolves consts via `getImpl`); a
   runtime `let`/`var` argument errors instead of silently using its name.
 - HTML escaping lives in `src/nimja/escaping.nim` (`HTMLSafeStr`, `htmlEscape`,
-  `safe`, `e`). `compileTemplateStr`/`File`/`tmpls`/`tmplf` take an
+  `safe`, `e`). The scan for characters to escape is vectorized with SSE2 via
+  `nimsimd` (x86-64 baseline, no runtime check; scalar fallback for other
+  targets) and the output is sized exactly — the earlier `len * 3` buffer
+  **overflowed** on `&`/`"` runs (6 bytes per char). `compileTemplateStr`/`File`/`tmpls`/`tmplf` take an
   `escapeWith` proc (`escapeWith = htmlEscape` for HTML, any proc for
   URL/JS/...). Escaping is idempotent; the generated call is `nwtStrProc`,
   defaulting to `$` so escaping costs nothing when unused.
@@ -164,7 +167,7 @@ Useful compile-time defines (from the readme):
   fold to one string; mixed runs fold each const with its preceding literal.
   Literal variables (`{{"x"}}`, `{{42}}`) are folded directly. Only simple
   identifiers are folded, so proc calls keep their runtime side effects.
-- Template `proc`/`func` bodies with `>= 64` static chars get their own
+- Template `proc`/`func` bodies with `>= 15` static chars get their own
   `newStringOfCap` in `astProc` (see `macro-generation-analysis.md` F-3).
 - Benchmark edits to generated code with `nimble bench` (see
   `bench/benchmark.nim` and `macro-generation-analysis.md`); results are noisy,
@@ -172,6 +175,30 @@ Useful compile-time defines (from the readme):
   inlined identity, so an "avoid `$`" helper does not help.
 - Entry/output is a `string` (`result` / `varname`) appended with `&=`; the
   generated code preallocates when possible (`noPreallocatedString` disables it).
+- The output-size estimate (`staticLen`) is a **heuristic, not a length**: static
+  blocks + `perVariableAllowance` (16) per `{{ }}` variable (32 when escaping),
+  `8 *` for `for`-bodies, floored at `minPreallocCap` = 64 for non-empty
+  templates. Under-estimating costs a `realloc` + copy of everything written so
+  far, which is the dominant cost of small renders; over-estimating only costs
+  memory, but a much larger floor (128) measured *slower*, so the floor is a
+  tuned value, not "bigger is better".
+- `int`/`float`/`float32` variables are emitted as `addInt`/`addFloat(dst, expr)`
+  and `char`/`bool` as `dst.add expr` (`appendVarSmart`): `$` would allocate a
+  temporary string per value. This only applies when escaping is off and the
+  output is not an iterator (`nwtIter`).
+- `loop()`'s `previtem`/`nextitem` are **accessors** (`func previtem[T](loop)`),
+  not fields: filling two `Option[T]` per iteration costs a refcount bump per
+  element, and most loops never read them. `Loop` keeps a borrowed
+  `ptr UncheckedArray[T]` to the iterated data for that.
+- `cycle()` is a macro: a literal `@[a, b]` argument is rewritten to an array
+  literal so it does not allocate a `seq` on every call (the documented
+  `loop.cycle(@["odd", "even"])` spelling is allocation-free).
+- Helper hot paths copy runs instead of appending char by char (`addSlice` =
+  `setLen` + `copyMem`): `nl2br`, `spaceless`, `truncate`. `truncate` also scans
+  words instead of `splitWhitespace()` (which allocates a seq + a string per
+  word), and `slugify` strips/lowercases/filters in one pass with
+  `toLowerAscii` — `strutils.toLower(string)` is re-exported from `std/unicode`
+  and decodes runes (≈10x slower, and pointless for the ASCII-only slug path).
 
 ## Bug history
 
