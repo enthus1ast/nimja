@@ -176,7 +176,9 @@ func staticLen(nodes: seq[NwtNode]): int =
       result += staticLen(node.nnElse)
     of NElif: result += staticLen(node.elifBody)
     of NWhile: result += staticLen(node.whileBody)
-    of NFor: result += staticLen(node.forBody)
+    # a loop body is rendered once per iteration; counting it a few times
+    # avoids growing (and copying) the result for typical list lengths
+    of NFor: result += 8 * staticLen(node.forBody)
     of NBlock: result += staticLen(node.blockBody)
     of NCase:
       result += staticLen(node.nnCaseOf)
