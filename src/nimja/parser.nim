@@ -152,16 +152,23 @@ proc compile(str: string, blockToRender: string = "", file: string = ""): seq[Nw
 proc astAstOne(token: NwtNode): NimNode
 proc generatePreallocatedStringDef(len: int): NimNode
 
+## Allowance per `{{ }}` variable in the output-size estimate: a variable
+## normally adds at least a few characters, and underestimating costs a
+## reallocation (plus a copy of everything written so far).
+const perVariableAllowance = 16
+
 func staticLen(nodes: seq[NwtNode]): int =
-  ## Sums the length of all static string blocks in `nodes`; used to
-  ## preallocate the output. Operates on the final tree, so it is independent
-  ## of the parse/cache path (avoids `newStringOfCap(0)` on cache hits).
-  ## Const/literal variable values are unknown at macro time and are not
-  ## counted: calling `parseStmt` for them here crashes `const` evaluation
-  ## under ARC/ORC with a NimNode `=destroy` internal error (Nim #25120).
+  ## Estimated length of the rendered output for `nodes`; used to preallocate
+  ## the result. Operates on the final tree, so it is independent of the
+  ## parse/cache path (avoids `newStringOfCap(0)` on cache hits).
+  ## Literal/const variable values are not resolved here: calling `parseStmt`
+  ## for them crashes `const` evaluation under ARC/ORC with a NimNode
+  ## `=destroy` internal error (Nim #25120), so they are estimated instead.
+  ## Over-estimating only costs memory; under-estimating costs a realloc.
   for node in nodes:
     case node.kind
     of NStr: result += node.strBody.len
+    of NVariable: result += perVariableAllowance
     of NIf, NWhen:
       result += staticLen(node.nnThen)
       result += staticLen(node.nnElif)
