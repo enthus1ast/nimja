@@ -141,12 +141,12 @@ if [ -z "$status" ]; then
     reason="benchmark failed or timed out ($LOGS/$STAMP-bench.log)"
     tail -n 20 "$LOGS/$STAMP-bench.log"
   else
-    cand=$(awk '$1=="candidate_lex_ms:" {print $2}' "$LOGS/$STAMP-bench.log")
-    base=$(awk '$1=="baseline_lex_ms:"  {print $2}' "$LOGS/$STAMP-bench.log")
+    cand=$(awk '$1=="candidate_ms:"    {print $2}' "$LOGS/$STAMP-bench.log")
+    base=$(awk '$1=="baseline_ms:"     {print $2}' "$LOGS/$STAMP-bench.log")
     speedup=$(awk '$1=="speedup:"           {print $2}' "$LOGS/$STAMP-bench.log")
     rt=$(awk '$1=="rt_mbps:"               {print $2}' "$LOGS/$STAMP-bench.log")
     cand="${cand:-0}"; base="${base:-0}"; speedup="${speedup:-0}"; rt="${rt:-0}"
-    grep -E '^(candidate_lex_ms|baseline_lex_ms|speedup|rt_mbps):' \
+    grep -E '^(candidate_ms|baseline_ms|speedup|rt_mbps):' \
       "$LOGS/$STAMP-bench.log"
     if ! awk -v s="$speedup" -v m="$MIN_SPEEDUP" 'BEGIN { exit !(s+0 >= m+0) }'; then
       status="discard"
