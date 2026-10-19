@@ -170,7 +170,17 @@ func spaceless*(str: string): string =
 proc slugify*(str: string, seperator = "-", allowedChars = allowedCharsInSlug): string =
   ## converts any string to an url friendly one.
   ## Removes any special chars and replaces non ASCII runes to their ASCII representation.
-  var cleaned = str.unidecode().strip(true, true).toLower()
+  # Fast path: pure ASCII skips unidecode entirely
+  var cleaned: string
+  var isAscii = true
+  for c in str:
+    if c < '\x01' or c > '\x7f':
+      isAscii = false
+      break
+  if isAscii:
+    cleaned = str.strip(true, true).toLower()
+  else:
+    cleaned = str.unidecode().strip(true, true).toLower()
   result = newStringOfCap(cleaned.len)
   for ch in cleaned:
     if ch in Whitespace:
