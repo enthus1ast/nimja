@@ -151,6 +151,7 @@ proc astAst(tokens: seq[NwtNode]): seq[NimNode]
 proc compile(str: string, blockToRender: string = "", file: string = ""): seq[NwtNode]
 proc astAstOne(token: NwtNode): NimNode
 proc generatePreallocatedStringDef(len: int): NimNode
+proc appendVarSmart(n: NwtNode): NimNode
 
 ## Allowance per `{{ }}` variable in the output-size estimate: a variable
 ## normally adds at least a few characters, and underestimating costs a
@@ -500,7 +501,6 @@ proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode] =
     result &= parseSecondStepOne(fsTokens, pos)
 
 proc astVariable(token: NwtNode): NimNode =
-  var varb: NimNode
   if token.variableBody.strip().len == 0:
     templateError("Empty variable body, a stray whitespace control char? `{{-}}`",
       token.file, token.line, token.col)
@@ -515,21 +515,7 @@ proc astVariable(token: NwtNode): NimNode =
     else:
       templateError("Undefined block referenced by `self.`: " & blockname,
         token.file, token.line, token.col)
-  try:
-    varb = parseStmt(token.variableBody)
-  except:
-    templateError("Cannot parse variable body: " & token.variableBody,
-      token.file, token.line, token.col)
-  return nnkStmtList.newTree(
-    nnkInfix.newTree(
-      newIdentNode("&="),
-      newIdentNode(nwtVarname),
-      newCall(
-        nwtStrProc,
-        varb
-      )
-    )
-  )
+  return appendVarSmart(token)
 
 proc astStr(token: NwtNode): NimNode =
   return nnkStmtList.newTree(
@@ -762,6 +748,32 @@ proc appendValue(value: NimNode): NimNode =
     result = nnkStmtList.newTree(
       nnkInfix.newTree(newIdentNode("&="), newIdentNode(nwtVarname), value))
 
+proc appendVarSmart(n: NwtNode): NimNode =
+  ## Appends a variable to the output. `int`/`float` values are formatted
+  ## directly into the destination (`addInt`/`addFloat`, both from `system`)
+  ## instead of going through `$`, which allocates a temporary string for
+  ## every appended number.
+  let dst = newIdentNode(nwtVarname)
+  if nwtIter or nwtEscaping:
+    return appendValue(stringifyVar(n))
+  var raw: NimNode
+  try:
+    raw = varExpr(n.variableBody)
+  except:
+    return appendValue(stringifyVar(n))
+  template numericBranch(typeIdent: string; addProc: string): NimNode =
+    nnkElifBranch.newTree(
+      nnkInfix.newTree(newIdentNode("is"), raw, newIdentNode(typeIdent)),
+      nnkStmtList.newTree(
+        nnkCall.newTree(newIdentNode(addProc), dst, raw)))
+  result = nnkWhenStmt.newTree(
+    numericBranch("int", "addInt"),
+    numericBranch("float", "addFloat"),
+    numericBranch("float32", "addFloat"),
+    nnkElse.newTree(
+      appendValue(newCall(newIdentNode("$"), raw))))
+
+
 proc staticCond(n: NwtNode): NimNode =
   nnkInfix.newTree(newIdentNode("is"), varExpr(n.variableBody),
                    newIdentNode("static"))
@@ -806,12 +818,12 @@ proc astRun(run: seq[NwtNode]): NimNode =
     of NVariable:
       let v = stringifyVar(n)
       if pending.isNil:
-        sep.add appendValue(v)
+        sep.add appendVarSmart(n)
       else:
         let merged = nnkInfix.newTree(newIdentNode("&"), pending, v)
         sep.add nnkWhenStmt.newTree(
           nnkElifBranch.newTree(staticCond(n), newStmtList(appendValue(merged))),
-          nnkElse.newTree(newStmtList(appendValue(pending), appendValue(v))))
+          nnkElse.newTree(newStmtList(appendValue(pending), appendVarSmart(n))))
       pending = nil
     else: discard
   if not pending.isNil:
