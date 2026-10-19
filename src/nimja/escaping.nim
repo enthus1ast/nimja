@@ -11,25 +11,27 @@ type
 func escapeHtmlChars(s: string): string =
   ## escapes the HTML special characters `& < > " '`
   var hasSpecial = false
-  for ch in s:
-    case ch
+  for c in s:
+    case c
     of '&', '<', '>', '"', '\'':
       hasSpecial = true
       break
-    else:
-      discard
+    else: discard
   if not hasSpecial:
-    # Nothing to escape: keep the string instead of allocating a copy.
     return s
-  result = newStringOfCap(s.len + s.len shr 2)
-  for ch in s:
-    case ch
-    of '&': result.add "&amp;"
-    of '<': result.add "&lt;"
-    of '>': result.add "&gt;"
-    of '"': result.add "&quot;"
-    of '\'': result.add "&#39;"
-    else: result.add ch
+  # Single pass, buffer write.
+  result = newStringOfCap(s.len * 3)
+  result.setLen(s.len * 3)
+  var p = 0
+  for c in s:
+    case c
+    of '&': result[p]='&';inc p;result[p]='a';inc p;result[p]='m';inc p;result[p]='p';inc p;result[p]=';';inc p
+    of '<': result[p]='&';inc p;result[p]='l';inc p;result[p]='t';inc p;result[p]=';';inc p
+    of '>': result[p]='&';inc p;result[p]='g';inc p;result[p]='t';inc p;result[p]=';';inc p
+    of '"': result[p]='&';inc p;result[p]='q';inc p;result[p]='u';inc p;result[p]='o';inc p;result[p]='t';inc p;result[p]=';';inc p
+    of '\'': result[p]='&';inc p;result[p]='#';inc p;result[p]='3';inc p;result[p]='9';inc p;result[p]=';';inc p
+    else: result[p]=c;inc p
+  result.setLen(p)
 
 proc `$`*(str: HTMLSafeStr): string {.borrow.}
 proc add*(x: var string, str: HTMLSafeStr) {.borrow.}
