@@ -26,6 +26,15 @@ type
 
 const allowedCharsInSlug* = Letters + Digits
 
+func addSlice(dst: var string, src: string, a, b: int) {.inline.} =
+  ## Appends `src[a..b]` (inclusive) with a single bulk copy. Cheaper than
+  ## appending char by char, and cheaper than slicing (which allocates).
+  if b < a: return
+  let k = b - a + 1
+  let old = dst.len
+  dst.setLen(old + k)
+  copyMem(addr dst[old], unsafeAddr src[a], k)
+
 func previtem*[T](loop: Loop[T]): Option[T] {.inline.} =
   ## the item of the previous loop iteration (if any)
   if loop.index0 > 0 and loop.src != nil:
@@ -145,23 +154,26 @@ proc truncate*(str: string, num: Natural, preserveWords = true, suf = "..."): st
     return str[0 .. num - 1] & suf
   else:
     result = newStringOfCap(num + suf.len)
-    for idx, word in enumerate(str.splitWhitespace()):
-      if result.len + (word.len) <= num:
+    # the same words `splitWhitespace` would produce, but without allocating a
+    # seq and a string per word on every call
+    let n = str.len
+    var i = 0
+    var idx = 0
+    while i < n:
+      while i < n and str[i] in Whitespace: inc i
+      if i >= n: break
+      let wStart = i
+      while i < n and str[i] notin Whitespace: inc i
+      let wLen = i - wStart
+      if result.len + wLen <= num:
         if idx != 0:
           result.add " "
-        result.add word
+        addSlice(result, str, wStart, i - 1)
+        inc idx
       else:
         result.add suf
         break
 
-func addSlice(dst: var string, src: string, a, b: int) {.inline.} =
-  ## Appends `src[a..b]` (inclusive) with a single bulk copy. Cheaper than
-  ## appending char by char, and cheaper than slicing (which allocates).
-  if b < a: return
-  let k = b - a + 1
-  let old = dst.len
-  dst.setLen(old + k)
-  copyMem(addr dst[old], unsafeAddr src[a], k)
 
 func nl2br*(str: string, keepNl = true): string =
   ## Converts all \n to <br>
