@@ -185,21 +185,37 @@ func spaceless*(str: string): string =
   ## warning, this is NOT smart.
   ## So it will destroy `<textarea>` and `<pre>` content!
   result = newStringOfCap(str.len)
-  var pos = 0
   let n = str.len
+  var i = 0
+  var start = 0 # start of the pending run that can be copied in bulk
   var intag = false
-  while pos < n:
-    let ch = str[pos]
-    if ch == '<': intag = true
-    if ch == '>': intag = false
-    if intag: result.add ch
-    else:
-      let skipped = str.skipWhile(Whitespace, pos)
-      if skipped > 1:
+  while i < n:
+    let ch = str[i]
+    if intag:
+      if ch == '>':
+        addSlice(result, str, start, i) # the whole tag, '>' included
+        intag = false
+        start = i + 1
+      inc i
+    elif ch == '<':
+      addSlice(result, str, start, i - 1) # text before the tag
+      inc i
+      intag = true
+      start = i - 1
+    elif ch in Whitespace:
+      addSlice(result, str, start, i - 1)
+      var j = i + 1
+      while j < n and str[j] in Whitespace: inc j
+      if j - i > 1:
         result.add ' ' # only one whitespace for multiple ones
-        pos.inc skipped - 1
-      else: result.add ch
-    pos.inc
+      else:
+        result.add ch
+      i = j
+      start = i
+    else:
+      inc i
+  if not intag:
+    addSlice(result, str, start, n - 1)
 
 proc slugify*(str: string, seperator = "-", allowedChars = allowedCharsInSlug): string =
   ## converts any string to an url friendly one.
