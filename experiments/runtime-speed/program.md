@@ -83,70 +83,102 @@ command runs longer than ~10 minutes, kill it and treat it as crashed.
 ## Where the time goes (baseline, `-d:release`, this machine)
 
 Iteration counts are fixed; these are the per-workload times from the harness.
-Use them to decide what is worth optimising (`loop` and `slugify` dominate).
+Use them to decide what is worth optimising.
 
-Current baseline (CPU time, after the escaping fast path):
+Current baseline (~36 ms total, after the first campaign):
 
 | workload | time | what it exercises |
 |---|---|---|
-| `filters-slugify` | ~11.2 ms | `slugify` (unicode folding, per-char work) |
-| `loop` | ~10.0 ms | `Loop` object + `cycle()` + first/last per iteration |
-| `proc` | ~7.0 ms | template-defined proc called 3× |
-| `escape` | ~5.5 ms | `htmlEscape` on a value full of `& < > " '` |
-| `filters-nl2br` | ~5.4 ms | `nl2br` |
-| `static` | ~5.4 ms | long static body + one variable |
-| `scalars` | ~5.3 ms | `$` of int/float/bool/char |
-| `filters-spaceless` | ~4.9 ms | `spaceless` |
-| `mixedConst` | ~4.5 ms | const variables + runtime variable |
-| `vars` | ~4.4 ms | 8 variables and nothing else |
-| `nested` | ~3.2 ms | for + if + case over tuples |
-| `bigProc` | ~3.1 ms | large template-proc body (preallocated) |
-| `page` | ~3.0 ms | realistic page with if + for |
-| `constBlock` | ~3.0 ms | const folding in a run |
-| `escape-plain` | ~3.0 ms | escaping a value with nothing to escape |
-| `page-anon` | ~2.9 ms | page with empty loop and logged-out branch |
-| `filters-truncate` | ~2.7 ms | `truncate` |
+| `escape` | ~3.0 ms | `htmlEscape` on a value full of `& < > " '` |
+| `bigProc` | ~2.6 ms | large template-proc body (preallocated) |
+| `vars` | ~2.5 ms | 8 variables and nothing else |
+| `static` | ~2.5 ms | long static body + one variable |
+| `nested` | ~2.4 ms | for + if + case over tuples |
+| `page` | ~2.4 ms | realistic page with if + for |
+| `proc` | ~2.3 ms | template-defined proc called 3× |
+| `page-anon` | ~2.3 ms | page with empty loop and logged-out branch |
+| `loop` | ~2.2 ms | `Loop` object + `cycle()` + first/last per iteration |
+| `scalars` | ~2.1 ms | `$` of int/float/bool/char |
+| `filters-slugify` | ~1.8 ms | `slugify` (ascii fold, per-char work) |
+| `filters-spaceless` | ~2.0 ms | `spaceless` |
+| `constBlock` | ~1.6 ms | const folding in a run |
+| `filters-nl2br` | ~1.5 ms | `nl2br` |
+| `mixedConst` | ~1.4 ms | const variables + runtime variable |
+| `filters-truncate` | ~1.4 ms | `truncate` |
+| `escape-plain` | ~1.0 ms | escaping a value with nothing to escape |
+
+The profile is now **allocation bound**: a render that outputs a handful of
+bytes still costs one `newStringOfCap` (~35 ns) plus the appends, and every
+temporary string (`$` of a number, an escaped value, a `seq` literal) adds
+another. The remaining wins came from removing allocations and from making the
+preallocation estimate good enough that the result never grows.
+
+### Verified findings (from the first campaign)
+
+* **Preallocation dominates small renders.** Templates with no static text got
+  no `newStringOfCap` at all and `vars`-style templates were 2.8× slower than
+  they needed to be (`constBlock` 6.8×, `mixedConst` 7.7×). A floor of 64 and a
+  per-variable allowance fixed that; a floor of 128 measured *worse* (0.92), so
+  do not assume bigger is better.
+* **`strutils.toLower(string)` is the rune-decoding version from `std/unicode`**
+  (758 ns vs 80 ns for `toLowerAscii` on 37 bytes). `slugify` was spending
+  ~90 % of its time there.
+* **`$` of `int`/`float`/`char`/`bool` allocates a temporary string.** Emitting
+  `addInt`/`addFloat`/`dst.add` instead was worth 1.85× on `loop` and 1.36× on
+  `scalars`. `$` of a `string` is an inlined identity — leave it alone.
+* **`loop()` built two `Option[T]` per iteration** (refcount traffic) even
+  though most templates never read `previtem`/`nextitem`; accessors instead of
+  fields: 1.86× on `loop`. `cycle(@[...])` also allocated a `seq` per call.
+* **Bulk copies beat per-char appends** in `nl2br`/`spaceless`/`truncate`
+  (`addSlice` = `setLen` + `copyMem`); `splitWhitespace()` in `truncate`
+  allocated a seq plus a string per word.
+* **SIMD (nimsimd/SSE2) is *not* a win for short values.** It paid off only for
+  escaping long values (1600 chars: 492 → 174 ns, 2.8×) and is neutral below
+  ~32 bytes. For scanning, `strutils.find` (a plain loop) matched SIMD on
+  40-byte inputs. Vectorize only where the strings are actually long.
+* **`.inline` procs with `var` parameters can be a pessimisation**: writing
+  through a `var int` cursor prevented register allocation and made the escape
+  write pass 2× slower; a `template` fixed it.
+* The `loop`, `vars`, `constBlock` and `mixedConst` workloads are the smallest
+  and noisiest (0.3–1.6 ms per round): single-run swings of 0.5×–3× happen
+  without any real change, so confirm such a case locally (copy the template
+  into a scratch driver, `taskset -c 0`) before believing it.
 
 ## Idea bank
 
-Start with the biggest workloads; each item is one experiment.
+Already done (do not redo): escaping fast path + SIMD scan, `$`-free
+`int`/`float`/`char`/`bool` appends, lazy `previtem`/`nextitem`, allocation-free
+`cycle(@[...])`, preallocation floor/allowances/for-body multiplier, bulk-copy
+`nl2br`/`spaceless`/`truncate`, one-pass `slugify` with `toLowerAscii`.
 
-1. **Escaping.** The "nothing to escape → return the input" fast path is
-   already in place (kept, +3.7 %); `escape-plain` dropped from ~5.5 ms to
-   ~3.0 ms. Next steps: copy non-special *runs* in bulk instead of one `add`
-   per character on the escaping path, and preallocate more accurately for the
-   special-heavy case (`escape`).
-2. **Escaping is idempotent.** `htmlEscape` on an `HTMLSafeStr` returns it
-   unchanged. Check what the generated code does for `{{x|e}}` with
-   `escapeWith = htmlEscape` and remove redundant work if the code generator
-   emits two escaping calls.
-3. **`loop()` helper.** It constructs a `Loop[T]` per iteration, calls
-   `a.len()` several times, and builds `Option[T]` prev/next. Hoist the length,
-   compute indices incrementally, keep semantics identical (index/first/last/
-   revindex/previtem/nextitem/cycle).
-4. **String helpers.** `slugify`, `spaceless`, `nl2br`, `truncate` are real
-   per-byte loops with allocations. Preallocate with `newStringOfCap`, avoid
-   intermediates, use `find`/slice copies for unchanged runs, and skip the
-   allocation entirely when the input is already in the target form.
-5. **Preallocation of the render result.** `compile` computes an output
-   capacity from the final node tree (`staticLen`, `noPreallocatedString`).
-   Check whether template procs and the main result get a good `newStringOfCap`
-   (the current rule is `>= 64` static chars for proc bodies) and whether the
-   estimate can include known-length parts without changing behaviour.
-6. **Fewer appends.** How does `astRun`/`astVariable` emit appends? Group
-   adjacent literals, fold more constant expressions, or emit a single
-   `add` of a concatenated literal when the pieces are static.
-7. **`$` vs direct add.** For `string`-typed variables the generated
-   `nwtStrProc` call may be redundant. See whether the generator can emit
-   `result.add x` when the type is already `string` (or `HTMLSafeStr` under
-   escaping) without changing semantics for other types.
-8. **Control-flow codegen.** `if`/`for`/`case` bodies currently emit many small
-   appends into the same `result`. Look for repeated work per iteration
-   (temporary strings, `$` on indices, bounds checks).
-9. **Template procs/funcs.** Preallocation already exists for large bodies;
-   check small ones and whether locals can be avoided.
-10. **Delete work.** Any allocation, temporary, or repeated conversion that the
-    gate proves unnecessary is a win.
+What is left is mostly *allocation* and *append* counting:
+
+1. **Per-render allocations.** Every render allocates its `result`; escaped
+   values, numbers (`$`), `seq` literals and template-proc calls allocate more.
+   Any way to avoid one of those is a win. (Changing `escapeWith`'s contract is
+   an API change, so `htmlEscape` must keep returning a value.)
+2. **Better output-size estimate.** The estimate cannot know loop lengths or
+   value widths. Ideas: count the biggest `if`/`case` branch instead of all of
+   them (it currently sums every branch, which over-allocates), weight static
+   text by the enclosing `for`-depth, or estimate per-variable size from the
+   static text around it. Only worth it when it removes a `realloc`.
+3. **Fewer appends.** Adjacent literal + variable appends are already merged;
+   look at control-flow boundaries (`if` inside a run currently forces a
+   separate append for the literal before it) and `case`/`when` bodies.
+4. **Template procs/funcs.** A proc body allocates its own result, which the
+   caller then copies. Inlining is not possible, but the prealloc threshold and
+   the body's own estimate can be tuned (currently `>= 15` static chars).
+5. **`$` on enums / other types.** `char`/`bool`/`int`/`float` are handled;
+   enums still go through `$` (a temporary string per value).
+6. **`addInt`-style appends inside loops**: check that `{{loop.index}}`-like
+   cases now cost nothing extra (they do) and look for other repeated
+   conversions (e.g. `{{ i * 2 }}`, `$` of a loop variable in a `case`).
+7. **Escaping**: the escaping path allocates the escaped value, then copies it
+   into the result. Reducing that to one pass would need a generator-level
+   contract change (`escapeWith`), which is out of scope here — but the escaping
+   helpers themselves (scan, sizing, `HTMLSafeStr`) can still be tuned.
+8. **Delete work.** Any temporary, allocation or repeated conversion the gate
+   proves unnecessary is a win.
 
 If you run out of ideas: re-read `src/nimja/parser.nim`'s `ast*` procs, compare
 the generated code (`-d:dumpNwtAstPretty` / `-d:dumpNwtMacro`), look at the
