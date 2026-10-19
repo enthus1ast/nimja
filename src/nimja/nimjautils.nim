@@ -150,9 +150,11 @@ func spaceless*(str: string): string =
   ## Removes unneeded whitespaces between html tags,
   ## warning, this is NOT smart.
   ## So it will destroy `<textarea>` and `<pre>` content!
+  result = newStringOfCap(str.len)
   var pos = 0
+  let n = str.len
   var intag = false
-  while pos < str.len:
+  while pos < n:
     let ch = str[pos]
     if ch == '<': intag = true
     if ch == '>': intag = false
