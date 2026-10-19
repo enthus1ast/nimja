@@ -79,6 +79,7 @@ handling, even the `ValueError` on unterminated triple-quoted strings.
 | `harness/bench_metric.nim` | the A/B compile-time score |
 | `harness/bench_table.nim` | human-facing benchy table (runtime, informational) |
 | `harness/gen_corpus.py` | how the corpus was generated (do not re-run mid-run) |
+| `VALIDATION.md` | hand-off record: noise floor and the two validation experiments |
 
 `experiment.sh` refuses to run if any file in `FIXED.sha256` changed, or if
 anything outside `src/nimja/lexer.nim` was modified/created.
@@ -100,7 +101,9 @@ Never stop until I interrupt you.
 ```
 
 Everything the model needs to know (commands, metric, rules, idea bank) is in
-`program.md`; keep iterating on that file, not on the harness.
+`program.md`; keep iterating on that file, not on the harness. Doc edits must
+be committed before the next experiment (the runner aborts on uncommitted
+out-of-scope changes, which is what keeps the agent inside the lexer).
 
 ## results.tsv
 
@@ -136,8 +139,10 @@ This harness was validated before hand-off (numbers in `VALIDATION.md`, raw rows
 ## Branches
 
 `setup.sh` creates `autoresearch-lexer/<tag>` (not `autoresearch/<tag>`,
-because the repo already has a branch named `autoresearch`). To adopt the
-results of a run:
+because the repo already has a branch named `autoresearch`). The validation run
+(`autoresearch-lexer/lexer-20261019`) was fast-forwarded into `autoresearch`
+and the branch deleted; a fresh run is set up on `autoresearch-lexer/run1`.
+To adopt the results of a later run:
 
 ```bash
 git checkout autoresearch
