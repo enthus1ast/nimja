@@ -127,7 +127,17 @@ proc lexBetween(buf: string, pos, line, lineStart: var int, bstart = "{{",
     else:
       store
     pos.inc
-  result.token.value = result.token.value.strip() ## TODO strip later? is this even correct for strings?
+  # Cheaper strip: manually find first/last non-ws chars, only copy when needed.
+  var lo = 0
+  while lo < result.token.value.len and result.token.value[lo] in {' ', '\t', '\n', '\r', '\f'}:
+    inc lo
+  var hi = result.token.value.len - 1
+  while hi >= lo and result.token.value[hi] in {' ', '\t', '\n', '\r', '\f'}:
+    dec hi
+  if lo > hi:
+    result.token.value = ""
+  elif lo > 0 or hi < result.token.value.len - 1:
+    result.token.value = result.token.value[lo .. hi]
   if isEof and endchar == false:
     lexerMsg(fmt"Endchar expected but not found... '{bend}'", line + 1)
 
