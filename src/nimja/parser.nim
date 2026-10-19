@@ -632,10 +632,10 @@ proc astProc(token: NwtNode, procStr = "proc"): NimNode =
   let easyProc =  procStr & " " & token.procHeader & " discard"
   result = parseStmt(easyProc) # dummy to build valid procBody
   result[0].body = newStmtList()
-  # preallocate the proc's own result for large static bodies; small procs are
-  # left alone (the newStringOfCap call is not worth it there)
+  # preallocate the proc's own result for bodies with enough static chars;
+  # lower threshold catches more real-world template procs
   let plen = staticLen(token.procBody)
-  if plen >= 64:
+  if plen >= 15:
     result[0].body.add generatePreallocatedStringDef(plen)
   for n in astAst(token.procBody): # fill the proc body with content
     result[0].body.add n
