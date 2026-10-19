@@ -10,6 +10,17 @@ type
 
 func escapeHtmlChars(s: string): string =
   ## escapes the HTML special characters `& < > " '`
+  var hasSpecial = false
+  for ch in s:
+    case ch
+    of '&', '<', '>', '"', '\'':
+      hasSpecial = true
+      break
+    else:
+      discard
+  if not hasSpecial:
+    # Nothing to escape: keep the string instead of allocating a copy.
+    return s
   result = newStringOfCap(s.len + s.len shr 2)
   for ch in s:
     case ch
