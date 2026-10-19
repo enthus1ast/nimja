@@ -139,6 +139,11 @@ when defined(dumpNwtAstPretty):
   proc pretty*(nwtNodes: seq[NwtNode]): string {.compileTime.} =
     (%* nwtNodes).pretty()
 
+## Minimum output capacity: templates without static text (e.g. only
+## `{{var}}`s) have no size estimate, and growing the result from scratch
+## reallocates and copies on nearly every append.
+const minPreallocCap = 64
+
 # Forward declaration
 proc parseSecondStep(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
 proc parseSecondStepOne(fsTokens: seq[FSNode], pos: var int): seq[NwtNode]
@@ -1130,6 +1135,8 @@ proc compile(str: string, blockToRender: string = "", file: string = ""): seq[Nw
   result = resolveSelf(result, resolving).condenseStrings()
   # compute the pre-allocation size from the final tree (cache independent)
   guessedStringLen = staticLen(result)
+  if result.len > 0 and guessedStringLen < minPreallocCap:
+    guessedStringLen = minPreallocCap
   # echo result
 
 proc generatePreallocatedStringDef(len: int): NimNode =
