@@ -128,9 +128,10 @@ compareOutput(candGate, baseGate)
 var
   candMin, baseMin: Table[string, int64]
   names: seq[string]
+  ratios: seq[float]
+  candTotals, baseTotals: seq[int64]
 
-proc collect(bin: string, mins: var Table[string, int64]) =
-  let cases = runBench(bin)
+proc checkWorkloads(cases: Table[string, int64]) =
   if names.len == 0:
     names = toSeq(cases.keys)
     names.sort()
@@ -139,30 +140,63 @@ proc collect(bin: string, mins: var Table[string, int64]) =
   for name in names:
     if not cases.hasKey(name):
       fail(2, "missing workload in a run: " & name)
+
+proc total(cases: Table[string, int64]): int64 =
+  for name in names:
+    result += cases[name]
+
+proc updateMin(mins: var Table[string, int64], cases: Table[string, int64]) =
+  for name in names:
     let v = cases[name]
     if not mins.hasKey(name) or v < mins[name]:
       mins[name] = v
 
+# The two sides are measured back-to-back within a round and the ratio of that
+# pair is recorded; the reported speedup is the MEDIAN of the per-round ratios.
+# This cancels slow drift (CPU frequency / system load), which a min-of-mins
+# estimator cannot: a single lucky window on one side would bias it.
 for r in 0 ..< rounds:
-  # Alternate the order so neither side systematically runs first.
+  var c, b: Table[string, int64]
   if (r and 1) == 0:
-    collect(candBin, candMin)
-    collect(baseBin, baseMin)
+    c = runBench(candBin)
+    b = runBench(baseBin)
   else:
-    collect(baseBin, baseMin)
-    collect(candBin, candMin)
+    b = runBench(baseBin)
+    c = runBench(candBin)
+  checkWorkloads(c)
+  checkWorkloads(b)
+  let ct = total(c)
+  let bt = total(b)
+  if ct <= 0 or bt <= 0:
+    fail(2, "empty workload total")
+  candTotals.add ct
+  baseTotals.add bt
+  ratios.add bt.float / ct.float
+  updateMin(candMin, c)
+  updateMin(baseMin, b)
 
-var candSum, baseSum: int64
+ratios.sort()
+let speedup =
+  if ratios.len == 0: 0.0
+  elif (ratios.len and 1) == 1: ratios[ratios.len div 2]
+  else: (ratios[ratios.len div 2 - 1] + ratios[ratios.len div 2]) / 2.0
+
+var candMinSum, baseMinSum: int64
 for name in names:
   let c = candMin[name]
   let b = baseMin[name]
-  candSum += c
-  baseSum += b
+  candMinSum += c
+  baseMinSum += b
   echo &"case {name}: cand={c} base={b} speedup={b.float / max(c.float, 1.0):.4f}"
 
-let speedup = if candSum > 0: baseSum.float / candSum.float else: 0.0
+var candBest, baseBest: int64 = high(int64)
+for i in 0 ..< rounds:
+  if candTotals[i] < candBest: candBest = candTotals[i]
+  if baseTotals[i] < baseBest: baseBest = baseTotals[i]
+
+echo "ratios: ", ratios.mapIt(&"{it:.4f}").join(" ")
 echo "---"
-echo &"candidate_ns: {candSum}"
-echo &"baseline_ns: {baseSum}"
+echo &"candidate_ns: {candBest}"
+echo &"baseline_ns: {baseBest}"
 echo &"speedup: {speedup:.4f}"
 echo &"rounds: {rounds}"
