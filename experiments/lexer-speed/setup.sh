@@ -3,7 +3,7 @@
 #
 #   ./setup.sh [tag]
 #
-# - creates branch autoresearch/<tag> (default: lexer-YYYYMMDD) from HEAD
+# - creates branch autoresearch-lexer/<tag> (default: lexer-YYYYMMDD) from HEAD
 # - commits the experiment harness on that branch (so the baseline is clean)
 # - writes results.tsv with a header
 # - measures the unchanged lexer and records the baseline row
@@ -16,7 +16,7 @@ set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 TAG="${1:-lexer-$(date +%Y%m%d)}"
-BRANCH="autoresearch/$TAG"
+BRANCH="autoresearch-lexer/$TAG"
 
 if git -C "$ROOT" show-ref --verify --quiet "refs/heads/$BRANCH"; then
   echo "branch $BRANCH already exists; pick another tag: ./setup.sh <tag>" >&2
