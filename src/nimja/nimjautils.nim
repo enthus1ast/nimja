@@ -154,17 +154,31 @@ proc truncate*(str: string, num: Natural, preserveWords = true, suf = "..."): st
         result.add suf
         break
 
+func addSlice(dst: var string, src: string, a, b: int) {.inline.} =
+  ## Appends `src[a..b]` (inclusive) with a single bulk copy. Cheaper than
+  ## appending char by char, and cheaper than slicing (which allocates).
+  if b < a: return
+  let k = b - a + 1
+  let old = dst.len
+  dst.setLen(old + k)
+  copyMem(addr dst[old], unsafeAddr src[a], k)
+
 func nl2br*(str: string, keepNl = true): string =
   ## Converts all \n to <br>
   ## if keepNL == true: newlines will still be in the output.
   result = newStringOfCap(str.len)
-  for ch in str:
-    if ch == '\n':
-      result.add("<br>")
-      if keepNl:
-        result.add(ch)
-    else:
-      result.add ch
+  let n = str.len
+  var start = 0
+  while start < n:
+    let found = str.find('\n', start)
+    if found < 0:
+      addSlice(result, str, start, n - 1)
+      break
+    addSlice(result, str, start, found - 1)
+    result.add("<br>")
+    if keepNl:
+      result.add '\n'
+    start = found + 1
 
 func spaceless*(str: string): string =
   ## Removes unneeded whitespaces between html tags,
