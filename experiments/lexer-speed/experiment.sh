@@ -30,7 +30,7 @@ LOGS="$HERE/logs"
 TSV="$HERE/results.tsv"
 STAMP="$(date +%Y%m%d-%H%M%S)-$$"
 MIN_SPEEDUP="${MIN_SPEEDUP:-1.01}"
-REPS="${REPS:-8}"
+REPS="${REPS:-10}"
 PATCH="$LOGS/$STAMP.patch"
 
 baseline_only=0

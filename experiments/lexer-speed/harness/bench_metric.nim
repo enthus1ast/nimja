@@ -25,7 +25,7 @@
 ##
 ## Environment:
 ##   CAND_LEX, BASE_LEX  primary module source files (required)
-##   REPS                interleaved repetitions per side (default 5)
+##   REPS                interleaved repetitions per side (default 10)
 ##   CT_TIMEOUT          seconds per `nim c` invocation (default 300)
 ##
 ## Exit code 0 = ok, 2 = fixture failed to compile, 3 = timeout.
@@ -68,9 +68,9 @@ let
   candLex = envOr("CAND_LEX", "")
   baseLex = envOr("BASE_LEX", "")
   reps = try:
-      parseInt(envOr("REPS", "5"))
+      parseInt(envOr("REPS", "10"))
     except ValueError:
-      5
+      10
   ctTimeout = envOr("CT_TIMEOUT", "600")
 
 if candLex.len == 0 or baseLex.len == 0:
@@ -121,9 +121,15 @@ proc lexRuntime(s: string): int =
 var
   candTimes, baseTimes: seq[float]
 
+# Alternate which side goes first in each round so neither side systematically
+# pays for a cold cache or a frequency transition.
 for i in 0 ..< reps:
-  candTimes.add compileMs(candDir, "ct_lex.nim", workDir / "nc-cand-lex")
-  baseTimes.add compileMs(baseDir, "ct_lex.nim", workDir / "nc-base-lex")
+  if (i and 1) == 0:
+    candTimes.add compileMs(candDir, "ct_lex.nim", workDir / "nc-cand-lex")
+    baseTimes.add compileMs(baseDir, "ct_lex.nim", workDir / "nc-base-lex")
+  else:
+    baseTimes.add compileMs(baseDir, "ct_lex.nim", workDir / "nc-base-lex")
+    candTimes.add compileMs(candDir, "ct_lex.nim", workDir / "nc-cand-lex")
 
 let
   candMs = minOf(candTimes)
