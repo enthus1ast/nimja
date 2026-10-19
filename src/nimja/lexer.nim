@@ -157,12 +157,14 @@ proc lexStr(buf: string, pos, line, lineStart: var int): LexReturn =
   result.token.col = pos - lineStart
   while pos < buf.len:
     let ch = buf[pos]
-    handleNl
-    if thisIs('{') and (nextIs('#') or nextIs('%') or nextIs('{')):
-      pos.dec # go back to last; for next lexer
+    if ch == '\n':
+      line.inc
+      lineStart = pos + 1
+    if ch == '{' and pos + 1 < buf.len and buf[pos + 1] in ['#', '%', '{']:
+      pos.dec
       break
     else:
-      store
+      result.token.value &= ch
     pos.inc
 
 
