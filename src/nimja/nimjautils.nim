@@ -27,7 +27,12 @@ type
 
 const allowedCharsInSlug* = Letters + Digits
 
-proc cycle*[T](loop: Loop, elems: openArray[T]): T =
+proc cycleItems*[T](loop: Loop, elems: openArray[T]): T {.inline.} =
+  if elems.len == 0:
+    raise newException(ValueError, "nimja: cycle() called with an empty sequence")
+  return elems[loop.index0 mod elems.len]
+
+macro cycle*(loop, elems: untyped): untyped =
   ## within a loop you can cycle through elements:
   ##
   ## .. code-block:: Nim
@@ -35,9 +40,15 @@ proc cycle*[T](loop: Loop, elems: openArray[T]): T =
   ##       <li class="{{ loop.cycle(@["odd", "even"]) }}">{{ row }}</li>
   ##   {% endfor %}
   ##
-  if elems.len == 0:
-    raise newException(ValueError, "nimja: cycle() called with an empty sequence")
-  return elems[loop.index0 mod elems.len]
+  ## A literal `@[...]` argument is rewritten to an array literal: same values,
+  ## but the array lives on the stack instead of allocating a fresh `seq` on
+  ## every single call.
+  var elems2 = elems
+  if elems2.kind == nnkPrefix and elems2.len == 2 and
+     elems2[0].kind in {nnkIdent, nnkSym} and eqIdent(elems2[0], "@") and
+     elems2[1].kind == nnkBracket and elems2[1].len > 0:
+    elems2 = elems2[1]
+  result = newCall(bindSym"cycleItems", loop, elems2)
 
 # iterator loop*[T](a: Loopable[T]): tuple[loop: Loop[T], val: T] = # TODO cannot access fields in the template; why?
 iterator loop*[T](a: openArray[T]): tuple[loop: Loop[T], val: T] {.inline.} =
