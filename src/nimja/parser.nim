@@ -768,10 +768,20 @@ proc appendVarSmart(n: NwtNode): NimNode =
       nnkInfix.newTree(newIdentNode("is"), raw, newIdentNode(typeIdent)),
       nnkStmtList.newTree(
         nnkCall.newTree(newIdentNode(addProc), dst, raw)))
+  template typeBranch(typeIdent: string; body: NimNode): NimNode =
+    nnkElifBranch.newTree(
+      nnkInfix.newTree(newIdentNode("is"), raw, newIdentNode(typeIdent)),
+      nnkStmtList.newTree(body))
+  template methodAdd(value: NimNode): NimNode =
+    nnkCall.newTree(nnkDotExpr.newTree(dst, newIdentNode("add")), value)
   result = nnkWhenStmt.newTree(
     numericBranch("int", "addInt"),
     numericBranch("float", "addFloat"),
     numericBranch("float32", "addFloat"),
+    # `$` of a `char` is the character itself and `$` of a `bool` is "true" or
+    # "false", so both can be appended without a temporary string
+    typeBranch("char", methodAdd(raw)),
+    typeBranch("bool", methodAdd(quote do: (if `raw`: "true" else: "false"))),
     nnkElse.newTree(
       appendValue(newCall(newIdentNode("$"), raw))))
 
