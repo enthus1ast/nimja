@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.10.3"
+version       = "0.10.4"
 
 author        = "David Krause"
 description   = "typed and compiled template engine inspired by jinja2, twig and onionhammer/nim-templates for Nim."
@@ -11,6 +11,8 @@ srcDir        = "src"
 # Dependencies
 
 requires "nim >= 1.4.8"
+requires "nimsimd >= 1.2.0"
+requires "unidecode"
 
 task tests, "Run all tests":
   exec """testament --directory:"./tests/" p "basic/*.nim""""
@@ -32,5 +34,12 @@ task tests, "Run all tests":
 
 
 task docs, "Generate all docs":
-  rmDir("src/htmldocs/")
+  rmDir("src/nimja/htmldocs/")
   exec "nim doc --project -o:docs/ src/nimja.nim"
+
+task bench, "Run the render benchmarks (needs treeform/benchy, see bench/)":
+  exec "nim c -r -d:release bench/benchmark.nim"
+
+task jinja, "Benchmark against Jinja2 (needs python3 with jinja2, see bench/vs_jinja2.*)":
+  exec "nim c -r -d:release bench/vs_jinja2.nim 2000000"
+  exec "python3 bench/vs_jinja2.py 200000"

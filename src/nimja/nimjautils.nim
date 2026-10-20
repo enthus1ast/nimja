@@ -1,10 +1,12 @@
-import options
+import std/options
 export options
 import sharedhelper
-import strutils
-import parseutils
+import escaping
+export escaping
+import std/strutils
+import std/parseutils
 import unidecode
-import os, mimetypes, uri, tables, macros, std/enumerate
+import std/[os, mimetypes, uri, tables, macros, enumerate]
 export uri
 
 type
@@ -13,11 +15,10 @@ type
     index0*: int ## which elemen (start from 0)
     first*: bool ## if this is the first loop iteration
     last*: bool ## if this is the last loop iteration
-    previtem*: Option[T] ## get the item from the last loop iteration
-    nextitem*: Option[T] ## get the item from the next loop iteration
     length*: int ## the length of the seq, (same as mySeq.len())
     revindex0*: int ## which element, counted from the end (last one is 0)
     revindex*: int ## which element, counted from the end (last one is 1)
+    src: ptr UncheckedArray[T] ## the iterated data (borrowed, never freed here)
   Loopable*[T] = concept x {.explain.}
     x.len() is int
     x[int] is T
@@ -25,7 +26,35 @@ type
 
 const allowedCharsInSlug* = Letters + Digits
 
-proc cycle*[T](loop: Loop, elems: openArray[T]): T =
+func addSlice(dst: var string, src: string, a, b: int) {.inline.} =
+  ## Appends `src[a..b]` (inclusive) with a single bulk copy. Cheaper than
+  ## appending char by char, and cheaper than slicing (which allocates).
+  if b < a: return
+  let k = b - a + 1
+  let old = dst.len
+  dst.setLen(old + k)
+  copyMem(addr dst[old], unsafeAddr src[a], k)
+
+func previtem*[T](loop: Loop[T]): Option[T] {.inline.} =
+  ## the item of the previous loop iteration (if any)
+  if loop.index0 > 0 and loop.src != nil:
+    some(loop.src[loop.index0 - 1])
+  else:
+    none(T)
+
+func nextitem*[T](loop: Loop[T]): Option[T] {.inline.} =
+  ## the item of the next loop iteration (if any)
+  if loop.index0 + 1 < loop.length and loop.src != nil:
+    some(loop.src[loop.index0 + 1])
+  else:
+    none(T)
+
+proc cycleItems*[T](loop: Loop, elems: openArray[T]): T {.inline.} =
+  if elems.len == 0:
+    raise newException(ValueError, "nimja: cycle() called with an empty sequence")
+  return elems[loop.index0 mod elems.len]
+
+macro cycle*(loop, elems: untyped): untyped =
   ## within a loop you can cycle through elements:
   ##
   ## .. code-block:: Nim
@@ -33,7 +62,15 @@ proc cycle*[T](loop: Loop, elems: openArray[T]): T =
   ##       <li class="{{ loop.cycle(@["odd", "even"]) }}">{{ row }}</li>
   ##   {% endfor %}
   ##
-  return elems[loop.index0 mod elems.len]
+  ## A literal `@[...]` argument is rewritten to an array literal: same values,
+  ## but the array lives on the stack instead of allocating a fresh `seq` on
+  ## every single call.
+  var elems2 = elems
+  if elems2.kind == nnkPrefix and elems2.len == 2 and
+     elems2[0].kind in {nnkIdent, nnkSym} and eqIdent(elems2[0], "@") and
+     elems2[1].kind == nnkBracket and elems2[1].len > 0:
+    elems2 = elems2[1]
+  result = newCall(bindSym"cycleItems", loop, elems2)
 
 # iterator loop*[T](a: Loopable[T]): tuple[loop: Loop[T], val: T] = # TODO cannot access fields in the template; why?
 iterator loop*[T](a: openArray[T]): tuple[loop: Loop[T], val: T] {.inline.} =
@@ -57,22 +94,19 @@ iterator loop*[T](a: openArray[T]): tuple[loop: Loop[T], val: T] {.inline.} =
   # TODO this should be a concept, but does not work why?
   # however, the element you iterate over must match the Concept `Loopable`.
   # This means you can propably not use loop() with an iterator, since they do not have a `len()` and `[]`
+  let n = a.len()
+  let src = if n > 0: cast[ptr UncheckedArray[T]](unsafeAddr a[0]) else: nil
+  var lp = Loop[T](length: n, src: src)
   var idx = 0
   for each in a:
-    var loop = Loop[T]()
-    loop.index = idx + 1
-    loop.index0 = idx
-    loop.first = idx == 0
-    loop.last = idx == a.len() - 1
-    if not loop.first:
-      loop.previtem = some(a[idx - 1])
-    if not loop.last:
-      loop.nextitem = some(a[idx + 1])
-    loop.length = a.len()
-    loop.revindex0 = a.len() - (idx + 1)
-    loop.revindex = a.len() - idx
-    idx.inc
-    yield (loop, each)
+    lp.index = idx + 1
+    lp.index0 = idx
+    lp.first = idx == 0
+    lp.last = idx == n - 1
+    lp.revindex0 = n - (idx + 1)
+    lp.revindex = n - idx
+    inc idx
+    yield (lp, each)
 
 
 template `~`*(aa, bb: untyped): string =
@@ -120,56 +154,109 @@ proc truncate*(str: string, num: Natural, preserveWords = true, suf = "..."): st
     return str[0 .. num - 1] & suf
   else:
     result = newStringOfCap(num + suf.len)
-    for idx, word in enumerate(str.splitWhitespace()):
-      if result.len + (word.len) <= num:
+    # the same words `splitWhitespace` would produce, but without allocating a
+    # seq and a string per word on every call
+    let n = str.len
+    var i = 0
+    var idx = 0
+    while i < n:
+      while i < n and str[i] in Whitespace: inc i
+      if i >= n: break
+      let wStart = i
+      while i < n and str[i] notin Whitespace: inc i
+      let wLen = i - wStart
+      if result.len + wLen <= num:
         if idx != 0:
           result.add " "
-        result.add word
+        addSlice(result, str, wStart, i - 1)
+        inc idx
       else:
         result.add suf
         break
 
+
 func nl2br*(str: string, keepNl = true): string =
   ## Converts all \n to <br>
   ## if keepNL == true: newlines will still be in the output.
-  for ch in str:
-    if ch == '\n':
-      result.add("<br>")
-      if keepNl:
-        result.add(ch)
-    else:
-      result.add ch
+  result = newStringOfCap(str.len)
+  let n = str.len
+  var start = 0
+  while start < n:
+    let found = str.find('\n', start)
+    if found < 0:
+      addSlice(result, str, start, n - 1)
+      break
+    addSlice(result, str, start, found - 1)
+    result.add("<br>")
+    if keepNl:
+      result.add '\n'
+    start = found + 1
 
 func spaceless*(str: string): string =
   ## Removes unneeded whitespaces between html tags,
   ## warning, this is NOT smart.
   ## So it will destroy `<textarea>` and `<pre>` content!
-  var pos = 0
+  result = newStringOfCap(str.len)
+  let n = str.len
+  var i = 0
+  var start = 0 # start of the pending run that can be copied in bulk
   var intag = false
-  while pos < str.len:
-    let ch = str[pos]
-    if ch == '<': intag = true
-    if ch == '>': intag = false
-    if intag: result.add ch
-    else:
-      let skipped = str.skipWhile(Whitespace, pos)
-      if skipped > 1:
+  while i < n:
+    let ch = str[i]
+    if intag:
+      if ch == '>':
+        addSlice(result, str, start, i) # the whole tag, '>' included
+        intag = false
+        start = i + 1
+      inc i
+    elif ch == '<':
+      addSlice(result, str, start, i - 1) # text before the tag
+      inc i
+      intag = true
+      start = i - 1
+    elif ch in Whitespace:
+      addSlice(result, str, start, i - 1)
+      var j = i + 1
+      while j < n and str[j] in Whitespace: inc j
+      if j - i > 1:
         result.add ' ' # only one whitespace for multiple ones
-        pos.inc skipped - 1
-      else: result.add ch
-    pos.inc
+      else:
+        result.add ch
+      i = j
+      start = i
+    else:
+      inc i
+  if not intag:
+    addSlice(result, str, start, n - 1)
 
 proc slugify*(str: string, seperator = "-", allowedChars = allowedCharsInSlug): string =
   ## converts any string to an url friendly one.
   ## Removes any special chars and replaces non ASCII runes to their ASCII representation.
-  var cleaned = str.unidecode().strip(true, true).toLower()
-  for ch in cleaned:
+  # Fast path: pure ASCII skips unidecode entirely
+  var cleaned: string
+  var isAscii = true
+  for c in str:
+    if c < '\x01' or c > '\x7f':
+      isAscii = false
+      break
+  # `toLowerAscii` is enough in *both* branches: the input is ASCII here, and
+  # `unidecode` only ever produces ASCII. `strutils.toLower` is re-exported
+  # from `std/unicode` and decodes runes (~10x slower for nothing).
+  #
+  # Strip, lower-case and filter in a single pass: `strip()` and `toLowerAscii()`
+  # each allocated a temporary string before.
+  let src = if isAscii: str else: str.unidecode()
+  var first = 0
+  var last = src.len - 1
+  while first <= last and src[first] in Whitespace: inc first
+  while last >= first and src[last] in Whitespace: dec last
+  result = newStringOfCap(last - first + 1)
+  for i in first .. last:
+    let ch = toLowerAscii(src[i])
     if ch in Whitespace:
-      result.add seperator 
+      result.add seperator
     elif ch in allowedChars:
       result.add ch
-    else:
-      discard
 
 template `?`*(con, body: untyped): untyped =
   ## shorthand `if` eg. for toggling html classes.
@@ -182,7 +269,7 @@ template `?`*(con, body: untyped): untyped =
   else:
     if con: yield body
 
-macro `|`*(aa, bb: untyped): string =
+macro `|`*(aa, bb: untyped): untyped =
   ## 'filter' alias, often used in other template engines.
   ## `a | b` is an alias to `a.b`.
   ## This enables syntax like this:

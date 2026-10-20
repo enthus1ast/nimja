@@ -311,7 +311,7 @@ block:
   var rax = Rax(aa: "aaaa", bb: 13.37)
   var foo = 123
   proc render(): string =
-    compileTemplateString("{{node.bb}}{{baa}}", {node: rax, baa: foo})
+    compileTemplateString("{{node.bb}}{{baa}}", context = {node: rax, baa: foo})
 ```
 
 Please note, currently the context **cannot be** procs/funcs etc.
@@ -395,7 +395,7 @@ block:
       bb: float
   var rax = Rax(aa: "aaaa", bb: 13.37)
   var foo = 123
-  tmpls("{{node.bb}}{{baa}}", {node: rax, baa: foo})
+  tmpls("{{node.bb}}{{baa}}", context = {node: rax, baa: foo})
 ```
 
 Please note, currently the context **cannot be** procs/funcs etc.
@@ -482,11 +482,28 @@ This way you create reusable template blocks to use all over your webpage.
 
 (Since Nimja 0.10.0) You can also use the [template fragment](#template-fragments) feature.
 
-The syntax to load one specific block via importnimja is:
+The syntax is:
 
 ```
-{% importnimja "path/to/file.nima" "theBlockToRender" %}
+{% importnimja "path/to/file.nimja" %}
+{% importnimja "path/to/file.nimja" "theBlockToRender" %}
+{% importnimja "path/to/file.nimja" {user: theUser} %}
+{% importnimja "path/to/file.nimja" "theBlockToRender" {user: theUser} %}
 ```
+
+The optional `"theBlockToRender"` (Since Nimja 0.10.0) renders only that
+`{% block %}` of the imported template.
+
+The optional `{name: value}` context makes `{{ name }}` inside the imported
+template resolve to `value` from the importing template (the line above makes
+`{{ user }}` resolve to `theUser`). The names are scoped to the imported
+template, so they do not leak into the rest of the parent template. As with the
+`context` of the compile procs, the values must be variables; procs/funcs are
+not supported yet.
+
+Do not use the same name for the context key and the parent variable
+(`{x: x}` creates a self referential alias); use the name the imported template
+expects, e.g. `{user: theUser}`.
 
 partials/_user.nimja:
 ```twig
@@ -846,6 +863,54 @@ userlist.nimja
     {% endfor %}
 </ul>
 ```
+
+HTML escaping / auto escaping
+==============================
+
+By default Nimja does **not** escape variables, so be careful with
+user supplied data (XSS). You can escape individual variables with the
+`e` alias or the `htmlEscape` filter:
+
+```twig
+{{ someUnsafeHTML|e }}
+```
+
+To escape every `{{ ... }}` variable of a template, pass the escaping proc as
+`escapeWith`. Use the built in `htmlEscape` for HTML:
+
+```nim
+proc renderPage(): string =
+  let someUnsafeHTML = "This contains <b>HTML</b>"
+  compileTemplateStr("<p>{{ someUnsafeHTML }}</p>", escapeWith = htmlEscape)
+```
+
+You can bypass escaping for a single variable with the `safe` filter
+(for trusted markup):
+
+```twig
+{{ trustedMarkup|safe }}
+```
+
+`htmlEscape` is idempotent, so `{{ x|e }}` is safe to combine with
+`escapeWith = htmlEscape` (it will not be escaped twice).
+
+Escaping something else
+-----------------------
+
+The escaping proc is not tied to HTML. Pass any proc that turns a value into a
+string (or into a type with a borrowed `add`/`$`) to escape for another
+target, e.g. URLs, JS or shell:
+
+```nim
+proc urlEscape(s: string): string = ...
+
+proc renderQuery(search: string): string =
+  compileTemplateStr("q={{ search }}", escapeWith = urlEscape)
+```
+
+`escapeWith` works with `compileTemplateStr`, `compileTemplateFile`, `tmpls`
+and `tmplf`. The built in escaping lives in `nimja/escaping` (`HTMLSafeStr`,
+`htmlEscape`, `safe`, `e`).
 
 Nimjautils
 ==========
@@ -1241,8 +1306,54 @@ Changelog
 
 ## TODO
 - 0.?.?
-  - Added context to `importnimja`
 ## DONE
+- 0.10.4
+  - `importnimja` accepts a `{name: value}` context so the imported template
+    can use a variable under a different name, e.g.
+    `{% importnimja "x.nimja" {user: theUser} %}` (#81).
+  - Fixed `self.<block>` resolving to the last-registered block when a block
+    name was used by multiple templates in the same project; `self.<block>` is
+    now bound per `compile` invocation (#107).
+  - Added whitespace control for comments: `{#- ... -#}` now strips whitespace
+    like `{%- ... -%}` and `{{- ... -}}`.
+  - Lexer: an unterminated triple-quoted string now raises a clear error
+    instead of swallowing the closing `}}`.
+  - Lexer: escaped quotes inside a quoted string (`{{ "a\"b" }}`) are kept
+    intact instead of ending the string early.
+  - Parser: a lone whitespace control char (`{{-}}`) no longer crashes the
+    compiler; empty variable bodies raise a clear error.
+  - Parser: unbalanced `when` and `block` blocks are now reported
+    (`errorOnUnevenBlocks` previously skipped both).
+  - Parser: circular/self `extends` is detected instead of recursing until the
+    VM call depth is exceeded.
+  - Parser: undefined `self.` blocks, unknown `blockToRender` values and
+    stray/misplaced tags now report a clear error instead of a confusing Nim
+    error, an internal `[SS] NOT IMPL` dump, or `quit()`.
+  - Removed leftover compile-time debug output when importing templates.
+  - `cycle()` with an empty sequence now raises instead of dividing by zero.
+  - Readme: fixed the `context` and `importnimja` examples.
+  - Performance: strings spliced in by `self.<block>` are condensed into the
+    surrounding literal (fewer runtime `&=` calls), and the output
+    pre-allocation size is computed from the final node tree (no more
+    `newStringOfCap(0)` on cache hits).
+  - Added render benchmarks in `bench/` (`nimble bench`).
+  - Template errors now report the template **file, line and column**
+    (e.g. `path/page.nimja(3, 5) Error: ...`), with no runtime cost.
+  - Fixed multi-variable `for` loops (e.g. `{% for name, val in fieldPairs(x) %}`)
+    where the iterator expression was overwritten by the loop body (#86).
+  - Added HTML escaping: the `{{ x|e }}` / `{{ x|htmlEscape }}` and
+    `{{ x|safe }}` filters, plus an `escapeWith` proc option for
+    `compileTemplateStr`, `compileTemplateFile`, `tmpls` and `tmplf`
+    (`escapeWith = htmlEscape` for HTML, any proc for URL/JS/...).
+  - Fixed `compileTemplateStr` with a `const` string argument: it compiled the
+    identifier name instead of the const's value. Non-literal/const string
+    arguments now raise a clear error instead of compiling the name.
+  - Performance: compile-time constant variables in `{{ ... }}` are folded
+    into a single string block when the whole string/variable run is static
+    (issue #53); in mixed runs each const is still folded with its preceding
+    literal. Literal variables (`{{"x"}}`, `{{42}}`) are folded too.
+    Template `proc`/`func` bodies with a long static body also preallocate
+    their result now. See `const-folding.md`.
 - 0.10.0
   - Possible Breaking Change.
   - [Template fragments](#template-fragments) (good for htmx); Render specific blocks from a template all procs (`tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`) got a "blockToRender" parameter, when set, only the given block is rendered.
@@ -1251,8 +1362,8 @@ Changelog
   - in order to fix #15 & #89 and to enable nimja components imported from other modules,
     all proc (`tmpls`, `tmplf`, `compileTemplateString` and `compileTemplateFile`) got a `baseDir` param:
     ```
-        compileTemplateStr("""{{importnimja "some/template.nimja"}}""", baseDir = getScriptDir())
-        tmpls("""{{importnimja "some/template.nimja"}}""", baseDir = getScriptDir())
+        compileTemplateStr("""{% importnimja "some/template.nimja" %}""", baseDir = getScriptDir())
+        tmpls("""{% importnimja "some/template.nimja" %}""", baseDir = getScriptDir())
         compileTemplateFile("some/template.nimja", baseDir = getScriptDir())
         tmpls("some/template.nimja", baseDir = getScriptDir())
     ```
