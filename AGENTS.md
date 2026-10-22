@@ -38,7 +38,7 @@ variable.
 | `tests/basic/*.nim` | main test suite (testament) |
 | `tests/bugs/*.nim` | regression tests for fixed bugs + compile-error specs |
 | `tests/templates`, `tests/basic/**/*.nimja` | template fixtures |
-| `examples/` | fromReadme, prologue/jester, dynlib, hcr examples |
+| `examples/` | fromReadme, prologue, dynlib, hcr examples (no jester dependency) |
 | `experiments/runtime-speed/` | autonomous runtime-speed research loop; read its `program.md` |
 | `readme.md` | the user manual (large; the source of truth for features) |
 

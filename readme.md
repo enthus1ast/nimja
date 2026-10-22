@@ -48,7 +48,7 @@ MOTIVATING EXAMPLE
 ==================
 
 - [this example is in the example folder](https://github.com/enthus1ast/nimja/tree/master/examples/fromReadme)
-- [and a more complete prologue and jester example](https://github.com/enthus1ast/nimja/tree/master/examples/prologue)
+- [and a more complete prologue example](https://github.com/enthus1ast/nimja/tree/master/examples/prologue)
 - [an example howto load templates from a shared library (dll, so)](https://github.com/enthus1ast/nimja/tree/master/examples/dynlib)
 
 server.nim
@@ -1177,7 +1177,7 @@ Minimal example:
 # this is the file that eg. implements your webserver and loads
 # the templates as a shared lib.
 import nimja/hcrutils # Nimja's hot code reloading utilities
-import jester, os
+import asyncdispatch, os
 
 # We watch the templates folder for change (and also tmpls.nim implicitly)
 var cw = newChangeWatcher(@[getAppDir() / "templates/"])
@@ -1188,12 +1188,13 @@ type
     ProcNoParam = proc (): string {.gcsafe, stdcall.}
     ProcId = proc (id: string): string {.gcsafe, stdcall.}
 
-routes:
-  get "/":
-    resp dyn(ProcNoParam, "index")
+# `dyn` declares `procptr` in the calling scope, so each call needs its own
+# `block`. In a real application you would call `dyn` from your webserver's
+# request handlers (asynchttpserver, prologue, ...).
+block: echo dyn(ProcNoParam, "index")
+block: echo dyn(ProcId, "detail", "123")
 
-  get "/id/@id":
-    resp dyn(ProcId, "detail", @"id")
+waitFor sleepAsync(2_000) # keep the process alive so the watcher can reload
 ```
 
 

@@ -1,6 +1,6 @@
 import nimja/hcrutils # Nimja's hot code reloading utilities
 import shared # for the TestObj that is also used in tmpls.nim
-import jester, os
+import asyncdispatch, os
 type
     # You must declare the proc definition from your tmpls.nim here as well.
     ProcNoParam = proc (): string {.gcsafe, stdcall.}
@@ -16,19 +16,16 @@ asyncCheck cw.recompile() # if a change is detected we recompile tmpls.nim
 
 const to = TestObj(foo: "foo!")
 
-routes:
-  get "/":
-    resp dyn(ProcNoParam, "myindex")
+# This example renders every template once, so it needs no web framework.
+# In a real application you would call `dyn` from your webserver's handlers.
+# Note: `dyn` declares `procptr` in the calling scope, so each call needs its own
+# `block`.
+proc renderAll() =
+  block: echo dyn(ProcNoParam, "myindex")
+  block: echo dyn(ProcId, "detail", "123")
+  block: echo dyn(ProcSeq, "error", @["a", "b", "c"])
+  block: echo dyn(ProcIS, "about", 1234, "foobaa")
+  block: echo dyn(ProcTestObj, "oop", to)
 
-  get "/id/@id":
-    resp dyn(ProcId, "detail", @"id")
-
-  get "/error":
-    resp dyn(ProcSeq, "error", @["a", "b", "c"])
-
-  get "/about":
-    resp dyn(ProcIS, "about", 1234, "foobaa")
-
-  get "/oop":
-    resp dyn(ProcTestObj, "oop", to)
-
+renderAll()
+waitFor sleepAsync(2_000)

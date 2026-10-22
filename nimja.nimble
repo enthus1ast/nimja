@@ -18,7 +18,6 @@ task tests, "Run all tests":
   exec """testament --directory:"./tests/" p "bugs/*.nim""""
 
   # Make sure all examples compile
-  exec "nimble install jester -y"
   exec "nimble install prologue -y"
   exec """testament  --directory:"./examples/"  p "prologue/server*.nim""""
   exec """testament  --directory:"./examples/"  p "fromReadme/server.nim""""
