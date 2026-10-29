@@ -257,7 +257,6 @@ compileTemplateFile
 you should use it like so:
 
 ```nim
-import os # for `/`
 proc myRenderProc(someParam: string): string =
   compileTemplateFile("myFile.html", baseDir = getScriptDir())
 
