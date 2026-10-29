@@ -207,9 +207,12 @@ User: {{user.name}} {{user.lastname}} age: {{user.age}}
 Basic Syntax
 ============
 
-- `{{ myObj.myVar }}` --transformed-to--->  `$(myObj.myVar)`
-- {% myExpression.inc() %} --transformed-to---> `myExpression.inc()`
-- {# a comment #}
+```
+template              ---> Nim code
+{{ myObj.myVar }}     ---> $(myObj.myVar)
+{% myExpression.inc() %}  ---> myExpression.inc()
+{# a comment #}       ---> (stripped)
+```
 
 
 
