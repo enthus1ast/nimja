@@ -18,7 +18,10 @@ type
     length*: int ## the length of the seq, (same as mySeq.len())
     revindex0*: int ## which element, counted from the end (last one is 0)
     revindex*: int ## which element, counted from the end (last one is 1)
-    src: ptr UncheckedArray[T] ## the iterated data (borrowed, never freed here)
+    when not defined(js) and not defined(nimscript):
+      src: ptr UncheckedArray[T] ## the iterated data (borrowed, never freed here)
+    else:
+      src: pointer ## JS/NimScript: unused placeholder
   Loopable*[T] = concept x {.explain.}
     x.len() is int
     x[int] is T
@@ -33,21 +36,36 @@ func addSlice(dst: var string, src: string, a, b: int) {.inline.} =
   let k = b - a + 1
   let old = dst.len
   dst.setLen(old + k)
-  copyMem(addr dst[old], unsafeAddr src[a], k)
+  when defined(js) or defined(nimscript):
+    ## JS/NimScript backend: no copyMem / unsafeAddr — copy byte-by-byte
+    var j = a
+    while j <= b:
+      dst.add(src[j])
+      inc j
+  else:
+    copyMem(addr dst[old], unsafeAddr src[a], k)
 
 func previtem*[T](loop: Loop[T]): Option[T] {.inline.} =
   ## the item of the previous loop iteration (if any)
-  if loop.index0 > 0 and loop.src != nil:
-    some(loop.src[loop.index0 - 1])
-  else:
+  when defined(js) or defined(nimscript):
+    ## JS/NimScript: src is unused, return none
     none(T)
+  else:
+    if loop.index0 > 0 and loop.src != nil:
+      some(loop.src[loop.index0 - 1])
+    else:
+      none(T)
 
 func nextitem*[T](loop: Loop[T]): Option[T] {.inline.} =
   ## the item of the next loop iteration (if any)
-  if loop.index0 + 1 < loop.length and loop.src != nil:
-    some(loop.src[loop.index0 + 1])
-  else:
+  when defined(js) or defined(nimscript):
+    ## JS/NimScript: src is unused, return none
     none(T)
+  else:
+    if loop.index0 + 1 < loop.length and loop.src != nil:
+      some(loop.src[loop.index0 + 1])
+    else:
+      none(T)
 
 proc cycleItems*[T](loop: Loop, elems: openArray[T]): T {.inline.} =
   if elems.len == 0:
@@ -95,8 +113,12 @@ iterator loop*[T](a: openArray[T]): tuple[loop: Loop[T], val: T] {.inline.} =
   # however, the element you iterate over must match the Concept `Loopable`.
   # This means you can propably not use loop() with an iterator, since they do not have a `len()` and `[]`
   let n = a.len()
-  let src = if n > 0: cast[ptr UncheckedArray[T]](unsafeAddr a[0]) else: nil
-  var lp = Loop[T](length: n, src: src)
+  when defined(js) or defined(nimscript):
+    ## JS/NimScript backend: no unsafeAddr / UncheckedArray — src is nil
+    var lp = Loop[T](length: n, src: cast[pointer](nil))
+  else:
+    let src = if n > 0: cast[ptr UncheckedArray[T]](unsafeAddr a[0]) else: nil
+    var lp = Loop[T](length: n, src: src)
   var idx = 0
   for each in a:
     lp.index = idx + 1
