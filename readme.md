@@ -360,16 +360,16 @@ If not all cases are covered, an error is generated.
 
 
 ```twig
-{%- case str -%}
-{%- of "foo" -%}
+{% case str %}
+{% of "foo" %}
   foo
-{%- of "baa" -%}
+{% of "baa" %}
   baa
-{%- of "baz" -%}
+{% of "baz" %}
   baz
-{%- else -%}
+{% else %}
   nothing
-{%- endcase -%}
+{% endcase %}
 ```
 
 tmpls / tmplf
