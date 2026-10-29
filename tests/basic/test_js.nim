@@ -6,50 +6,87 @@ discard """
   joinable: false
 """
 import ../../src/nimja
+import unittest
 
-proc testBasic(name: string): string =
-  compileTemplateStr("Hello {{name}}!")
+block:
+  proc testBasic(name: string): string =
+    compileTemplateStr("Hello {{name}}!")
 
-proc testLoop(items: openArray[string]): string =
-  compileTemplateStr("{% for (loop, item) in items.loop() %}{{item}}{% endfor %}")
+  test "basic variable":
+    check testBasic("Nim") == "Hello Nim!"
 
-proc testIf(flag: bool): string =
-  compileTemplateStr("{% if flag %}yes{% else %}no{% endif %}")
+block:
+  proc testLoop(items: openArray[string]): string =
+    compileTemplateStr("{% for (loop, item) in items.loop() %}{{item}}{% endfor %}")
 
-proc testIfNested(a: bool, b: bool): string =
-  compileTemplateStr("{% if a %}{% if b %}ab{% endif %}{% endif %}")
+  test "loop iteration":
+    check testLoop(@["a", "b", "c"]) == "abc"
 
-proc testHtmlEscape(x: string): string =
-  compileTemplateStr("{{x | e}}")
+block:
+  proc testIf(flag: bool): string =
+    compileTemplateStr("{% if flag %}yes{% else %}no{% endif %}")
 
-proc testVarInt(n: int): string =
-  compileTemplateStr("{{n}}")
+  test "if/else true":
+    check testIf(true) == "yes"
 
-proc testVarFloat(f: float): string =
-  compileTemplateStr("{{f}}")
+  test "if/else false":
+    check testIf(false) == "no"
 
-proc testComments(): string =
-  compileTemplateStr("before{# comment #}after")
+block:
+  proc testIfNested(a: bool, b: bool): string =
+    compileTemplateStr("{% if a %}{% if b %}ab{% endif %}{% endif %}")
 
-proc testEval(): string =
-  compileTemplateStr("{% var x = 42 %}{{x}}")
+  test "nested if both true":
+    check testIfNested(true, true) == "ab"
 
-proc testConcat(): string =
-  compileTemplateStr("{{\"a\" ~ \"b\" ~ \"c\"}}")
+  test "nested if a false":
+    check testIfNested(false, true) == ""
 
-proc testWhile(): string =
-  compileTemplateStr("{% var i = 0 %}{% while i < 3 %}{{i}}{% inc i %}{% endwhile %}")
+block:
+  proc testHtmlEscape(x: string): string =
+    compileTemplateStr("{{x | e}}")
 
-doAssert testBasic("Nim") == "Hello Nim!"
-doAssert testLoop(@["a", "b", "c"]) == "abc"
-doAssert testIf(true) == "yes"
-doAssert testIf(false) == "no"
-doAssert testIfNested(true, true) == "ab"
-doAssert testIfNested(false, true) == ""
-doAssert testHtmlEscape("<b>bold</b>") == "&lt;b&gt;bold&lt;/b&gt;"
-doAssert testVarInt(42) == "42"
-doAssert testVarFloat(3.14) == "3.14"
-doAssert testComments() == "beforeafter"
-doAssert testEval() == "42"
-doAssert testConcat() == "abc"
-doAssert testWhile() == "012"
+  test "html escape":
+    check testHtmlEscape("<b>bold</b>") == "&lt;b&gt;bold&lt;/b&gt;"
+
+block:
+  proc testVarInt(n: int): string =
+    compileTemplateStr("{{n}}")
+
+  test "integer variable":
+    check testVarInt(42) == "42"
+
+block:
+  proc testVarFloat(f: float): string =
+    compileTemplateStr("{{f}}")
+
+  test "float variable":
+    check testVarFloat(3.14) == "3.14"
+
+block:
+  proc testComments(): string =
+    compileTemplateStr("before{# comment #}after")
+
+  test "comments stripped":
+    check testComments() == "beforeafter"
+
+block:
+  proc testEval(): string =
+    compileTemplateStr("{% var x = 42 %}{{x}}")
+
+  test "var eval":
+    check testEval() == "42"
+
+block:
+  proc testConcat(): string =
+    compileTemplateStr("{{\"a\" ~ \"b\" ~ \"c\"}}")
+
+  test "string concat":
+    check testConcat() == "abc"
+
+block:
+  proc testWhile(): string =
+    compileTemplateStr("{% var i = 0 %}{% while i < 3 %}{{i}}{% inc i %}{% endwhile %}")
+
+  test "while loop":
+    check testWhile() == "012"
