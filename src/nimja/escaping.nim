@@ -8,10 +8,11 @@
 ## compiling for x86 (SSE2 is part of the x86-64 baseline, so no runtime check
 ## is needed); other targets run the same algorithm with a scalar scan.
 
-when (defined(amd64) or defined(i386)) and not defined(js):
+when defined(js) or defined(nimscript):
+  const htmlEscapeSimd = false
+elif (defined(amd64) or defined(i386)):
   import nimsimd/sse2
   import std/bitops
-
   const htmlEscapeSimd = true
 else:
   const htmlEscapeSimd = false

@@ -31,6 +31,10 @@ task tests, "Run all tests":
   exec "nim c examples/hcr/hcrex.nim"
 
 
+task testsJs, "Run nimja tests targeting JS (Node.js)":
+  exec "nim js -r tests/basic/test_js.nim"
+
+
 task docs, "Generate all docs":
   rmDir("src/nimja/htmldocs/")
   exec "nim doc --project -o:docs/ src/nimja.nim"
