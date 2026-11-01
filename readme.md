@@ -1302,8 +1302,6 @@ Changelog
     (#118). `loop.previtem`/`loop.nextitem` return `none` on JS, because the
     borrowed `src` pointer does not exist there.
   - Added the `nimble testsJs` task (`nim js -r tests/basic/test_js.nim`).
-  - Nimony compatibility: removed the `strformat` dependency and import `std/syncio`
-    where `echo` is no longer auto-exported.
   - Readme fixes (removed a stale benchmark block, corrected the
     `compileTemplateFile` and `case`/`of` examples).
 - 0.10.4
