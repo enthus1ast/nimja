@@ -1296,6 +1296,16 @@ Changelog
 ## TODO
 - 0.?.?
 ## DONE
+- 0.11.0
+  - JavaScript/NimScript backend: the hot paths fall back to safe scalar code
+    (no `copyMem`/`unsafeAddr`) when compiled with `-d:js` or for NimScript
+    (#118). `loop.previtem`/`loop.nextitem` return `none` on JS, because the
+    borrowed `src` pointer does not exist there.
+  - Added the `nimble testsJs` task (`nim js -r tests/basic/test_js.nim`).
+  - Nimony compatibility: removed the `strformat` dependency and import `std/syncio`
+    where `echo` is no longer auto-exported.
+  - Readme fixes (removed a stale benchmark block, corrected the
+    `compileTemplateFile` and `case`/`of` examples).
 - 0.10.4
   - `importnimja` accepts a `{name: value}` context so the imported template
     can use a variable under a different name, e.g.
