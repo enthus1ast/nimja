@@ -21,20 +21,6 @@ FEATURES
 - control structures (if elif else / case / for / while)
 - import other templates
 - most nim code is valid in the templates
-- very fast:
-```
-# https://github.com/enthus1ast/dekao/blob/master/bench.nim
-# nim c --gc:arc -d:release -d:danger -d:lto --opt:speed -r bench.nim
-name ................. min time  avg time  std dv   runs
-dekao ................ 0.105 ms  0.117 ms  ±0.013  x1000
-karax ................ 0.126 ms  0.132 ms  ±0.008  x1000
-htmlgen .............. 0.021 ms  0.023 ms  ±0.004  x1000
-nimja ................ 0.016 ms  0.017 ms  ±0.001  x1000 <--
-nimja iterator ....... 0.008 ms  0.009 ms  ±0.001  x1000 <--
-scf .................. 0.023 ms  0.024 ms  ±0.003  x1000
-nim-mustache ......... 0.745 ms  0.790 ms  ±0.056  x1000
-```
-
 DOCUMENTATION
 =============
 
@@ -207,9 +193,12 @@ User: {{user.name}} {{user.lastname}} age: {{user.age}}
 Basic Syntax
 ============
 
-- `{{ myObj.myVar }}` --transformed-to--->  `$(myObj.myVar)`
-- {% myExpression.inc() %} --transformed-to---> `myExpression.inc()`
-- {# a comment #}
+```
+template              ---> Nim code
+{{ myObj.myVar }}     ---> $(myObj.myVar)
+{% myExpression.inc() %}  ---> myExpression.inc()
+{# a comment #}       ---> (stripped)
+```
 
 
 
@@ -257,7 +246,6 @@ compileTemplateFile
 you should use it like so:
 
 ```nim
-import os # for `/`
 proc myRenderProc(someParam: string): string =
   compileTemplateFile("myFile.html", baseDir = getScriptDir())
 
@@ -360,16 +348,16 @@ If not all cases are covered, an error is generated.
 
 
 ```twig
-{%- case str -%}
-{%- of "foo" -%}
+{% case str %}
+{% of "foo" %}
   foo
-{%- of "baa" -%}
+{% of "baa" %}
   baa
-{%- of "baz" -%}
+{% of "baz" %}
   baz
-{%- else -%}
+{% else %}
   nothing
-{%- endcase -%}
+{% endcase %}
 ```
 
 tmpls / tmplf
@@ -1308,6 +1296,14 @@ Changelog
 ## TODO
 - 0.?.?
 ## DONE
+- 0.11.0
+  - JavaScript/NimScript backend: the hot paths fall back to safe scalar code
+    (no `copyMem`/`unsafeAddr`) when compiled with `-d:js` or for NimScript
+    (#118). `loop.previtem`/`loop.nextitem` return `none` on JS, because the
+    borrowed `src` pointer does not exist there.
+  - Added the `nimble testsJs` task (`nim js -r tests/basic/test_js.nim`).
+  - Readme fixes (removed a stale benchmark block, corrected the
+    `compileTemplateFile` and `case`/`of` examples).
 - 0.10.4
   - `importnimja` accepts a `{name: value}` context so the imported template
     can use a variable under a different name, e.g.
